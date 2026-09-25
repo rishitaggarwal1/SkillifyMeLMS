@@ -11,7 +11,7 @@ These are permanent decisions. Follow them in every task. Changing one requires 
   - `apps/api` — Python FastAPI (async)
   - `services/` — future runner services (code execution, etc.)
   - `infra/` — Terraform (later)
-  - `docs/` — architecture and design docs
+  - `docs/` — architecture and design docs; phase plans live in `docs/plans/`
 - **Modular monolith backend**: each module lives in `apps/api/app/modules/<module>/` with `router.py`, `schemas.py`, `models.py`, `service.py`, `repository.py`, `tests/`.
   - Modules interact only through each other's **service interfaces**. Never query another module's tables, and never import another module's repository or models for querying.
 - **Stateless API**: all state lives in PostgreSQL, Redis, or S3. No in-process session/state that must survive a request.
@@ -22,6 +22,22 @@ These are permanent decisions. Follow them in every task. Changing one requires 
   - One error envelope for every error: `{"error": {"code": str, "message": str, "details": ...}}`.
 - **Frontend API types** are generated from FastAPI's OpenAPI spec with `openapi-typescript` into `apps/web/src/lib/api/schema.ts` (`make gen-api`). Never hand-edit that file.
 - **Domain events** are written to an outbox table in the same transaction as the state change, then relayed to Kafka.
+
+## Content ownership & sharing
+
+Decided 2026-09-26.
+
+- Every course has exactly one **owner organization** (`courses.organization_id`).
+- `organizations.is_content_publisher` marks orgs that author content for other orgs. SkillifyMe's own org has it.
+- A course is visible to its owner org and to any org it is assigned to through `course_assignments (course_id, organization_id, batch_id NULL)`.
+  - `batch_id IS NULL` means the whole assigned org can see the course.
+  - A `batch_id` limits visibility to that batch's students.
+- Only owner-org members with the `instructor` or `org_admin` role can edit a course. Assigned orgs get read and enroll access only.
+- Any org can author private courses that are visible only to itself.
+- These rules are enforced by **PostgreSQL RLS policies**, not only by service-layer checks. They must be covered by tests proving that:
+  - an assigned org cannot edit
+  - an unassigned org cannot see
+  - a batch-level assignment limits visibility to that batch's students
 
 ## Stack
 
