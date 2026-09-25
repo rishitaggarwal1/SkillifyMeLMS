@@ -1,0 +1,58 @@
+# Install once with `make install` (runs `uvx pre-commit install`).
+# Hooks use the project's own toolchains (uv / pnpm) so versions match CI exactly.
+default_install_hook_types: [pre-commit]
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: check-yaml
+        exclude: ^apps/web/pnpm-lock\.yaml$ # multi-document YAML
+      - id: check-json
+        exclude: ^apps/web/tsconfig\.json$ # JSONC
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check (api)
+        entry: bash -c 'cd apps/api && uv run ruff check --fix --exit-non-zero-on-fix .'
+        language: system
+        files: ^apps/api/.*\.py$
+        pass_filenames: false
+      - id: ruff-format
+        name: ruff format (api)
+        entry: bash -c 'cd apps/api && uv run ruff format .'
+        language: system
+        files: ^apps/api/.*\.py$
+        pass_filenames: false
+      - id: mypy
+        name: mypy --strict (api)
+        entry: bash -c 'cd apps/api && uv run mypy'
+        language: system
+        files: ^apps/api/.*\.py$
+        pass_filenames: false
+      - id: prettier
+        name: prettier (web)
+        entry: bash -c 'cd apps/web && pnpm exec prettier --write --ignore-unknown "${@#apps/web/}"' --
+        language: system
+        files: ^apps/web/
+      - id: eslint
+        name: eslint (web)
+        entry: bash -c 'cd apps/web && pnpm exec eslint --max-warnings=0 --no-warn-ignored --fix "${@#apps/web/}"' --
+        language: system
+        files: ^apps/web/.*\.(ts|tsx|mts|mjs)$
+      - id: tsc
+        name: tsc (web)
+        entry: bash -c 'cd apps/web && pnpm typecheck'
+        language: system
+        files: ^apps/web/.*\.(ts|tsx|mts)$
+        pass_filenames: false

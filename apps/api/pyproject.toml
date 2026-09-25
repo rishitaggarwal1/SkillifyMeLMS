@@ -1,0 +1,80 @@
+[project]
+name = "skillifyme-api"
+version = "0.1.0"
+description = "SkillifyMe Portal API (modular monolith)"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "alembic>=1.20.0",
+    "asyncpg>=0.31.0",
+    "celery>=5.6.3",
+    "fastapi>=0.141.1",
+    "opentelemetry-api>=1.45.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.45.0",
+    "opentelemetry-instrumentation-fastapi>=0.66b0",
+    "opentelemetry-instrumentation-redis>=0.66b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.66b0",
+    "opentelemetry-sdk>=1.45.0",
+    "pydantic>=2.13.5",
+    "pydantic-settings>=2.15.0",
+    "redis[hiredis]>=8.1.0",
+    "sqlalchemy[asyncio]>=2.1.1",
+    "structlog>=26.1.0",
+    "uuid-utils>=1.0.0",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "asgi-lifespan>=2.1.0",
+    "celery-types>=0.26.0",
+    "httpx>=0.28.1",
+    "mypy>=2.3.1",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.16.9",
+]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+extend-exclude = ["migrations/versions/*.py.mako"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F", "I", "B", "UP", "N", "S", "ASYNC", "C4", "SIM", "RUF", "PT", "TID",
+    "PTH", "RET", "DTZ", "T20", "PL", "ERA",
+]
+ignore = [
+    "PLR0913", # FastAPI dependencies routinely take many params
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S101", "PLR2004", "S105", "S106"]
+"tests/**" = ["S101", "PLR2004", "S105", "S106"]
+"migrations/**" = ["ERA001", "S608"]  # DDL cannot use bind params; identifiers are constants
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+plugins = ["pydantic.mypy"]
+warn_unreachable = true
+files = ["app", "tests", "migrations"]
+
+[[tool.mypy.overrides]]
+module = ["opentelemetry.instrumentation.*"]
+ignore_missing_imports = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests", "app"]
+addopts = "-ra --strict-markers"

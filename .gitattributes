@@ -1,0 +1,6 @@
+# Normalise to LF everywhere: shell scripts and configs are executed inside Linux containers.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
