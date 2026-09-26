@@ -54,9 +54,55 @@ The mapping lives in `apps/api/app/events/envelope.py`. Add a row here whenever 
 
 ## Event catalogue
 
-The schemas are added by the phase that starts emitting each event.
+| Type | Topic | Emitted when |
+|---|---|---|
+| `batch_member_added` | `identity.batch-members.v1` | A user joins a batch: added by an admin, through an invitation, or through a CSV import |
+| `batch_member_removed` | `identity.batch-members.v1` | A user leaves a batch: removed by an admin, removed from the organization, or their invitation was revoked or expired |
 
-| Type | Topic | Emitted when | Schema |
-|---|---|---|---|
-| `batch_member_added` | `identity.batch-members.v1` | A user joins a batch | Phase 1, step 3 |
-| `batch_member_removed` | `identity.batch-members.v1` | A user leaves a batch, or is removed from the org | Phase 1, step 3 |
+Both events are keyed by `batch_id`, so all changes to one batch arrive in order. Phase 2
+(enrollments) consumes them to enroll and unenroll students in the courses assigned to the batch.
+
+### `batch_member_added` (version 1)
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "batch_member_added.v1 data",
+  "type": "object",
+  "required": ["batch_id", "user_id", "organization_id", "actor_user_id", "reason"],
+  "additionalProperties": false,
+  "properties": {
+    "batch_id": { "type": "string", "format": "uuid" },
+    "user_id": { "type": "string", "format": "uuid" },
+    "organization_id": { "type": "string", "format": "uuid" },
+    "actor_user_id": {
+      "type": ["string", "null"], "format": "uuid",
+      "description": "Who made the change; null for system jobs"
+    },
+    "reason": { "enum": ["added", "invitation", "import"] }
+  }
+}
+```
+
+### `batch_member_removed` (version 1)
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "batch_member_removed.v1 data",
+  "type": "object",
+  "required": ["batch_id", "user_id", "organization_id", "actor_user_id", "reason"],
+  "additionalProperties": false,
+  "properties": {
+    "batch_id": { "type": "string", "format": "uuid" },
+    "user_id": { "type": "string", "format": "uuid" },
+    "organization_id": { "type": "string", "format": "uuid" },
+    "actor_user_id": { "type": ["string", "null"], "format": "uuid" },
+    "reason": { "enum": ["removed", "left_organization", "invitation_revoked"] }
+  }
+}
+```
+
+A user in several batches gets one event per batch. Consumers should treat `added` for an existing
+membership, or `removed` for an absent one, as a no-op; together with deduping on the envelope `id`,
+that makes replays safe.

@@ -12,10 +12,14 @@ from app.core.config import Settings, get_settings
 from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging, get_logger
 from app.core.middleware import RequestContextMiddleware
+from app.core.ratelimit import RateLimiter
 from app.core.redis import create_redis
+from app.core.storage import ObjectStorage
 from app.core.telemetry import configure_tracing, instrument_engine
+from app.core.validation import configure_email_validation
 from app.db.session import create_engine, create_sessionmaker
 from app.modules.identity.keycloak_admin import KeycloakAdmin
+from app.modules.identity.tasks import enqueue_import
 
 logger = get_logger(__name__)
 
@@ -38,6 +42,7 @@ def create_jwt_validator(settings: Settings, http: httpx.AsyncClient) -> JwtVali
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     configure_logging(settings.log_level, json_logs=settings.log_json)
+    configure_email_validation(settings)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -53,6 +58,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.keycloak_admin = (
             KeycloakAdmin(http, settings) if settings.kc_admin_client_secret else None
         )
+        app.state.rate_limiter = RateLimiter(redis)
+        app.state.storage = ObjectStorage(settings)
+        app.state.enqueue_import = enqueue_import
         logger.info("startup", environment=settings.environment, oidc_issuer=settings.oidc_issuer)
         try:
             yield

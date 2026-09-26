@@ -93,11 +93,14 @@ class Factory:
             )
         )
 
-    async def invitation(self, org: Organization, *, email: str | None = None) -> Invitation:
+    async def invitation(
+        self, org: Organization, *, email: str | None = None, user: User | None = None
+    ) -> Invitation:
         inv = Invitation(
             id=new_id(),
             organization_id=org.id,
-            email=email or f"invitee-{_suffix()}@example.test",
+            user_id=user.id if user else None,
+            email=email or (user.email if user else f"invitee-{_suffix()}@example.test"),
             roles=["student"],
             batch_ids=[],
             expires_at=datetime.now(UTC) + timedelta(days=7),

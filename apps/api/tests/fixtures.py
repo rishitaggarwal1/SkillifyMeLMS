@@ -33,6 +33,7 @@ from app.main import create_app
 from app.modules.identity.models import User
 from tests.auth import SigningKey, StaticJwksSource, TokenFactory, make_validator
 from tests.factories import Factory
+from tests.fakes import EnqueueRecorder, FakeKeycloakAdmin
 
 API_ROOT = Path(__file__).resolve().parents[1]
 
@@ -126,7 +127,33 @@ async def app(
     async with LifespanManager(application):
         await application.state.redis.flushdb()
         application.state.jwt_validator = make_validator(settings, StaticJwksSource(signing_key))
+        application.state.keycloak_admin = FakeKeycloakAdmin()
+        application.state.enqueue_import = EnqueueRecorder()
         yield application
+
+
+@pytest.fixture
+async def fake_idp(app: FastAPI) -> FakeKeycloakAdmin:
+    idp: FakeKeycloakAdmin = app.state.keycloak_admin
+    idp.reset()
+    return idp
+
+
+@pytest.fixture
+def enqueued(app: FastAPI) -> EnqueueRecorder:
+    recorder: EnqueueRecorder = app.state.enqueue_import
+    recorder.jobs.clear()
+    return recorder
+
+
+@pytest.fixture(autouse=True)
+async def _reset_rate_limits(request: pytest.FixtureRequest) -> None:
+    """Rate-limit counters live in the test Redis DB; start every test with a clean slate."""
+    if "app" in request.fixturenames:
+        application: FastAPI = request.getfixturevalue("app")
+        keys = [k async for k in application.state.redis.scan_iter("ratelimit:*")]
+        if keys:
+            await application.state.redis.delete(*keys)
 
 
 @pytest.fixture

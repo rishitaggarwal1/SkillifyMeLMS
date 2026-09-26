@@ -1,13 +1,74 @@
-from fastapi import APIRouter
+"""Identity HTTP API (thin: parse input, call the service, shape output)."""
 
-from app.modules.identity.dependencies import CurrentPrincipal, TenantSession
+from typing import Annotated, Literal
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, File, Form, Query, Request, Response, UploadFile, status
+
+from app.core.pagination import CursorPage, PageParams
+from app.core.ratelimit import RateLimiter
+from app.core.redis import RedisClient
+from app.modules.identity import service
+from app.modules.identity.dependencies import AuditActorDep, CurrentPrincipal, TenantSession
+from app.modules.identity.models import OrgRole
 from app.modules.identity.repository import OrganizationRepository
-from app.modules.identity.schemas import MembershipOut, MeResponse, MeUser, OrganizationSummary
+from app.modules.identity.schemas import (
+    BatchCreate,
+    BatchMembersAdd,
+    BatchMembersAddResult,
+    BatchOut,
+    BatchUpdate,
+    ImportJobOut,
+    InvitationCreate,
+    InvitationOut,
+    MemberOut,
+    MembershipOut,
+    MemberUpdate,
+    MeResponse,
+    MeUser,
+    OrganizationCreate,
+    OrganizationOut,
+    OrganizationSummary,
+    OrganizationUpdate,
+)
 
-router = APIRouter(tags=["identity"])
+router = APIRouter()
+
+StatusFilter = Annotated[Literal["active", "archived"] | None, Query(alias="status")]
 
 
-@router.get("/me", operation_id="get_me")
+async def get_ctx(
+    principal: CurrentPrincipal, session: TenantSession, actor: AuditActorDep, redis: RedisClient
+) -> service.Ctx:
+    return service.Ctx(session=session, principal=principal, actor=actor, redis=redis)
+
+
+Ctx = Annotated[service.Ctx, Depends(get_ctx)]
+
+
+def _limiter(request: Request) -> RateLimiter:
+    limiter: RateLimiter = request.app.state.rate_limiter
+    return limiter
+
+
+async def invite_rate_limit(request: Request, principal: CurrentPrincipal) -> None:
+    settings = request.app.state.settings
+    await _limiter(request).check(
+        "invites", str(principal.user_id), limit=settings.rl_invites_per_hour, window_seconds=3600
+    )
+
+
+async def import_rate_limit(request: Request, principal: CurrentPrincipal) -> None:
+    settings = request.app.state.settings
+    await _limiter(request).check(
+        "imports", str(principal.user_id), limit=settings.rl_imports_per_hour, window_seconds=3600
+    )
+
+
+# ============================================================================ me
+
+
+@router.get("/me", operation_id="get_me", tags=["identity"])
 async def get_me(principal: CurrentPrincipal, session: TenantSession) -> MeResponse:
     """The signed-in user, their organizations and roles (for the org switcher), and the active
     organization's permissions."""
@@ -30,3 +91,246 @@ async def get_me(principal: CurrentPrincipal, session: TenantSession) -> MeRespo
         permissions=sorted(p.value for p in principal.permissions),
         memberships=memberships,
     )
+
+
+# ============================================================================ organizations
+
+orgs = APIRouter(prefix="/organizations", tags=["organizations"])
+
+
+@orgs.post("", status_code=status.HTTP_201_CREATED, operation_id="create_organization")
+async def create_organization(ctx: Ctx, body: OrganizationCreate) -> OrganizationOut:
+    """Create an organization (platform admins)."""
+    return await service.create_organization(ctx, body)
+
+
+@orgs.get("", operation_id="list_organizations")
+async def list_organizations(
+    ctx: Ctx, page: PageParams, status_: StatusFilter = None
+) -> CursorPage[OrganizationOut]:
+    items, cursor = await service.list_organizations(ctx, page, status_)
+    return CursorPage(items=items, next_cursor=cursor)
+
+
+@orgs.get("/current", operation_id="get_current_organization")
+async def get_current_organization(ctx: Ctx) -> OrganizationOut:
+    """The active organization (any member)."""
+    return await service.get_current_organization(ctx)
+
+
+@orgs.get("/{organization_id}", operation_id="get_organization")
+async def get_organization(ctx: Ctx, organization_id: UUID) -> OrganizationOut:
+    return await service.get_organization(ctx, organization_id)
+
+
+@orgs.patch("/{organization_id}", operation_id="update_organization")
+async def update_organization(
+    ctx: Ctx, organization_id: UUID, body: OrganizationUpdate
+) -> OrganizationOut:
+    return await service.update_organization(ctx, organization_id, body)
+
+
+@orgs.delete("/{organization_id}", operation_id="archive_organization")
+async def archive_organization(ctx: Ctx, organization_id: UUID) -> OrganizationOut:
+    """Archive (soft-delete): members lose access; data is kept."""
+    return await service.update_organization(
+        ctx, organization_id, OrganizationUpdate(status="archived")
+    )
+
+
+# ============================================================================ batches
+
+batches = APIRouter(prefix="/batches", tags=["batches"])
+
+
+@batches.post("", status_code=status.HTTP_201_CREATED, operation_id="create_batch")
+async def create_batch(ctx: Ctx, body: BatchCreate) -> BatchOut:
+    return await service.create_batch(ctx, body)
+
+
+@batches.get("", operation_id="list_batches")
+async def list_batches(
+    ctx: Ctx, page: PageParams, status_: StatusFilter = None
+) -> CursorPage[BatchOut]:
+    items, cursor = await service.list_batches(ctx, page, status_)
+    return CursorPage(items=items, next_cursor=cursor)
+
+
+@batches.get("/{batch_id}", operation_id="get_batch")
+async def get_batch(ctx: Ctx, batch_id: UUID) -> BatchOut:
+    return await service.get_batch(ctx, batch_id)
+
+
+@batches.patch("/{batch_id}", operation_id="update_batch")
+async def update_batch(ctx: Ctx, batch_id: UUID, body: BatchUpdate) -> BatchOut:
+    return await service.update_batch(ctx, batch_id, body)
+
+
+@batches.delete("/{batch_id}", operation_id="archive_batch")
+async def archive_batch(ctx: Ctx, batch_id: UUID) -> BatchOut:
+    """Archive (soft-delete): members and history are kept; no new members can be added."""
+    return await service.update_batch(ctx, batch_id, BatchUpdate(status="archived"))
+
+
+@batches.get("/{batch_id}/members", operation_id="list_batch_members")
+async def list_batch_members(ctx: Ctx, batch_id: UUID, page: PageParams) -> CursorPage[MemberOut]:
+    items, cursor = await service.list_batch_members(ctx, batch_id, page)
+    return CursorPage(items=items, next_cursor=cursor)
+
+
+@batches.post("/{batch_id}/members", operation_id="add_batch_members")
+async def add_batch_members(
+    ctx: Ctx, batch_id: UUID, body: BatchMembersAdd
+) -> BatchMembersAddResult:
+    return await service.add_batch_members(ctx, batch_id, body.user_ids)
+
+
+@batches.delete(
+    "/{batch_id}/members/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    operation_id="remove_batch_member",
+)
+async def remove_batch_member(ctx: Ctx, batch_id: UUID, user_id: UUID) -> None:
+    await service.remove_batch_member(ctx, batch_id, user_id)
+
+
+# ============================================================================ members
+
+members = APIRouter(prefix="/members", tags=["members"])
+
+
+@members.get("", operation_id="list_members")
+async def list_members(
+    ctx: Ctx,
+    page: PageParams,
+    q: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
+    role: OrgRole | None = None,
+    batch_id: UUID | None = None,
+) -> CursorPage[MemberOut]:
+    """Search members by name or email, filter by role or batch."""
+    items, cursor = await service.list_members(ctx, page, q=q, role=role, batch_id=batch_id)
+    return CursorPage(items=items, next_cursor=cursor)
+
+
+@members.get("/{user_id}", operation_id="get_member")
+async def get_member(ctx: Ctx, user_id: UUID) -> MemberOut:
+    return await service.get_member(ctx, user_id)
+
+
+@members.patch("/{user_id}", operation_id="update_member")
+async def update_member(ctx: Ctx, user_id: UUID, body: MemberUpdate) -> MemberOut:
+    """Replace the member's roles in the active organization."""
+    return await service.update_member_roles(ctx, user_id, body)
+
+
+@members.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT, operation_id="remove_member")
+async def remove_member(ctx: Ctx, user_id: UUID) -> None:
+    """Remove from the organization (and all its batches)."""
+    await service.remove_member(ctx, user_id)
+
+
+# ============================================================================ invitations
+
+invitations = APIRouter(prefix="/invitations", tags=["invitations"])
+
+
+@invitations.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    operation_id="create_invitation",
+    dependencies=[Depends(invite_rate_limit)],
+)
+async def create_invitation(ctx: Ctx, request: Request, body: InvitationCreate) -> InvitationOut:
+    """Invite someone by email: grants the roles/batches now and emails a link to set a password
+    (new accounts only)."""
+    return await service.create_invitation(
+        ctx, request.app.state.keycloak_admin, request.app.state.settings, body
+    )
+
+
+@invitations.get("", operation_id="list_invitations")
+async def list_invitations(
+    ctx: Ctx,
+    page: PageParams,
+    status_: Annotated[
+        Literal["pending", "accepted", "revoked", "expired"] | None, Query(alias="status")
+    ] = None,
+) -> CursorPage[InvitationOut]:
+    items, cursor = await service.list_invitations(ctx, page, status_)
+    return CursorPage(items=items, next_cursor=cursor)
+
+
+@invitations.delete("/{invitation_id}", operation_id="revoke_invitation")
+async def revoke_invitation(ctx: Ctx, invitation_id: UUID) -> InvitationOut:
+    return await service.revoke_invitation(ctx, invitation_id)
+
+
+@invitations.post(
+    "/{invitation_id}/resend",
+    operation_id="resend_invitation",
+    dependencies=[Depends(invite_rate_limit)],
+)
+async def resend_invitation(ctx: Ctx, request: Request, invitation_id: UUID) -> InvitationOut:
+    return await service.resend_invitation(ctx, request.app.state.keycloak_admin, invitation_id)
+
+
+# ============================================================================ imports
+
+imports = APIRouter(prefix="/imports", tags=["imports"])
+
+
+@imports.post(
+    "",
+    status_code=status.HTTP_202_ACCEPTED,
+    operation_id="create_import",
+    dependencies=[Depends(import_rate_limit)],
+)
+async def create_import(
+    ctx: Ctx,
+    request: Request,
+    file: Annotated[UploadFile, File(description="CSV with email and full_name columns")],
+    batch_id: Annotated[UUID | None, Form()] = None,
+) -> ImportJobOut:
+    """Upload a CSV of students; processing continues in the background (poll GET /imports/{id})."""
+    settings = request.app.state.settings
+    data = await file.read(settings.import_max_bytes + 1)
+    return await service.start_import(
+        ctx,
+        request.app.state.storage,
+        request.app.state.enqueue_import,
+        file_name=file.filename or "import.csv",
+        content_type=file.content_type or "",
+        data=data,
+        batch_id=batch_id,
+        max_bytes=settings.import_max_bytes,
+    )
+
+
+@imports.get("", operation_id="list_imports")
+async def list_imports(ctx: Ctx, page: PageParams) -> CursorPage[ImportJobOut]:
+    items, cursor = await service.list_imports(ctx, page)
+    return CursorPage(items=items, next_cursor=cursor)
+
+
+@imports.get("/{job_id}", operation_id="get_import")
+async def get_import(ctx: Ctx, job_id: UUID) -> ImportJobOut:
+    return await service.get_import(ctx, job_id)
+
+
+@imports.get(
+    "/{job_id}/errors.csv",
+    operation_id="download_import_errors",
+    response_class=Response,
+    responses={200: {"content": {"text/csv": {}}, "description": "Per-row errors as CSV"}},
+)
+async def download_import_errors(ctx: Ctx, job_id: UUID) -> Response:
+    content = await service.import_errors_csv(ctx, job_id)
+    return Response(
+        content=content,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="import-{job_id}-errors.csv"'},
+    )
+
+
+for sub in (orgs, batches, members, invitations, imports):
+    router.include_router(sub)

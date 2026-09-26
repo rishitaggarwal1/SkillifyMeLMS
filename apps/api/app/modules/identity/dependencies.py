@@ -13,7 +13,8 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth.jwt import JwtValidator
-from app.core.errors import AuthenticationError
+from app.core.errors import AuthenticationError, PermissionDeniedError, RateLimitedError
+from app.core.ratelimit import RateLimiter
 from app.core.redis import RedisClient
 from app.db.session import DbSession
 from app.db.tenancy import set_tenant_context
@@ -22,6 +23,7 @@ from app.modules.identity import service
 from app.modules.identity.authz import Principal
 
 _bearer = HTTPBearer(auto_error=False, description="Keycloak access token")
+_AUTH_FAILURES = "auth_failures"
 
 
 async def get_principal(
@@ -35,15 +37,30 @@ async def get_principal(
 ) -> Principal:
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise AuthenticationError
+    settings = request.app.state.settings
+    limiter: RateLimiter = request.app.state.rate_limiter
+    client_ip = request.client.host if request.client else "unknown"
+    limit = {"limit": settings.rl_auth_failures_per_minute, "window_seconds": 60}
+    # Throttle clients that keep presenting bad tokens or probing organizations they don't
+    # belong to. Successful requests are never counted.
+    if retry_after := await limiter.is_blocked(_AUTH_FAILURES, client_ip, **limit):
+        raise RateLimitedError(
+            details={"retry_after_seconds": retry_after},
+            headers={"Retry-After": str(retry_after)},
+        )
     validator: JwtValidator = request.app.state.jwt_validator
-    claims = await validator.validate(credentials.credentials)
-    principal = await service.resolve_principal(
-        claims=claims,
-        requested_org=x_organization_id,
-        sessionmaker=request.app.state.sessionmaker,
-        redis=redis,
-        cache_ttl_seconds=request.app.state.settings.principal_cache_ttl_seconds,
-    )
+    try:
+        claims = await validator.validate(credentials.credentials)
+        principal = await service.resolve_principal(
+            claims=claims,
+            requested_org=x_organization_id,
+            sessionmaker=request.app.state.sessionmaker,
+            redis=redis,
+            cache_ttl_seconds=settings.principal_cache_ttl_seconds,
+        )
+    except (AuthenticationError, PermissionDeniedError):
+        await limiter.hit(_AUTH_FAILURES, client_ip, **limit)
+        raise
     request.state.principal = principal
     return principal
 

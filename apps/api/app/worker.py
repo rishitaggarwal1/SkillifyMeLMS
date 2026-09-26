@@ -10,8 +10,10 @@ from celery.signals import setup_logging
 
 from app.core.config import get_settings
 from app.core.logging import configure_logging
+from app.core.validation import configure_email_validation
 
 settings = get_settings()
+configure_email_validation(settings)
 
 celery_app = Celery("skillifyme", broker=settings.celery_broker)
 celery_app.conf.update(
@@ -26,7 +28,13 @@ celery_app.conf.update(
     enable_utc=True,
     broker_connection_retry_on_startup=True,
 )
-celery_app.autodiscover_tasks(["app.modules"], related_name="tasks")
+celery_app.conf.beat_schedule = {
+    "identity-expire-invitations": {
+        "task": "identity.expire_invitations",
+        "schedule": 3600.0,  # hourly
+    },
+}
+celery_app.autodiscover_tasks(["app.modules.identity"], related_name="tasks")
 
 
 @setup_logging.connect

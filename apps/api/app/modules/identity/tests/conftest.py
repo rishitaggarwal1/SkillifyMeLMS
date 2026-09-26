@@ -1,5 +1,6 @@
 """A two-org world shared by the identity RLS tests (created once per module via the owner role)."""
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -89,4 +90,38 @@ async def world(owner_sessionmaker: async_sessionmaker[AsyncSession]) -> World:
         audit_b=await f.audit(org_b, admin_b),
         event_a=await _outbox_event(owner_sessionmaker, org_a.id),
         event_b=await _outbox_event(owner_sessionmaker, org_b.id),
+    )
+
+
+@dataclass
+class OrgSetup:
+    """A fresh org with one user per role and a batch (the student is in it)."""
+
+    org: Organization
+    admin: User
+    instructor: User
+    lab_author: User
+    student: User
+    batch: Batch
+    auth: Callable[..., dict[str, str]]
+
+    def h(self, user: User) -> dict[str, str]:
+        """Auth headers for `user` acting in this org."""
+        return self.auth(user, org=self.org.id)
+
+
+@pytest.fixture
+async def org_setup(factory: Factory, auth_headers: Callable[..., dict[str, str]]) -> OrgSetup:
+    org = await factory.org()
+    student = await factory.member(org, "student")
+    batch = await factory.batch(org)
+    await factory.add_to_batch(batch, student)
+    return OrgSetup(
+        org=org,
+        admin=await factory.member(org, "org_admin"),
+        instructor=await factory.member(org, "instructor"),
+        lab_author=await factory.member(org, "lab_author"),
+        student=student,
+        batch=batch,
+        auth=auth_headers,
     )

@@ -70,6 +70,28 @@ class Settings(BaseSettings):
     jwks_refetch_cooldown_seconds: float = Field(default=30.0, ge=0)
     principal_cache_ttl_seconds: int = Field(default=60, ge=0)
 
+    # Web app origin (e.g. http://localhost:3000): where Keycloak's invitation emails send users
+    # after they set a password.
+    web_origin: str | None = None
+
+    # ---- S3 (MinIO locally): CSV imports and, later, learning content.
+    s3_endpoint_url: str | None = None
+    s3_region: str = "us-east-1"
+    s3_access_key_id: SecretStr | None = None
+    s3_secret_access_key: SecretStr | None = None
+    s3_bucket: str = "skillifyme-local"
+
+    # ---- Rate limits (Redis sliding windows).
+    rl_auth_failures_per_minute: int = Field(default=30, ge=1)  # per client IP
+    rl_invites_per_hour: int = Field(default=60, ge=1)  # per acting user
+    rl_imports_per_hour: int = Field(default=10, ge=1)  # per acting user
+
+    # ---- CSV student import limits.
+    import_max_bytes: int = Field(default=5 * 1024 * 1024, ge=1)
+    import_max_rows: int = Field(default=10_000, ge=1)
+    import_chunk_size: int = Field(default=500, ge=1, le=1000)
+    invitation_ttl_days: int = Field(default=14, ge=1)
+
     # OpenTelemetry is disabled unless an OTLP endpoint is configured.
     otel_exporter_otlp_endpoint: str | None = None
 

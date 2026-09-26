@@ -8,11 +8,12 @@ shape and index use, not for access control.
 """
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, exists, func, or_, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,6 +29,30 @@ from app.modules.identity.models import (
     Organization,
     User,
 )
+
+_ENSURE_USERS = text(
+    "SELECT keycloak_sub, user_id, user_status, email_conflict "
+    "FROM app.ensure_users(:ids, :subs, :emails, :names)"
+)
+
+
+def _escape_like(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+@dataclass(frozen=True, slots=True)
+class EnsureUser:
+    keycloak_sub: str
+    email: str
+    full_name: str
+
+
+@dataclass(frozen=True, slots=True)
+class EnsuredUser:
+    keycloak_sub: str
+    user_id: UUID | None  # None when the email belongs to another identity
+    status: str | None
+    email_conflict: bool
 
 
 class OrganizationRepository:
@@ -110,6 +135,65 @@ class UserRepository:
         await self.session.flush()
         return user
 
+    async def list_members(
+        self,
+        organization_id: UUID,
+        params: CursorParams,
+        *,
+        q: str | None = None,
+        role: str | None = None,
+        batch_id: UUID | None = None,
+    ) -> tuple[list[User], str | None]:
+        """Users with any membership (optionally a given role / batch) in the org, newest first.
+        `q` matches name or email (trigram indexes)."""
+        membership = select(Membership.id).where(
+            Membership.user_id == User.id, Membership.organization_id == organization_id
+        )
+        if role is not None:
+            membership = membership.where(Membership.role == role)
+        stmt = select(User).where(exists(membership))
+        if batch_id is not None:
+            stmt = stmt.where(
+                exists(
+                    select(BatchMember.id).where(
+                        BatchMember.user_id == User.id, BatchMember.batch_id == batch_id
+                    )
+                )
+            )
+        if q:
+            pattern = f"%{_escape_like(q.lower())}%"
+            stmt = stmt.where(
+                or_(
+                    func.lower(User.email).like(pattern, escape="\\"),
+                    func.lower(User.full_name).like(pattern, escape="\\"),
+                )
+            )
+        return await paginate_by_id(self.session, stmt, User.id, params)
+
+    async def ensure_many(self, users: Sequence["EnsureUser"]) -> list["EnsuredUser"]:
+        """Find-or-create users by Keycloak id through app.ensure_users() (SECURITY DEFINER: org
+        admins can't see users outside their org). Requires org_admin in the current org."""
+        if not users:
+            return []
+        rows = await self.session.execute(
+            _ENSURE_USERS,
+            {
+                "ids": [new_id() for _ in users],
+                "subs": [u.keycloak_sub for u in users],
+                "emails": [u.email for u in users],
+                "names": [u.full_name for u in users],
+            },
+        )
+        return [
+            EnsuredUser(
+                keycloak_sub=r.keycloak_sub,
+                user_id=r.user_id,
+                status=r.user_status,
+                email_conflict=r.email_conflict,
+            )
+            for r in rows
+        ]
+
     async def update(self, user_id: UUID, values: dict[str, Any]) -> User | None:
         return await self.session.scalar(
             update(User)
@@ -158,6 +242,27 @@ class MembershipRepository:
             result[user_id].add(role)
         return result
 
+    async def count_with_role(self, organization_id: UUID, role: str) -> int:
+        return int(
+            await self.session.scalar(
+                select(func.count())
+                .select_from(Membership)
+                .where(Membership.organization_id == organization_id, Membership.role == role)
+            )
+            or 0
+        )
+
+    async def member_subs(self, organization_id: UUID) -> list[str]:
+        """Keycloak subjects of an org's members (to invalidate cached principals)."""
+        return list(
+            await self.session.scalars(
+                select(User.keycloak_sub)
+                .join(Membership, Membership.user_id == User.id)
+                .where(Membership.organization_id == organization_id)
+                .distinct()
+            )
+        )
+
     async def add(
         self, *, user_id: UUID, organization_id: UUID, role: str, created_by: UUID | None
     ) -> bool:
@@ -193,6 +298,22 @@ class BatchRepository:
 
     async def get(self, batch_id: UUID) -> Batch | None:
         return await self.session.get(Batch, batch_id)
+
+    async def get_many(self, ids: Sequence[UUID]) -> list[Batch]:
+        if not ids:
+            return []
+        return list(await self.session.scalars(select(Batch).where(Batch.id.in_(ids))))
+
+    async def member_counts(self, batch_ids: Sequence[UUID]) -> dict[UUID, int]:
+        counts: dict[UUID, int] = dict.fromkeys(batch_ids, 0)
+        if batch_ids:
+            rows = await self.session.execute(
+                select(BatchMember.batch_id, func.count())
+                .where(BatchMember.batch_id.in_(batch_ids))
+                .group_by(BatchMember.batch_id)
+            )
+            counts.update({batch_id: int(n) for batch_id, n in rows})
+        return counts
 
     async def list_page(
         self, organization_id: UUID, params: CursorParams, *, status: str | None = None
@@ -295,6 +416,47 @@ class BatchMemberRepository:
             stmt = stmt.where(BatchMember.user_id > after)
         return list(await self.session.scalars(stmt.order_by(BatchMember.user_id).limit(limit)))
 
+    async def list_page(
+        self, batch_id: UUID, params: CursorParams
+    ) -> tuple[list[BatchMember], str | None]:
+        stmt = select(BatchMember).where(BatchMember.batch_id == batch_id)
+        return await paginate_by_id(self.session, stmt, BatchMember.id, params)
+
+    async def student_ids(
+        self, batch_id: UUID, *, after: UUID | None = None, limit: int = 500
+    ) -> list[UUID]:
+        """Keyset page of batch members who hold the student role in the batch's org."""
+        stmt = (
+            select(BatchMember.user_id)
+            .join(
+                Membership,
+                (Membership.user_id == BatchMember.user_id)
+                & (Membership.organization_id == BatchMember.organization_id)
+                & (Membership.role == "student"),
+            )
+            .where(BatchMember.batch_id == batch_id)
+        )
+        if after is not None:
+            stmt = stmt.where(BatchMember.user_id > after)
+        return list(await self.session.scalars(stmt.order_by(BatchMember.user_id).limit(limit)))
+
+    async def batch_ids_for_users(
+        self, organization_id: UUID, user_ids: Sequence[UUID]
+    ) -> dict[UUID, list[UUID]]:
+        result: dict[UUID, list[UUID]] = {uid: [] for uid in user_ids}
+        if user_ids:
+            rows = await self.session.execute(
+                select(BatchMember.user_id, BatchMember.batch_id)
+                .where(
+                    BatchMember.organization_id == organization_id,
+                    BatchMember.user_id.in_(user_ids),
+                )
+                .order_by(BatchMember.batch_id)
+            )
+            for user_id, batch_id in rows:
+                result[user_id].append(batch_id)
+        return result
+
     async def batch_ids_for_user(self, organization_id: UUID, user_id: UUID) -> list[UUID]:
         return list(
             await self.session.scalars(
@@ -327,6 +489,25 @@ class InvitationRepository:
         if status is not None:
             stmt = stmt.where(Invitation.status == status)
         return await paginate_by_id(self.session, stmt, Invitation.id, params)
+
+    async def find_pending(self, organization_id: UUID, email: str) -> Invitation | None:
+        return await self.session.scalar(
+            select(Invitation).where(
+                Invitation.organization_id == organization_id,
+                func.lower(Invitation.email) == email.lower(),
+                Invitation.status == "pending",
+            )
+        )
+
+    async def expired_pending(self, now: datetime, limit: int = 500) -> list[Invitation]:
+        return list(
+            await self.session.scalars(
+                select(Invitation)
+                .where(Invitation.status == "pending", Invitation.expires_at < now)
+                .order_by(Invitation.id)
+                .limit(limit)
+            )
+        )
 
     async def create(
         self,

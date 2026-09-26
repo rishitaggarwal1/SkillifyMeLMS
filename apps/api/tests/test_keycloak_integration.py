@@ -6,19 +6,24 @@ http://keycloak:<KEYCLOAK_PORT>. Keycloak pins the issuer with KC_HOSTNAME, and 
 the issuer in real tokens ever diverges from the one the API expects (Settings.oidc_issuer).
 """
 
+import asyncio
+import os
 from collections.abc import AsyncIterator
+from pathlib import Path
 from typing import Any
 
 import httpx
 import jwt
 import pytest
 from asgi_lifespan import LifespanManager
+from dotenv import dotenv_values
 from httpx import ASGITransport, AsyncClient
+from uuid_utils.compat import uuid7
 
 from app.core.auth.jwt import InvalidTokenError, JwtValidator
 from app.core.config import Settings
 from app.main import create_app, create_jwt_validator
-from app.modules.identity.keycloak_admin import KeycloakAdmin
+from app.modules.identity.keycloak_admin import KeycloakAdmin, NewUser
 
 PASSWORD = "Local-Dev-Only-1"  # dev-realm test users only
 TEST_CLIENT = "skillifyme-test"
@@ -127,3 +132,36 @@ async def test_admin_service_account_can_look_up_users(settings: Settings) -> No
     assert user is not None
     assert user["email"] == "cse.student@demo-college.local"
     assert missing is None
+
+
+def _mailpit_url() -> str:
+    port = os.environ.get("MAILPIT_UI_PORT") or dotenv_values(
+        Path(__file__).resolve().parents[3] / ".env"
+    ).get("MAILPIT_UI_PORT")
+    assert port, "MAILPIT_UI_PORT must be set"
+    return f"http://localhost:{port}"
+
+
+async def test_bulk_create_and_setup_email(settings: Settings) -> None:
+    emails = [f"kc-it-{uuid7().hex[-10:]}@college.test" for _ in range(2)]
+    async with httpx.AsyncClient() as http:
+        admin = KeycloakAdmin(http, settings)
+        created = await admin.ensure_users([NewUser(e, "Integration Test") for e in emails])
+        again = await admin.ensure_users([NewUser(e, "Integration Test") for e in emails])
+        try:
+            await admin.send_setup_email(created[emails[0]])
+            async with asyncio.timeout(15):
+                while True:
+                    found = await http.get(
+                        f"{_mailpit_url()}/api/v1/search", params={"query": f"to:{emails[0]}"}
+                    )
+                    if found.json().get("messages_count", 0) > 0:
+                        break
+                    await asyncio.sleep(0.5)
+        finally:
+            headers = await admin._auth_header()
+            for kc_id in created.values():
+                await http.delete(f"{admin.base}/users/{kc_id}", headers=headers)
+
+    assert set(created) == set(emails)
+    assert again == created  # partialImport skips existing users; ids resolve the same

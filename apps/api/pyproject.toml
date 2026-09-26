@@ -7,7 +7,9 @@ dependencies = [
     "aiokafka>=0.14.0",
     "alembic>=1.20.0",
     "asyncpg>=0.31.0",
+    "boto3>=1.43.103",
     "celery>=5.6.3",
+    "email-validator>=2.3.0",
     "fastapi>=0.141.1",
     "httpx>=0.28.1",
     "opentelemetry-api>=1.45.0",
@@ -19,6 +21,7 @@ dependencies = [
     "pydantic>=2.13.5",
     "pydantic-settings>=2.15.0",
     "pyjwt[crypto]>=2.15.0",
+    "python-multipart>=0.0.32",
     "redis[hiredis]>=8.1.0",
     "sqlalchemy[asyncio]>=2.1.1",
     "structlog>=26.1.0",
@@ -31,11 +34,14 @@ dev = [
     "asgi-lifespan>=2.1.0",
     "celery-types>=0.26.0",
     "httpx>=0.28.1",
+    "jsonschema>=4.26.0",
     "mypy>=2.3.1",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "respx>=0.23.1",
     "ruff>=0.16.9",
+    "types-boto3[s3]>=1.43.103",
+    "types-jsonschema>=4.26.0.20260518",
 ]
 
 [tool.ruff]
@@ -54,8 +60,9 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 # Tests build SQL from constant table names (S608) to exercise RLS directly.
-"**/tests/**" = ["S101", "PLR2004", "S105", "S106", "S608"]
-"tests/**" = ["S101", "PLR2004", "S105", "S106", "S608"]
+# ...and take many pytest fixtures as positional parameters (PLR0917).
+"**/tests/**" = ["S101", "PLR2004", "S105", "S106", "S608", "PLR0917"]
+"tests/**" = ["S101", "PLR2004", "S105", "S106", "S608", "PLR0917"]
 # DDL cannot use bind params (identifiers are constants); schema migrations are long by nature.
 "migrations/**" = ["ERA001", "S608", "PLR0915"]
 

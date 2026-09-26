@@ -41,7 +41,8 @@
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
       "redirectUris": [
-        "${WEB_ORIGIN}/auth/callback"
+        "${WEB_ORIGIN}/auth/callback",
+        "${WEB_ORIGIN}/"
       ],
       "webOrigins": [
         "${WEB_ORIGIN}"
@@ -154,7 +155,8 @@
       ],
       "realmRoles": [
         "platform_admin"
-      ]
+      ],
+      "id": "076110f8-d2c4-5a37-9b44-6e3e81b8595d"
     },
     {
       "username": "content.admin@skillifyme.local",
@@ -169,7 +171,8 @@
           "value": "Local-Dev-Only-1",
           "temporary": false
         }
-      ]
+      ],
+      "id": "2a714448-6f4b-567e-b302-9b4a37845b0c"
     },
     {
       "username": "author@skillifyme.local",
@@ -184,7 +187,8 @@
           "value": "Local-Dev-Only-1",
           "temporary": false
         }
-      ]
+      ],
+      "id": "316926c5-826d-54a1-b1a6-fa83eec38f8d"
     },
     {
       "username": "lab.author@skillifyme.local",
@@ -199,7 +203,8 @@
           "value": "Local-Dev-Only-1",
           "temporary": false
         }
-      ]
+      ],
+      "id": "f0e2026b-c02b-537f-bef1-0b0cd2b4c56d"
     },
     {
       "username": "multi@skillifyme.local",
@@ -214,7 +219,8 @@
           "value": "Local-Dev-Only-1",
           "temporary": false
         }
-      ]
+      ],
+      "id": "93f38411-b57c-5898-9a56-99ad1036b6e8"
     },
     {
       "username": "admin@demo-college.local",
@@ -229,7 +235,8 @@
           "value": "Local-Dev-Only-1",
           "temporary": false
         }
-      ]
+      ],
+      "id": "be6d9a67-1814-5e09-894c-1e79471f582e"
     },
     {
       "username": "instructor@demo-college.local",
@@ -244,7 +251,8 @@
           "value": "Local-Dev-Only-1",
           "temporary": false
         }
-      ]
+      ],
+      "id": "155a4b21-6da0-5d19-9d29-0cb789e44d0b"
     },
     {
       "username": "cse.student@demo-college.local",
@@ -259,7 +267,8 @@
           "value": "Local-Dev-Only-1",
           "temporary": false
         }
-      ]
+      ],
+      "id": "b764f807-b6eb-57be-8b45-54a2692eef4a"
     },
     {
       "username": "ece.student@demo-college.local",
@@ -274,7 +283,8 @@
           "value": "Local-Dev-Only-1",
           "temporary": false
         }
-      ]
+      ],
+      "id": "6b17609c-1d89-5228-90c4-baaa877f8b7e"
     },
     {
       "username": "admin@other-college.local",
@@ -289,7 +299,8 @@
           "value": "Local-Dev-Only-1",
           "temporary": false
         }
-      ]
+      ],
+      "id": "eb7a99b2-6dc8-58a2-8236-a7b753d1cd5f"
     },
     {
       "username": "instructor@other-college.local",
@@ -304,7 +315,8 @@
           "value": "Local-Dev-Only-1",
           "temporary": false
         }
-      ]
+      ],
+      "id": "0d21026b-ddc8-56c9-9821-e89a85ead329"
     },
     {
       "username": "student@other-college.local",
@@ -319,7 +331,8 @@
           "value": "Local-Dev-Only-1",
           "temporary": false
         }
-      ]
+      ],
+      "id": "03fda0ce-9c6f-5944-91c9-f9af906677a0"
     },
     {
       "username": "service-account-skillifyme-admin",

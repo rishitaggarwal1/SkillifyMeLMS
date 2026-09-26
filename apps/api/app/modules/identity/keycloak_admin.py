@@ -2,8 +2,11 @@
 (realm-management: manage-users / view-users / query-users). Used for seeding, invitations and CSV
 imports. Talks to Keycloak over the backchannel (KEYCLOAK_INTERNAL_URL)."""
 
+import asyncio
 import time
-from typing import Any
+from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import Any, Protocol
 
 import httpx
 
@@ -14,7 +17,37 @@ class KeycloakAdminError(Exception):
     pass
 
 
+@dataclass(frozen=True, slots=True)
+class NewUser:
+    email: str
+    full_name: str
+
+
+class IdentityProviderAdmin(Protocol):
+    """What the identity service needs from Keycloak (a fake implements it in tests)."""
+
+    async def find_user_by_email(self, email: str) -> dict[str, Any] | None: ...
+
+    async def ensure_users(self, users: Sequence[NewUser]) -> dict[str, str]:
+        """Create missing users (existing ones are left alone); returns lowercased email -> id."""
+        ...
+
+    async def send_setup_email(self, keycloak_id: str) -> None:
+        """Ask Keycloak to email a link to verify the address and set a password."""
+        ...
+
+
+def _split_name(full_name: str) -> tuple[str, str]:
+    first, _, last = full_name.strip().partition(" ")
+    return first or full_name, last
+
+
 class KeycloakAdmin:
+    # Invitation links stay valid for 7 days.
+    SETUP_EMAIL_LIFESPAN_SECONDS = 7 * 24 * 3600
+    # Parallel user creations per call: keeps imports fast without flooding Keycloak.
+    CREATE_CONCURRENCY = 8
+
     def __init__(self, http: httpx.AsyncClient, settings: Settings) -> None:
         if settings.kc_admin_client_secret is None:
             msg = "KC_ADMIN_CLIENT_SECRET is not configured"
@@ -24,6 +57,8 @@ class KeycloakAdmin:
         self.token_url = settings.oidc_token_url
         self.client_id = settings.kc_admin_client_id
         self.client_secret = settings.kc_admin_client_secret.get_secret_value()
+        self.web_client_id = "skillifyme-web"
+        self.redirect_uri = f"{settings.web_origin}/" if settings.web_origin else None
         self._token: str | None = None
         self._token_expires_at = 0.0
 
@@ -63,3 +98,54 @@ class KeycloakAdmin:
     async def find_user_by_email(self, email: str) -> dict[str, Any] | None:
         users = await self._get("/users", {"email": email, "exact": "true"})
         return users[0] if users else None
+
+    async def ensure_users(self, users: Sequence[NewUser]) -> dict[str, str]:
+        """Create missing users (existing ones are left untouched) and resolve every email to its
+        Keycloak id. Uses POST /users per user, which needs only `manage-users` (the bulk
+        partialImport endpoint would require realm-admin rights), with bounded concurrency."""
+        semaphore = asyncio.Semaphore(self.CREATE_CONCURRENCY)
+        headers = await self._auth_header()
+
+        async def ensure(user: NewUser) -> tuple[str, str]:
+            email = user.email.lower()
+            first, last = _split_name(user.full_name)
+            async with semaphore:
+                response = await self.http.post(
+                    f"{self.base}/users",
+                    json={
+                        "username": email,
+                        "email": email,
+                        "firstName": first,
+                        "lastName": last,
+                        "enabled": True,
+                        "emailVerified": False,
+                    },
+                    headers=headers,
+                    timeout=15.0,
+                )
+                if response.status_code == httpx.codes.CREATED:
+                    return email, response.headers["Location"].rstrip("/").rsplit("/", 1)[-1]
+                if response.status_code == httpx.codes.CONFLICT:
+                    found = await self.find_user_by_email(email)
+                    if found is not None:
+                        return email, str(found["id"])
+                msg = f"Could not create or find {email} ({response.status_code})"
+                raise KeycloakAdminError(msg)
+
+        unique = list({u.email.lower(): u for u in users}.values())
+        return dict(await asyncio.gather(*(ensure(u) for u in unique)))
+
+    async def send_setup_email(self, keycloak_id: str) -> None:
+        params = {"lifespan": str(self.SETUP_EMAIL_LIFESPAN_SECONDS)}
+        if self.redirect_uri:
+            params |= {"client_id": self.web_client_id, "redirect_uri": self.redirect_uri}
+        response = await self.http.put(
+            f"{self.base}/users/{keycloak_id}/execute-actions-email",
+            params=params,
+            json=["VERIFY_EMAIL", "UPDATE_PASSWORD"],
+            headers=await self._auth_header(),
+            timeout=15.0,
+        )
+        if response.status_code not in (httpx.codes.OK, httpx.codes.NO_CONTENT):
+            msg = f"execute-actions-email failed ({response.status_code}): {response.text[:200]}"
+            raise KeycloakAdminError(msg)

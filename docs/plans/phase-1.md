@@ -176,3 +176,18 @@ Every table gets separate policies for SELECT, INSERT, UPDATE and DELETE.
 - CSV import tests cover valid, duplicate and malformed rows.
 - A Playwright test: the org admin logs in, creates a batch, and imports 50 students.
 - Everything is pushed to `main`.
+
+## Implementation notes (deviations from the plan above)
+
+- **Keycloak user creation (step 3):** invitations and imports create accounts with `POST /users`
+  (8 in parallel) instead of `partialImport`. The bulk endpoint needs realm-admin rights; the
+  per-user endpoint needs only `manage-users`, so the service account stays least-privileged.
+- **`app.ensure_users()` (migration 0003):** org admins can't see users outside their org under
+  RLS, so a `SECURITY DEFINER` function finds or creates users by Keycloak id for invites and
+  imports. It checks that the caller is an org admin (or platform admin) itself.
+- **Invitations are accepted automatically** on the user's first login, inside `provision_user`.
+  Revoking or expiring a pending invitation withdraws the access it granted.
+- **Dev Keycloak keeps no data.** Dev-realm user ids are pinned in the realm file, so they survive
+  re-imports, and the seed reconciles ids by email.
+- **Email validation** allows the `.local` and `.test` domains outside production only (dev realm
+  and test data).

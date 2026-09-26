@@ -13,7 +13,7 @@ import sys
 from dataclasses import dataclass, field
 
 import httpx
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -115,6 +115,13 @@ async def _upsert_batch(session: AsyncSession, org: Organization, name: str) -> 
 async def _upsert_user(session: AsyncSession, kc_user: dict[str, object]) -> User:
     sub, email = str(kc_user["id"]), str(kc_user["email"])
     full_name = " ".join(str(kc_user.get(k) or "") for k in ("firstName", "lastName")).strip()
+    # Dev reconciliation: if this dev user exists under an older Keycloak id (e.g. seeded before
+    # ids were pinned in the realm file), point the row at the current id.
+    await session.execute(
+        update(User)
+        .where(func.lower(User.email) == email.lower(), User.keycloak_sub != sub)
+        .values(keycloak_sub=sub)
+    )
     await session.execute(
         pg_insert(User)
         .values(id=new_id(), keycloak_sub=sub, email=email, full_name=full_name, status="active")

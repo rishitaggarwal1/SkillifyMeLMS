@@ -106,6 +106,14 @@ def require_role(principal: Principal, *roles: OrgRole) -> UUID:
     return org
 
 
+def require_org_permission(principal: Principal, permission: Permission) -> UUID:
+    """Require an org-scoped permission; returns the active organization id."""
+    org = require_org(principal)
+    if permission not in principal.permissions:
+        raise PermissionDeniedError(details={"required_permission": permission.value})
+    return org
+
+
 def require_permission(principal: Principal, permission: Permission) -> UUID | None:
     """Require a permission. Org-scoped permissions also require an active org (returned).
 

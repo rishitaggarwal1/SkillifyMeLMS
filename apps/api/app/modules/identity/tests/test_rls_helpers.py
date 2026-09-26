@@ -23,6 +23,7 @@ HELPERS = {
     "app.user_is_member_of(uuid,uuid)": True,
     "app.user_visible_to_current_user(uuid)": True,
     "app.provision_user(uuid,text,text,text)": True,
+    "app.ensure_users(uuid[],text[],text[],text[])": True,
 }
 
 
