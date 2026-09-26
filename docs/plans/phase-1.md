@@ -29,7 +29,9 @@ This phase also delivers everything in the "Prerequisites from Phase 1" section 
   - rejects state-changing requests (POST, PATCH, DELETE) whose `Origin` isn't our own site (CSRF
     protection)
 - **Keycloak URLs:**
-  - The browser sees the issuer at `localhost:8080`; containers reach Keycloak at `keycloak:8080`.
+  - Keycloak listens on `KEYCLOAK_PORT` (default 8080) inside and outside Docker. The browser
+    sees the issuer at `localhost:<port>`, pinned by `KC_HOSTNAME`; containers reach Keycloak at
+    `keycloak:<port>`.
   - The BFF and the API therefore get both URLs, configured explicitly rather than by discovery.
 - **JWT validation in the API:**
   - The signature is checked against Keycloak's public keys (JWKS), cached with a TTL.

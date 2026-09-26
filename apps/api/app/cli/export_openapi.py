@@ -23,6 +23,7 @@ def main() -> None:
         database_url=placeholder,
         migration_database_url=placeholder,
         redis_url=SecretStr("redis://localhost:6379/0"),
+        keycloak_port=1,
         _env_file=None,
     )
     spec = create_app(settings).openapi()

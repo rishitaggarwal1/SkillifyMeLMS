@@ -4,6 +4,27 @@
  */
 
 export interface paths {
+  "/api/v1/me": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Me
+     * @description The signed-in user, their organizations and roles (for the org switcher), and the active
+     *     organization's permissions.
+     */
+    get: operations["get_me"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/health/live": {
     parameters: {
       query?: never;
@@ -54,6 +75,19 @@ export interface components {
        */
       status: "ok" | "error";
     };
+    /** ErrorBody */
+    ErrorBody: {
+      /** Code */
+      code: string;
+      /** Details */
+      details?: unknown;
+      /** Message */
+      message: string;
+    };
+    /** ErrorResponse */
+    ErrorResponse: {
+      error: components["schemas"]["ErrorBody"];
+    };
     /** LivenessResponse */
     LivenessResponse: {
       /**
@@ -61,6 +95,57 @@ export interface components {
        * @constant
        */
       status: "ok";
+    };
+    /** MeResponse */
+    MeResponse: {
+      /** Active Organization Id */
+      active_organization_id: string | null;
+      /** Active Roles */
+      active_roles: components["schemas"]["OrgRole"][];
+      /** Is Platform Admin */
+      is_platform_admin: boolean;
+      /** Memberships */
+      memberships: components["schemas"]["MembershipOut"][];
+      /** Permissions */
+      permissions: string[];
+      user: components["schemas"]["MeUser"];
+    };
+    /** MeUser */
+    MeUser: {
+      /** Email */
+      email: string;
+      /** Full Name */
+      full_name: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+    };
+    /** MembershipOut */
+    MembershipOut: {
+      organization: components["schemas"]["OrganizationSummary"];
+      /** Roles */
+      roles: components["schemas"]["OrgRole"][];
+    };
+    /**
+     * OrgRole
+     * @enum {string}
+     */
+    OrgRole: "org_admin" | "instructor" | "lab_author" | "student";
+    /** OrganizationSummary */
+    OrganizationSummary: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Is Content Publisher */
+      is_content_publisher: boolean;
+      /** Name */
+      name: string;
+      /** Slug */
+      slug: string;
     };
     /** ReadinessResponse */
     ReadinessResponse: {
@@ -83,6 +168,47 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  get_me: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MeResponse"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
   health_live: {
     parameters: {
       query?: never;

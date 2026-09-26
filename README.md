@@ -36,7 +36,7 @@ make dev       # builds and starts the whole stack; returns once everything is h
 | Web               | http://localhost:3000                 |
 | API docs          | http://localhost:8000/docs            |
 | API readiness     | http://localhost:8000/health/ready    |
-| Keycloak          | http://localhost:8080 (realm `skillifyme`) |
+| Keycloak          | http://localhost:$KEYCLOAK_PORT (realm `skillifyme`) |
 | MinIO console     | http://localhost:9001                 |
 | Redpanda console  | http://localhost:8082                 |
 | Mailpit           | http://localhost:8025                 |
@@ -45,14 +45,23 @@ Credentials for all of these are in your local `.env`, which is created from `.e
 
 ### Dev realm test users (local only)
 
-All four use the password `Local-Dev-Only-1`:
+`make dev` runs the `seed` job (`make seed` to run it again). It creates three orgs and the users
+below. All of them use the password `Local-Dev-Only-1`.
 
-| User                          | Realm role    |
-| ----------------------------- | ------------- |
-| superadmin@skillifyme.local   | super_admin   |
-| orgadmin@skillifyme.local     | org_admin     |
-| instructor@skillifyme.local   | instructor    |
-| student@skillifyme.local      | student       |
+| User                              | Organization and role                        |
+| --------------------------------- | -------------------------------------------- |
+| platform.admin@skillifyme.local   | platform admin (Keycloak realm role)         |
+| content.admin@skillifyme.local    | SkillifyMe (content publisher): org_admin    |
+| author@skillifyme.local           | SkillifyMe: instructor                       |
+| lab.author@skillifyme.local       | SkillifyMe: lab_author                       |
+| multi@skillifyme.local            | SkillifyMe and Demo College: instructor      |
+| admin@demo-college.local          | Demo College: org_admin                      |
+| instructor@demo-college.local     | Demo College: instructor                     |
+| cse.student@demo-college.local    | Demo College: student, batch CSE 2026        |
+| ece.student@demo-college.local    | Demo College: student, batch ECE 2026        |
+| admin@other-college.local         | Other College: org_admin                     |
+| instructor@other-college.local    | Other College: instructor                    |
+| student@other-college.local       | Other College: student, batch MECH 2026      |
 
 ## Everyday commands
 
@@ -80,5 +89,10 @@ make clean           # stop and wipe local data volumes
 - **Background services.** `worker` runs Celery tasks, and `beat` runs the Celery scheduler (keep
   only one instance). `outbox-relay` publishes outbox events to Kafka (Redpanda locally); see
   `docs/events.md`.
-- **Port clash on 8080.** If something else already uses port 8080, set `KEYCLOAK_PORT` (and the
-  port in `OIDC_ISSUER`) in your `.env`.
+- **Ports are configuration.** Every port is set in `.env` (see `.env.example`). If the default
+  Keycloak port is taken, change `KEYCLOAK_PORT` (e.g. to 8180). Everything else follows from it:
+  - the token issuer, `http://localhost:$KEYCLOAK_PORT/realms/skillifyme`, pinned via `KC_HOSTNAME`
+    so it's the same whichever host fetched the token
+  - the API's JWKS URL
+  - the dev realm's redirect URIs
+  `apps/api/tests/test_config_ports.py` fails if a port gets hardcoded.

@@ -28,7 +28,7 @@ jobs:
         # Same images and config as local dev; .env.example holds CI/local-only placeholders.
         run: |
           cp .env.example .env
-          docker compose up -d --wait postgres redis redpanda
+          docker compose up -d --wait postgres redis redpanda keycloak
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.12.19"
@@ -106,7 +106,7 @@ jobs:
       - name: Start backing services
         run: |
           cp .env.example .env
-          docker compose up -d --wait postgres redis redpanda
+          docker compose up -d --wait postgres redis redpanda keycloak
       - name: Prepare database
         working-directory: apps/api
         run: |

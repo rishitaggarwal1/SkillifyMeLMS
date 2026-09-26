@@ -12,6 +12,7 @@ import asyncio
 from collections.abc import AsyncIterator, Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from pathlib import Path
+from typing import Any
 from uuid import UUID
 
 import pytest
@@ -29,11 +30,15 @@ from app.core.config import Settings
 from app.db.rls import APP_ROLE, RELAY_ROLE
 from app.db.tenancy import set_tenant_context
 from app.main import create_app
+from app.modules.identity.models import User
+from tests.auth import SigningKey, StaticJwksSource, TokenFactory, make_validator
 from tests.factories import Factory
 
 API_ROOT = Path(__file__).resolve().parents[1]
 
 TenantSessionFactory = Callable[..., AbstractAsyncContextManager[AsyncSession]]
+AuthHeaders = Callable[..., dict[str, str]]
+TEST_REDIS_DB = 15
 
 
 def _with_database(url: SecretStr, database: str) -> SecretStr:
@@ -55,10 +60,13 @@ def alembic_config(database_url: str) -> Config:
 def settings() -> Settings:
     base = Settings()
     test_db = f"{make_url(base.database_url.get_secret_value()).database}_test"
+    redis_url = make_url(base.redis_url.get_secret_value()).set(database=str(TEST_REDIS_DB))
     update: dict[str, object] = {
         "environment": "test",
         "database_url": _with_database(base.database_url, test_db),
         "migration_database_url": _with_database(base.migration_database_url, test_db),
+        # A separate Redis DB so cached principals / rate-limit counters never mix with dev data.
+        "redis_url": SecretStr(redis_url.render_as_string(hide_password=False)),
     }
     if base.relay_database_url is not None:
         update["relay_database_url"] = _with_database(base.relay_database_url, test_db)
@@ -99,10 +107,48 @@ def migrated_database(settings: Settings) -> None:
 
 
 @pytest.fixture(scope="session")
-async def app(settings: Settings, migrated_database: None) -> AsyncIterator[FastAPI]:
+def signing_key() -> SigningKey:
+    return SigningKey(kid="test-key-1")
+
+
+@pytest.fixture(scope="session")
+def token_factory(settings: Settings, signing_key: SigningKey) -> TokenFactory:
+    return TokenFactory(key=signing_key, issuer=settings.oidc_issuer)
+
+
+@pytest.fixture(scope="session")
+async def app(
+    settings: Settings, migrated_database: None, signing_key: SigningKey
+) -> AsyncIterator[FastAPI]:
+    """The API with a JWT validator trusting the test signing key (same issuer/audience rules as
+    production). Tests against real Keycloak build their own app/validator."""
     application = create_app(settings)
     async with LifespanManager(application):
+        await application.state.redis.flushdb()
+        application.state.jwt_validator = make_validator(settings, StaticJwksSource(signing_key))
         yield application
+
+
+@pytest.fixture
+def auth_headers(token_factory: TokenFactory) -> AuthHeaders:
+    """Headers for a request as `user` (optionally in `org`, optionally as platform admin)."""
+
+    def _headers(
+        user: User, *, org: UUID | None = None, platform_admin: bool = False, **claims: Any
+    ) -> dict[str, str]:
+        token = token_factory.token(
+            sub=user.keycloak_sub,
+            email=user.email,
+            name=user.full_name,
+            realm_access={"roles": ["platform_admin"] if platform_admin else []},
+            **claims,
+        )
+        headers = {"Authorization": f"Bearer {token}"}
+        if org is not None:
+            headers["X-Organization-Id"] = str(org)
+        return headers
+
+    return _headers
 
 
 @pytest.fixture

@@ -48,8 +48,61 @@ class Settings(BaseSettings):
 
     health_check_timeout_seconds: float = Field(default=2.0, gt=0)
 
+    # ---- Keycloak / OIDC: every URL derives from KEYCLOAK_PORT and KEYCLOAK_REALM unless set.
+    # Required: comes from KEYCLOAK_PORT (see .env.example).
+    keycloak_port: int = Field(ge=1, le=65535)
+    keycloak_realm: str = "skillifyme"
+    # Browser-facing base URL. Keycloak pins its issuer to this (KC_HOSTNAME), so every token
+    # carries iss=<public url>/realms/<realm>, no matter which host requested it.
+    keycloak_public_url: str | None = None
+    # Where this process reaches Keycloak (JWKS, admin API). In docker: http://keycloak:<port>.
+    keycloak_internal_url: str | None = None
+    kc_admin_client_id: str = "skillifyme-admin"
+    kc_admin_client_secret: SecretStr | None = None
+    # Dev realm only: the password-grant client used by automated tests (never set in production).
+    kc_test_client_secret: SecretStr | None = None
+    oidc_audience: str = "skillifyme-api"
+    # Clients (`azp`) whose access tokens are accepted.
+    oidc_allowed_clients: list[str] = Field(default_factory=lambda: ["skillifyme-web"])
+    jwt_leeway_seconds: int = Field(default=30, ge=0, le=300)
+    jwks_cache_ttl_seconds: int = Field(default=600, ge=10)
+    # Minimum gap between refetches triggered by an unknown `kid` (key rotation / junk tokens).
+    jwks_refetch_cooldown_seconds: float = Field(default=30.0, ge=0)
+    principal_cache_ttl_seconds: int = Field(default=60, ge=0)
+
     # OpenTelemetry is disabled unless an OTLP endpoint is configured.
     otel_exporter_otlp_endpoint: str | None = None
+
+    @property
+    def keycloak_base_url(self) -> str:
+        return (self.keycloak_public_url or f"http://localhost:{self.keycloak_port}").rstrip("/")
+
+    @property
+    def keycloak_backchannel_url(self) -> str:
+        return (self.keycloak_internal_url or self.keycloak_base_url).rstrip("/")
+
+    @property
+    def oidc_issuer(self) -> str:
+        return f"{self.keycloak_base_url}/realms/{self.keycloak_realm}"
+
+    @property
+    def oidc_jwks_url(self) -> str:
+        return (
+            f"{self.keycloak_backchannel_url}/realms/{self.keycloak_realm}"
+            "/protocol/openid-connect/certs"
+        )
+
+    @property
+    def oidc_token_url(self) -> str:
+        """Token endpoint over the backchannel (service-account logins)."""
+        return (
+            f"{self.keycloak_backchannel_url}/realms/{self.keycloak_realm}"
+            "/protocol/openid-connect/token"
+        )
+
+    @property
+    def keycloak_admin_api_url(self) -> str:
+        return f"{self.keycloak_backchannel_url}/admin/realms/{self.keycloak_realm}"
 
     @property
     def celery_broker(self) -> str:

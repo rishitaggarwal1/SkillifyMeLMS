@@ -31,6 +31,7 @@ class AppError(Exception):
     status_code: int = HTTPStatus.BAD_REQUEST
     code: str = "bad_request"
     message: str = "The request could not be processed."
+    headers: Mapping[str, str] | None = None
 
     def __init__(
         self,
@@ -38,10 +39,13 @@ class AppError(Exception):
         *,
         code: str | None = None,
         details: Any = None,
+        headers: Mapping[str, str] | None = None,
     ) -> None:
         self.message = message or self.message
         self.code = code or self.code
         self.details = details
+        if headers is not None:
+            self.headers = headers
         super().__init__(self.message)
 
 
@@ -61,12 +65,19 @@ class AuthenticationError(AppError):
     status_code = HTTPStatus.UNAUTHORIZED
     code = "unauthenticated"
     message = "Authentication is required."
+    headers = {"WWW-Authenticate": "Bearer"}  # noqa: RUF012 - read-only class default
 
 
 class PermissionDeniedError(AppError):
     status_code = HTTPStatus.FORBIDDEN
     code = "permission_denied"
     message = "You do not have permission to perform this action."
+
+
+class RateLimitedError(AppError):
+    status_code = HTTPStatus.TOO_MANY_REQUESTS
+    code = "rate_limited"
+    message = "Too many requests. Try again later."
 
 
 class InvalidCursorError(AppError):
@@ -112,7 +123,9 @@ def _json_error(
 
 async def _app_error_handler(_request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, AppError)  # noqa: S101 - narrowing for the type checker
-    return _json_error(exc.status_code, exc.code, exc.message, jsonable_encoder(exc.details))
+    return _json_error(
+        exc.status_code, exc.code, exc.message, jsonable_encoder(exc.details), headers=exc.headers
+    )
 
 
 async def _http_error_handler(_request: Request, exc: Exception) -> JSONResponse:

@@ -1,0 +1,337 @@
+{
+  "realm": "${KEYCLOAK_REALM}",
+  "displayName": "SkillifyMe Portal (local dev)",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "verifyEmail": false,
+  "bruteForceProtected": true,
+  "failureFactor": 10,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "smtpServer": {
+    "host": "mailpit",
+    "port": "1025",
+    "from": "no-reply@skillifyme.local",
+    "fromDisplayName": "SkillifyMe (local)"
+  },
+  "roles": {
+    "realm": [
+      {
+        "name": "platform_admin",
+        "description": "SkillifyMe operator: manages all organizations. Org roles live in the app DB."
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "skillifyme-web",
+      "name": "SkillifyMe Web (BFF)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${KC_WEB_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "${WEB_ORIGIN}/auth/callback"
+      ],
+      "webOrigins": [
+        "${WEB_ORIGIN}"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "${WEB_ORIGIN}/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "skillifyme-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "skillifyme-api",
+      "name": "SkillifyMe API (resource server)",
+      "enabled": true,
+      "bearerOnly": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    },
+    {
+      "clientId": "skillifyme-admin",
+      "name": "SkillifyMe API admin service account (invites, imports)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${KC_ADMIN_CLIENT_SECRET}",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true
+    },
+    {
+      "clientId": "skillifyme-test",
+      "name": "Automated tests (dev only)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${KC_TEST_CLIENT_SECRET}",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocolMappers": [
+        {
+          "name": "api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "skillifyme-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "authenticationFlows": [
+    {
+      "alias": "first broker login - auto link",
+      "description": "Create the user if unique, otherwise link to the existing account by email",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "idp-create-user-if-unique",
+          "requirement": "ALTERNATIVE",
+          "priority": 10,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "idp-auto-link",
+          "requirement": "ALTERNATIVE",
+          "priority": 20,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "platform.admin@skillifyme.local",
+      "email": "platform.admin@skillifyme.local",
+      "firstName": "Priya",
+      "lastName": "Platform",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Local-Dev-Only-1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "platform_admin"
+      ]
+    },
+    {
+      "username": "content.admin@skillifyme.local",
+      "email": "content.admin@skillifyme.local",
+      "firstName": "Kabir",
+      "lastName": "Content",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Local-Dev-Only-1",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "author@skillifyme.local",
+      "email": "author@skillifyme.local",
+      "firstName": "Asha",
+      "lastName": "Author",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Local-Dev-Only-1",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "lab.author@skillifyme.local",
+      "email": "lab.author@skillifyme.local",
+      "firstName": "Lalit",
+      "lastName": "Labs",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Local-Dev-Only-1",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "multi@skillifyme.local",
+      "email": "multi@skillifyme.local",
+      "firstName": "Meera",
+      "lastName": "Multi",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Local-Dev-Only-1",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "admin@demo-college.local",
+      "email": "admin@demo-college.local",
+      "firstName": "Dev",
+      "lastName": "Admin",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Local-Dev-Only-1",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "instructor@demo-college.local",
+      "email": "instructor@demo-college.local",
+      "firstName": "Ira",
+      "lastName": "Instructor",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Local-Dev-Only-1",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "cse.student@demo-college.local",
+      "email": "cse.student@demo-college.local",
+      "firstName": "Chetan",
+      "lastName": "CSE",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Local-Dev-Only-1",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "ece.student@demo-college.local",
+      "email": "ece.student@demo-college.local",
+      "firstName": "Esha",
+      "lastName": "ECE",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Local-Dev-Only-1",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "admin@other-college.local",
+      "email": "admin@other-college.local",
+      "firstName": "Omar",
+      "lastName": "Admin",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Local-Dev-Only-1",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "instructor@other-college.local",
+      "email": "instructor@other-college.local",
+      "firstName": "Oviya",
+      "lastName": "Instructor",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Local-Dev-Only-1",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "student@other-college.local",
+      "email": "student@other-college.local",
+      "firstName": "Sam",
+      "lastName": "Student",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Local-Dev-Only-1",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "service-account-skillifyme-admin",
+      "enabled": true,
+      "serviceAccountClientId": "skillifyme-admin",
+      "clientRoles": {
+        "realm-management": [
+          "manage-users",
+          "view-users",
+          "query-users"
+        ]
+      }
+    }
+  ]
+}

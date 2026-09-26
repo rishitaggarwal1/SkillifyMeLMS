@@ -3,9 +3,11 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import FastAPI
 
 from app.api import health, v1
+from app.core.auth.jwt import HttpJwksSource, JwksCache, JwtValidator
 from app.core.config import Settings, get_settings
 from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging, get_logger
@@ -13,8 +15,24 @@ from app.core.middleware import RequestContextMiddleware
 from app.core.redis import create_redis
 from app.core.telemetry import configure_tracing, instrument_engine
 from app.db.session import create_engine, create_sessionmaker
+from app.modules.identity.keycloak_admin import KeycloakAdmin
 
 logger = get_logger(__name__)
+
+
+def create_jwt_validator(settings: Settings, http: httpx.AsyncClient) -> JwtValidator:
+    jwks = JwksCache(
+        HttpJwksSource(http, settings.oidc_jwks_url),
+        ttl_seconds=settings.jwks_cache_ttl_seconds,
+        refetch_cooldown_seconds=settings.jwks_refetch_cooldown_seconds,
+    )
+    return JwtValidator(
+        jwks,
+        issuer=settings.oidc_issuer,
+        audience=settings.oidc_audience,
+        allowed_clients=frozenset(settings.oidc_allowed_clients),
+        leeway_seconds=settings.jwt_leeway_seconds,
+    )
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -26,13 +44,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         engine = create_engine(settings)
         instrument_engine(engine, settings)
         redis = create_redis(settings)
+        http = httpx.AsyncClient(timeout=10.0)
         app.state.engine = engine
         app.state.sessionmaker = create_sessionmaker(engine)
         app.state.redis = redis
-        logger.info("startup", environment=settings.environment)
+        app.state.http = http
+        app.state.jwt_validator = create_jwt_validator(settings, http)
+        app.state.keycloak_admin = (
+            KeycloakAdmin(http, settings) if settings.kc_admin_client_secret else None
+        )
+        logger.info("startup", environment=settings.environment, oidc_issuer=settings.oidc_issuer)
         try:
             yield
         finally:
+            await http.aclose()
             await redis.aclose()
             await engine.dispose()
             logger.info("shutdown")

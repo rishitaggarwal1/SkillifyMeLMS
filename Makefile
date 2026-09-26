@@ -11,6 +11,9 @@ endif
 .DEFAULT_GOAL := help
 MAKEFLAGS += --no-print-directory
 
+# Ports and other settings come from .env (created from .env.example on first run).
+-include .env
+
 API := apps/api
 WEB := apps/web
 COMPOSE := docker compose
@@ -37,12 +40,12 @@ install: .env ## Install host toolchains (API venv, web deps, Playwright browser
 dev: .env ## Start the full local stack in docker and wait until every service is healthy
 	$(COMPOSE) up -d --build --wait
 	@echo ""
-	@echo "  Web            http://localhost:3000"
-	@echo "  API            http://localhost:8000/docs    (ready: /health/ready)"
-	@echo "  Keycloak       http://localhost:8080         (realm: skillifyme)"
-	@echo "  MinIO console  http://localhost:9001"
-	@echo "  Redpanda       http://localhost:8082"
-	@echo "  Mailpit        http://localhost:8025"
+	@echo "  Web            http://localhost:$(WEB_PORT)"
+	@echo "  API            http://localhost:$(API_PORT)/docs    (ready: /health/ready)"
+	@echo "  Keycloak       http://localhost:$(KEYCLOAK_PORT)    (realm: $(KEYCLOAK_REALM))"
+	@echo "  MinIO console  http://localhost:$(MINIO_CONSOLE_PORT)"
+	@echo "  Redpanda       http://localhost:$(REDPANDA_CONSOLE_PORT)"
+	@echo "  Mailpit        http://localhost:$(MAILPIT_UI_PORT)"
 	@echo ""
 	@echo "  Follow logs with: make logs"
 
@@ -66,6 +69,10 @@ ps: ## Show service status
 .PHONY: migrate
 migrate: .env ## Apply database migrations (alembic upgrade head)
 	$(COMPOSE) run --rm migrate
+
+.PHONY: seed
+seed: .env ## Load dev orgs, batches and memberships for the dev-realm users (idempotent)
+	$(COMPOSE) run --rm seed
 
 .PHONY: migration
 migration: ## Create a migration: make migration m="add courses"

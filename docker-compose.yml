@@ -14,6 +14,14 @@ x-api-env: &api-env
   RELAY_DB_PASSWORD: ${RELAY_DB_PASSWORD:?}
   REDIS_URL: redis://redis:6379/0
   KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
+  # Issuer is derived from KEYCLOAK_PORT (http://localhost:<port>/realms/<realm>); containers fetch
+  # JWKS and call the admin API over the Docker network at KEYCLOAK_INTERNAL_URL.
+  KEYCLOAK_PORT: ${KEYCLOAK_PORT:?}
+  KEYCLOAK_REALM: ${KEYCLOAK_REALM:?}
+  KEYCLOAK_INTERNAL_URL: http://keycloak:${KEYCLOAK_PORT:?}
+  KC_ADMIN_CLIENT_SECRET: ${KC_ADMIN_CLIENT_SECRET:?}
+  OIDC_AUDIENCE: ${OIDC_AUDIENCE:?}
+  OIDC_ALLOWED_CLIENTS: ${OIDC_ALLOWED_CLIENTS:?}
   OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
   # Windows/macOS bind mounts do not deliver inotify events into Linux containers.
   WATCHFILES_FORCE_POLLING: "true"
@@ -110,7 +118,8 @@ services:
       KAFKA_BROKERS: redpanda:9092
       SCHEMAREGISTRY_ENABLED: "true"
       SCHEMAREGISTRY_URLS: http://redpanda:8081
-    ports: ["${REDPANDA_CONSOLE_PORT:-8082}:8080"]
+      SERVER_LISTENPORT: ${REDPANDA_CONSOLE_PORT:?}
+    ports: ["${REDPANDA_CONSOLE_PORT:?}:${REDPANDA_CONSOLE_PORT:?}"]
 
   # ------------------------------------------------------------------------------ auth & mail
   keycloak:
@@ -120,12 +129,22 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:?}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?}
       KC_HEALTH_ENABLED: "true"
-      # Tokens must carry the issuer the browser sees; containers reach Keycloak via the backchannel.
-      KC_HOSTNAME: http://localhost:${KEYCLOAK_PORT:-8080}
+      # Same port inside and outside the container, so one KEYCLOAK_PORT drives every URL.
+      KC_HTTP_PORT: ${KEYCLOAK_PORT:?}
+      # Pin the issuer to the browser-facing URL. Tokens always carry
+      # iss=http://localhost:<port>/realms/<realm>, whichever host fetched them (browser, BFF over
+      # the Docker network, tests via 127.0.0.1). Backchannel calls may use the internal hostname.
+      KC_HOSTNAME: http://localhost:${KEYCLOAK_PORT:?}
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
-    ports: ["${KEYCLOAK_PORT:-8080}:8080"]
+      # Placeholders used by the realm import (infra/local/keycloak/realm/*.json).
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:?}
+      WEB_ORIGIN: http://localhost:${WEB_PORT:?}
+      KC_WEB_CLIENT_SECRET: ${KC_WEB_CLIENT_SECRET:?}
+      KC_ADMIN_CLIENT_SECRET: ${KC_ADMIN_CLIENT_SECRET:?}
+      KC_TEST_CLIENT_SECRET: ${KC_TEST_CLIENT_SECRET:?}
+    ports: ["${KEYCLOAK_PORT:?}:${KEYCLOAK_PORT:?}"]
     volumes:
-      - ./infra/local/keycloak:/opt/keycloak/data/import:ro
+      - ./infra/local/keycloak/realm:/opt/keycloak/data/import:ro
     healthcheck:
       test:
         - CMD-SHELL
@@ -137,6 +156,23 @@ services:
       timeout: 5s
       retries: 30
       start_period: 30s
+
+  keycloak-google:
+    # Adds Google as an identity provider when GOOGLE_CLIENT_ID/SECRET are set; no-op otherwise.
+    image: quay.io/keycloak/keycloak:26.6
+    entrypoint: ["bash", "/scripts/configure-google.sh"]
+    environment:
+      KEYCLOAK_URL: http://keycloak:${KEYCLOAK_PORT:?}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:?}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:?}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+    volumes:
+      - ./infra/local/keycloak/scripts:/scripts:ro
+    depends_on:
+      keycloak: { condition: service_healthy }
+    restart: "no"
 
   mailpit:
     image: axllent/mailpit:v1.29
@@ -161,6 +197,18 @@ services:
       postgres: { condition: service_healthy }
     restart: "no"
 
+  seed:
+    # Idempotent dev data: orgs, batches, and memberships for the dev-realm test users.
+    image: skillifyme-api:dev
+    pull_policy: never
+    environment: *api-env
+    command: ["python", "-m", "app.cli.seed"]
+    volumes: ["./apps/api:/app"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      keycloak-google: { condition: service_completed_successfully }
+    restart: "no"
+
   api:
     # Built once by the migrate service; never pulled from a registry.
     image: skillifyme-api:dev
@@ -170,6 +218,7 @@ services:
     volumes: ["./apps/api:/app"]
     depends_on:
       migrate: { condition: service_completed_successfully }
+      seed: { condition: service_completed_successfully }
       minio-init: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
     healthcheck:
