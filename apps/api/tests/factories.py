@@ -12,6 +12,16 @@ from uuid_utils.compat import uuid7
 
 from app.db.base import new_id
 from app.modules.audit.models import AuditLog
+from app.modules.courses.models import (
+    Course,
+    CourseAssignment,
+    CourseModule,
+    CourseVersion,
+    CourseVersionLesson,
+    Lesson,
+    LessonType,
+)
+from app.modules.enrollments.models import Enrollment
 from app.modules.identity.models import (
     Batch,
     BatchMember,
@@ -22,6 +32,7 @@ from app.modules.identity.models import (
     Organization,
     User,
 )
+from app.modules.media.models import VideoAsset
 
 
 def _suffix() -> str:
@@ -142,3 +153,112 @@ class Factory:
         )
         await self._save(entry)
         return entry.id
+
+    # ------------------------------------------------------------------ courses (Phase 2)
+
+    async def course(self, owner: Organization, *, title: str | None = None) -> "Course":
+        sfx = _suffix()
+        course = Course(
+            id=new_id(), organization_id=owner.id, title=title or f"Course {sfx}", slug=f"c-{sfx}"
+        )
+        await self._save(course)
+        return course
+
+    async def module(self, course: "Course", *, position: int = 1) -> "CourseModule":
+        module = CourseModule(
+            id=new_id(),
+            course_id=course.id,
+            organization_id=course.organization_id,
+            title=f"Module {position}",
+            position=position,
+        )
+        await self._save(module)
+        return module
+
+    async def lesson(
+        self,
+        module: "CourseModule",
+        *,
+        lesson_type: "LessonType | str" = "notes",
+        position: int = 1,
+    ) -> "Lesson":
+        lesson = Lesson(
+            id=new_id(),
+            course_id=module.course_id,
+            module_id=module.id,
+            organization_id=module.organization_id,
+            lesson_type=lesson_type,
+            title=f"Lesson {position}",
+            position=position,
+        )
+        await self._save(lesson)
+        return lesson
+
+    async def version(
+        self, course: "Course", *lessons: "Lesson", major: int = 1, minor: int = 0
+    ) -> "CourseVersion":
+        version = CourseVersion(
+            id=new_id(),
+            course_id=course.id,
+            organization_id=course.organization_id,
+            major=major,
+            minor=minor,
+            release_type="major" if minor == 0 else "minor",
+            title=course.title,
+            snapshot={"lessons": [str(lesson.id) for lesson in lessons]},
+        )
+        await self._save(version)
+        await self._save(
+            *(
+                CourseVersionLesson(
+                    version_id=version.id,
+                    lesson_id=lesson.id,
+                    course_id=course.id,
+                    organization_id=course.organization_id,
+                    module_id=lesson.module_id,
+                    module_position=1,
+                    position=lesson.position,
+                    lesson_type=lesson.lesson_type,
+                    is_required=True,
+                )
+                for lesson in lessons
+            )
+        )
+        return version
+
+    async def assignment(
+        self,
+        course: "Course",
+        org: Organization,
+        *,
+        batch: Batch | None = None,
+        by_receiver: bool = False,
+        parent: "CourseAssignment | None" = None,
+    ) -> "CourseAssignment":
+        assignment = CourseAssignment(
+            id=new_id(),
+            course_id=course.id,
+            owner_organization_id=course.organization_id,
+            organization_id=org.id,
+            batch_id=batch.id if batch else None,
+            assigned_by_org_id=org.id if by_receiver else course.organization_id,
+            parent_assignment_id=parent.id if parent else None,
+        )
+        await self._save(assignment)
+        return assignment
+
+    async def enrollment(self, course: "Course", student: User, org: Organization) -> "Enrollment":
+        enrollment = Enrollment(
+            id=new_id(), organization_id=org.id, user_id=student.id, course_id=course.id,
+            major_version=1,
+        )  # fmt: skip
+        await self._save(enrollment)
+        return enrollment
+
+    async def video(self, org: Organization) -> "VideoAsset":
+        video = VideoAsset(
+            id=new_id(), organization_id=org.id, provider="local",
+            provider_video_id=f"v-{_suffix()}", title="Video",
+        )  # fmt: skip
+        await self._save(video)
+        return video

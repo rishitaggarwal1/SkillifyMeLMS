@@ -116,8 +116,39 @@ org.
 | invitations, import_jobs, import_job_errors | org_admin | org_admin |
 | audit_log | org_admin of the active org; platform admins | Any member, only as themselves; **no UPDATE or DELETE** (append-only) |
 | outbox_events | The active org's events | Insert for the active org; only the relay role (`skillify_relay`) can mark events published |
+| skills | Everyone (global taxonomy) | Platform admins, and org_admin / instructor / lab_author of a **content-publisher** org |
+| courses | Owner-org editors*; readers through an assignment** | Owner-org editors* |
+| course_modules, lessons, lesson_skills (the draft) | Owner-org editors* only | Owner-org editors* |
+| course_versions, course_version_lessons | Owner-org editors*; readers** | Owner-org editors* (publish). Immutable: no UPDATE or DELETE |
+| course_assignments | Owner-org editors*; the receiving org's org_admins and instructors | Publisher-made rows: owner-org editors* (to other orgs only if the owner is a content publisher). Narrowing rows: the receiving org's org_admin, batch rows under an existing org grant only. Removal: only the org that created the row. No UPDATE |
+| enrollments, lesson_progress (the student's org) | The student; org_admin and instructors of that org | The student (own progress); org_admin; system jobs |
+| video_assets, files | Owner-org editors* | Owner-org editors* |
+| catalog_entries | Everyone | Owner-org editors* |
 
-These are enforced by `app/modules/identity/tests/test_rls_*.py`:
+\* **Editors**: `instructor` or `org_admin` of the course's owner org, acting in that org, or platform
+admins.
+
+\** **Readers** of a published course, where the course is assigned to the reader's active org:
+- that org's `org_admin` and `instructor`, through any assignment (org grant or batch assignment)
+- students, **only** through a batch assignment for a batch they belong to. This applies in the
+  owner org too.
+
+Helper functions for courses: `app.course_readable(course)` (the reader rule above) and
+`app.is_org_grant(grant, course, org)` (used by the narrowing policy). Both are `SECURITY DEFINER`,
+so policies on `courses` and `course_assignments` don't recurse into each other.
+
+**Assignment rules (confirmed 2026-09-26):**
+1. Assignments the publisher made, including publisher-made batch assignments, can be removed only
+   by the publisher. A receiving org's `org_admin` can remove only the assignments their own org
+   created.
+2. Instructors of an assigned org can read the course but cannot distribute it to batches. Only the
+   receiving org's `org_admin` distributes.
+3. Opting into a new major version applies to a whole organization or to chosen batches, never to
+   individual students.
+
+The content rules are enforced by `app/modules/courses/tests/test_course_rls.py`,
+`app/modules/skills/tests/` and `app/modules/enrollments/tests/`. The identity rules are enforced by
+`app/modules/identity/tests/test_rls_*.py`:
 - an org A user cannot read, change or insert org B data, tested through raw SQL **and** through
   direct repository calls
 - a forged org context grants nothing

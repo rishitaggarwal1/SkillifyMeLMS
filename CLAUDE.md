@@ -34,6 +34,8 @@ Decided 2026-09-26.
   - A `batch_id` row is a **batch assignment**: the course becomes visible to that batch's students.
   - A publisher assigns a course to an org (org grant) or directly to specific batches of that org.
   - The receiving org's `org_admin` chooses which of their batches receive a granted course. Org admins can only narrow within what was assigned to them, never widen it.
+  - **Who removes assignments:** assignments the publisher made (including publisher-made batch assignments) can be removed only by the publisher. A receiving org's `org_admin` can remove only the assignments their own org created.
+  - **Instructors of an assigned org** can read the course but cannot distribute it to batches; only the receiving org's `org_admin` distributes.
 - **Students see a course only when it is assigned to their batch.** This includes students of the owner org.
 - Owner-org members with the `instructor` or `org_admin` role can see, preview (drafts and published versions) and edit a course. No one else can edit. Assigned orgs get read and enroll access only.
 - Any org can author private courses that are visible only to itself.
@@ -41,7 +43,10 @@ Decided 2026-09-26.
   - Each published version is marked **minor** (corrections only: no lessons added, removed or reordered) or **major**.
   - Minor versions apply automatically to all existing enrollments.
   - Major versions apply only to new enrollments. An `org_admin` can opt their org's existing enrollments into the new major version; progress carries over for lessons whose stable lesson ID still exists.
+  - Opt-in applies to a **whole organization or chosen batches**, never to individual students.
   - Lessons keep stable IDs across versions.
+- **Lesson types** are a database enum that already includes the placeholder types `quiz`, `lab` and `assignment` alongside `video`, `notes` and `pdf`, so later phases need no enum migration.
+- **Skills taxonomy** is global (no `organization_id`) in this phase. Everyone can read it; only `platform_admin` and staff (`org_admin`, `instructor`, `lab_author`) of a content-publisher org can create or edit skills.
 - These rules are enforced by **PostgreSQL RLS policies**, written per operation, not only by service-layer checks. They must be covered by tests proving that:
   - an assigned org cannot edit
   - an unassigned org cannot see
