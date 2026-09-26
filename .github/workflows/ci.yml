@@ -115,10 +115,12 @@ jobs:
           uv sync --frozen --no-dev
           uv run --no-dev python -m app.cli.db_roles
           uv run --no-dev alembic upgrade head
-      - name: Start API
+          uv run --no-dev python -m app.cli.seed
+      - name: Start API and worker
         working-directory: apps/api
         run: |
           nohup uv run --no-dev uvicorn app.asgi:app --host 127.0.0.1 --port 8000 > /tmp/api.log 2>&1 &
+          nohup uv run --no-dev celery -A app.worker worker --loglevel=INFO > /tmp/worker.log 2>&1 &
           for i in $(seq 1 30); do
             curl -fsS http://127.0.0.1:8000/health/ready && exit 0
             sleep 1
@@ -135,9 +137,12 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: Playwright
         working-directory: apps/web
-        env:
-          API_INTERNAL_URL: http://127.0.0.1:8000
-        run: pnpm test:e2e
+        # The production server gets the same settings as local dev (.env from .env.example), with
+        # host-side URLs because here the web server runs on the runner, not in Docker.
+        run: |
+          set -a; source ../../.env; set +a
+          export API_INTERNAL_URL=http://127.0.0.1:8000 REDIS_URL=redis://localhost:6379/1
+          pnpm test:e2e
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4
@@ -145,9 +150,9 @@ jobs:
           name: playwright-report
           path: apps/web/playwright-report
           retention-days: 7
-      - name: API log
+      - name: API and worker logs
         if: failure()
-        run: cat /tmp/api.log
+        run: cat /tmp/api.log /tmp/worker.log
 
   # ------------------------------------------------------------------------------------------ Images
   docker:

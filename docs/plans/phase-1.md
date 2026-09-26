@@ -191,3 +191,11 @@ Every table gets separate policies for SELECT, INSERT, UPDATE and DELETE.
   re-imports, and the seed reconciles ids by email.
 - **Email validation** allows the `.local` and `.test` domains outside production only (dev realm
   and test data).
+- **Web auth (step 4):** Next.js routes `/auth/login`, `/auth/callback`, `/auth/logout` (POST only)
+  and `/auth/org`. Tokens live in `__Host-` cookies (httpOnly, Secure, SameSite=Lax), AES-GCM
+  encrypted with `SESSION_SECRET`. The `/backend` proxy attaches the bearer token (refreshing
+  within 30s of expiry), sends `X-Organization-Id` from the org cookie, strips browser cookies,
+  and rejects cross-origin writes.
+- **Dev realm:** brute-force detection is **off**, because parallel Playwright logins lock test
+  users. Production realms must enable it. The dev `AUTH_RATE_LIMIT_PER_MINUTE` is 300: locally
+  there's no edge proxy setting `X-Forwarded-For`, so every browser shares one limiter bucket.

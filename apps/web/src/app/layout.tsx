@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { Toaster } from "@/components/ui/sonner";
+import { SiteHeader } from "@/features/auth/site-header";
+
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -34,12 +37,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col bg-background text-foreground">
         <Providers>
-          <header className="border-b">
-            <div className="mx-auto flex h-14 w-full max-w-5xl items-center px-4">
-              <span className="text-base font-semibold tracking-tight">SkillifyMe</span>
-            </div>
-          </header>
+          <SiteHeader />
           <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:py-10">{children}</main>
+          <Toaster richColors position="top-center" />
         </Providers>
       </body>
     </html>

@@ -1,15 +1,26 @@
 /**
  * Same-origin proxy from the browser to the FastAPI backend: /backend/<path> -> API_INTERNAL_URL/<path>.
  *
- * Runs at request time (unlike next.config rewrites, which are fixed at build time), so one Docker
- * image works in every environment. Later phases attach the user's session from an httpOnly cookie
- * here, so access tokens never reach browser JavaScript.
+ * This is the backend-for-frontend boundary:
+ * - access tokens stay server-side (encrypted httpOnly cookies) and are attached here as
+ *   `Authorization: Bearer`, refreshed shortly before they expire;
+ * - the active organization (httpOnly cookie) is sent as `X-Organization-Id`;
+ * - state-changing requests must come from our own origin (CSRF);
+ * - only /api/v1/* and /health/* are reachable.
+ * It runs at request time (unlike next.config rewrites), so one image works in every environment.
  */
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+
+import { isAllowedOrigin } from "@/lib/auth/policy";
+import { serverConfig } from "@/server/config";
+import { csrfRejected, errorResponse } from "@/server/responses";
+import { clearSession, readSession, writeTokens } from "@/server/session";
+import { accessTokenFor } from "@/server/tokens";
 
 const ALLOWED_PREFIXES = ["api/v1/", "health/"];
 
-// Hop-by-hop headers must not be forwarded (RFC 9110 §7.6.1); host is set by fetch.
+// Hop-by-hop headers (RFC 9110 §7.6.1), browser credentials (the API authenticates via the bearer
+// token we add, never via cookies), and headers only this proxy may set.
 const STRIPPED_REQUEST_HEADERS = [
   "host",
   "connection",
@@ -20,6 +31,9 @@ const STRIPPED_REQUEST_HEADERS = [
   "te",
   "trailer",
   "content-length",
+  "cookie",
+  "authorization",
+  "x-organization-id",
 ];
 const STRIPPED_RESPONSE_HEADERS = [
   "connection",
@@ -27,27 +41,28 @@ const STRIPPED_RESPONSE_HEADERS = [
   "transfer-encoding",
   "content-encoding",
   "content-length",
+  "set-cookie",
 ];
 
-function apiOrigin(): string {
-  return process.env.API_INTERNAL_URL ?? "http://localhost:8000";
-}
-
 async function proxy(request: NextRequest, ctx: RouteContext<"/backend/[...path]">) {
+  const cfg = serverConfig();
   const { path } = await ctx.params;
   const joined = path.map(encodeURIComponent).join("/");
   const hasDotSegment = path.some((segment) => segment === "." || segment === "..");
   if (hasDotSegment || !ALLOWED_PREFIXES.some((prefix) => `${joined}/`.startsWith(prefix))) {
-    return Response.json(
-      { error: { code: "not_found", message: "Not Found", details: null } },
-      { status: 404 },
-    );
+    return errorResponse(404, "not_found", "Not Found");
   }
+  if (!isAllowedOrigin(request.method, request.headers, cfg.webOrigin)) return csrfRejected();
 
-  const target = new URL(`${joined}${request.nextUrl.search}`, `${apiOrigin()}/`);
+  const session = await readSession(request.cookies);
+  const access = await accessTokenFor(session);
+
   const headers = new Headers(request.headers);
   for (const name of STRIPPED_REQUEST_HEADERS) headers.delete(name);
+  if (access.accessToken) headers.set("Authorization", `Bearer ${access.accessToken}`);
+  if (session.organizationId) headers.set("X-Organization-Id", session.organizationId);
 
+  const target = new URL(`${joined}${request.nextUrl.search}`, `${cfg.apiInternalUrl}/`);
   const hasBody = request.method !== "GET" && request.method !== "HEAD";
   let upstream: Response;
   try {
@@ -62,21 +77,18 @@ async function proxy(request: NextRequest, ctx: RouteContext<"/backend/[...path]
       signal: request.signal,
     } as RequestInit);
   } catch {
-    return Response.json(
-      {
-        error: {
-          code: "upstream_unavailable",
-          message: "The API is unreachable.",
-          details: null,
-        },
-      },
-      { status: 502 },
-    );
+    return errorResponse(502, "upstream_unavailable", "The API is unreachable.");
   }
 
   const responseHeaders = new Headers(upstream.headers);
   for (const name of STRIPPED_RESPONSE_HEADERS) responseHeaders.delete(name);
-  return new Response(upstream.body, { status: upstream.status, headers: responseHeaders });
+  const response = new NextResponse(upstream.body, {
+    status: upstream.status,
+    headers: responseHeaders,
+  });
+  if (access.refreshed) await writeTokens(response, access.refreshed);
+  if (access.expired) clearSession(response);
+  return response;
 }
 
 export const GET = proxy;

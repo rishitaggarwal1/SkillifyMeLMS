@@ -273,6 +273,16 @@ services:
     command: ["sh", "-c", "corepack enable && pnpm install --frozen-lockfile && pnpm dev --hostname 0.0.0.0"]
     environment:
       API_INTERNAL_URL: http://api:8000
+      # Backend-for-frontend auth. Keycloak URLs derive from KEYCLOAK_PORT, like the API's.
+      KEYCLOAK_PORT: ${KEYCLOAK_PORT:?}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:?}
+      KEYCLOAK_INTERNAL_URL: http://keycloak:${KEYCLOAK_PORT:?}
+      OIDC_WEB_CLIENT_ID: ${OIDC_WEB_CLIENT_ID:?}
+      KC_WEB_CLIENT_SECRET: ${KC_WEB_CLIENT_SECRET:?}
+      WEB_ORIGIN: http://localhost:${WEB_PORT:?}
+      SESSION_SECRET: ${SESSION_SECRET:?}
+      REDIS_URL: redis://redis:6379/1
+      AUTH_RATE_LIMIT_PER_MINUTE: ${AUTH_RATE_LIMIT_PER_MINUTE:-20}
       COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
       WATCHPACK_POLLING: "true"
       NEXT_TELEMETRY_DISABLED: "1"

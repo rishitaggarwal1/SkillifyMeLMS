@@ -43,6 +43,13 @@ make dev       # builds and starts the whole stack; returns once everything is h
 
 Credentials for all of these are in your local `.env`, which is created from `.env.example`.
 
+### Signing in
+
+Open http://localhost:3000 and click **Sign in**. The web app sends you to Keycloak's login page
+and back. Org admins get an **Admin** link: batches, members and invitations, and CSV import.
+Tokens never reach browser JavaScript; they're kept in encrypted httpOnly cookies by the Next.js
+server.
+
 ### Dev realm test users (local only)
 
 `make dev` runs the `seed` job (`make seed` to run it again). It creates three orgs and the users

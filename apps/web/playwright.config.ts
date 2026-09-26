@@ -10,9 +10,15 @@ const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`;
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
+  // A local dev server compiles on the same event loop that serves requests; don't swamp it.
+  workers: process.env.CI ? undefined : 2,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
+  globalSetup: "./e2e/global-setup.ts",
+  // Locally tests usually hit the dev server (slow first compiles); CI uses the production build.
+  timeout: process.env.CI ? 30_000 : 60_000,
+  expect: { timeout: process.env.CI ? 5_000 : 15_000 },
   use: {
     baseURL,
     trace: "retain-on-failure",

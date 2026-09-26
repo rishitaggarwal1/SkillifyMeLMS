@@ -20,7 +20,11 @@ export function jsonResponse(body: unknown, status = 200, headers: Record<string
   });
 }
 
-export function renderWithQuery(ui: ReactElement) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+export function testQueryClient() {
+  // staleTime: Infinity lets tests seed the cache (setQueryData) without triggering fetches.
+  return new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+}
+
+export function renderWithQuery(ui: ReactElement, client: QueryClient = testQueryClient()) {
+  return { client, ...render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>) };
 }
