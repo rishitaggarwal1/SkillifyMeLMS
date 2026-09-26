@@ -100,6 +100,396 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/course-assignments/{assignment_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete Assignment */
+    delete: operations["delete_course_assignment"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/courses": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Courses */
+    get: operations["list_courses"];
+    put?: never;
+    /**
+     * Create Course
+     * @description Create a course owned by the active organization (instructors and org admins).
+     */
+    post: operations["create_course"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/courses/{course_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Course */
+    get: operations["get_course"];
+    put?: never;
+    post?: never;
+    /**
+     * Archive Course
+     * @description Archive: no more publishing or new assignments. Existing versions stay readable.
+     */
+    delete: operations["archive_course"];
+    options?: never;
+    head?: never;
+    /** Update Course */
+    patch: operations["update_course"];
+    trace?: never;
+  };
+  "/api/v1/courses/{course_id}/assignments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Assignments */
+    get: operations["list_course_assignments"];
+    put?: never;
+    /**
+     * Create Assignments
+     * @description Assign a published course to batches, or (content publishers) grant it to another org.
+     *     A receiving org's admin uses this to distribute a granted course to their batches.
+     *     Returns only newly created rows (existing ones are left as they are).
+     */
+    post: operations["create_course_assignments"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/courses/{course_id}/draft": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Draft
+     * @description The editable outline (owner-org editors).
+     */
+    get: operations["get_course_draft"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/courses/{course_id}/enrollment-upgrades": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Upgrade Enrollments
+     * @description Opt the organization's existing enrollments (or chosen batches') into a newer major
+     *     version. Progress carries over for lessons that still exist. Org admins only.
+     */
+    post: operations["upgrade_enrollments"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/courses/{course_id}/lessons/{lesson_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Lesson */
+    get: operations["get_lesson"];
+    put?: never;
+    post?: never;
+    /** Delete Lesson */
+    delete: operations["delete_lesson"];
+    options?: never;
+    head?: never;
+    /** Update Lesson */
+    patch: operations["update_lesson"];
+    trace?: never;
+  };
+  "/api/v1/courses/{course_id}/lessons/{lesson_id}/skills": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Set Lesson Skills */
+    put: operations["set_lesson_skills"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/courses/{course_id}/modules": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Create Module */
+    post: operations["create_module"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/courses/{course_id}/modules/order": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Reorder Modules
+     * @description Set the module order (every module id, once).
+     */
+    put: operations["reorder_modules"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/courses/{course_id}/modules/{module_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete Module */
+    delete: operations["delete_module"];
+    options?: never;
+    head?: never;
+    /** Update Module */
+    patch: operations["update_module"];
+    trace?: never;
+  };
+  "/api/v1/courses/{course_id}/modules/{module_id}/lessons": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Create Lesson */
+    post: operations["create_lesson"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/courses/{course_id}/modules/{module_id}/lessons/order": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Reorder Lessons
+     * @description Set the module's lessons in order; lessons listed from other modules move here.
+     */
+    put: operations["reorder_lessons"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/courses/{course_id}/publish-preview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Publish Preview
+     * @description The next version numbers, whether a minor is allowed (and why not), and blockers.
+     */
+    get: operations["get_publish_preview"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/courses/{course_id}/versions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Versions */
+    get: operations["list_course_versions"];
+    put?: never;
+    /**
+     * Publish
+     * @description Publish the draft as a new immutable version (minor or major).
+     */
+    post: operations["publish_course"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/courses/{course_id}/versions/{version_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Version */
+    get: operations["get_course_version"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/enrollments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List My Enrollments
+     * @description The signed-in student's active enrollments in the active organization.
+     */
+    get: operations["list_my_enrollments"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/enrollments/{enrollment_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Enrollment
+     * @description The course outline the student sees (their major version's latest minor) and progress.
+     */
+    get: operations["get_enrollment"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/complete": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Complete Lesson
+     * @description Mark a notes lesson (or an opened PDF) complete; returns the new course progress.
+     */
+    post: operations["complete_lesson"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/visit": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Visit Lesson
+     * @description Record that the student opened a lesson (resume and "Continue learning").
+     */
+    post: operations["visit_lesson"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/imports": {
     parameters: {
       query?: never;
@@ -340,6 +730,47 @@ export interface paths {
     patch: operations["update_organization"];
     trace?: never;
   };
+  "/api/v1/skills": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Skills
+     * @description The skills taxonomy (any signed-in user).
+     */
+    get: operations["list_skills"];
+    put?: never;
+    /**
+     * Create Skill
+     * @description Add a skill (platform admins, and staff of content-publisher organizations).
+     */
+    post: operations["create_skill"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/skills/{skill_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Update Skill */
+    patch: operations["update_skill"];
+    trace?: never;
+  };
   "/health/live": {
     parameters: {
       query?: never;
@@ -378,6 +809,57 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** AssignmentCreate */
+    AssignmentCreate: {
+      /**
+       * Batch Ids
+       * @description Batches to assign. Empty = an org grant (content publishers only).
+       */
+      batch_ids?: string[];
+      /**
+       * Organization Id
+       * @description Receiving organization (default: the active organization)
+       */
+      organization_id?: string | null;
+    };
+    /** AssignmentOut */
+    AssignmentOut: {
+      /**
+       * Assigned By Org Id
+       * Format: uuid
+       */
+      assigned_by_org_id: string;
+      /** Batch Id */
+      batch_id: string | null;
+      /**
+       * Course Id
+       * Format: uuid
+       */
+      course_id: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "org_grant" | "batch";
+      /**
+       * Organization Id
+       * Format: uuid
+       * @description The receiving organization
+       */
+      organization_id: string;
+      /** Parent Assignment Id */
+      parent_assignment_id: string | null;
+    };
     /** AuditEntryOut */
     AuditEntryOut: {
       /** Action */
@@ -490,6 +972,92 @@ export interface components {
        */
       status: "ok" | "error";
     };
+    /** CourseCreate */
+    CourseCreate: {
+      /**
+       * Description
+       * @default
+       */
+      description: string;
+      /**
+       * Is Public Catalog
+       * @default false
+       */
+      is_public_catalog: boolean;
+      /**
+       * Slug
+       * @description Derived from the title when omitted.
+       */
+      slug?: string | null;
+      /** Title */
+      title: string;
+    };
+    /** CourseOut */
+    CourseOut: {
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      current_version: components["schemas"]["VersionSummary"] | null;
+      /** Description */
+      description: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Is Owner
+       * @description Whether the active organization owns (and can edit) it
+       */
+      is_owner: boolean;
+      /** Is Public Catalog */
+      is_public_catalog: boolean;
+      /**
+       * Organization Id
+       * Format: uuid
+       * @description The owner organization
+       */
+      organization_id: string;
+      /** Revision */
+      revision: number;
+      /** Slug */
+      slug: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "active" | "archived";
+      /** Title */
+      title: string;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
+    };
+    /** CourseUpdate */
+    CourseUpdate: {
+      /** Description */
+      description?: string | null;
+      /** Is Public Catalog */
+      is_public_catalog?: boolean | null;
+      /** Slug */
+      slug?: string | null;
+      /** Title */
+      title?: string | null;
+    };
+    /** CursorPage[AssignmentOut] */
+    CursorPage_AssignmentOut_: {
+      /** Items */
+      items: components["schemas"]["AssignmentOut"][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for the next page; null when there are no more items.
+       */
+      next_cursor: string | null;
+    };
     /** CursorPage[AuditEntryOut] */
     CursorPage_AuditEntryOut_: {
       /** Items */
@@ -504,6 +1072,26 @@ export interface components {
     CursorPage_BatchOut_: {
       /** Items */
       items: components["schemas"]["BatchOut"][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for the next page; null when there are no more items.
+       */
+      next_cursor: string | null;
+    };
+    /** CursorPage[CourseOut] */
+    CursorPage_CourseOut_: {
+      /** Items */
+      items: components["schemas"]["CourseOut"][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for the next page; null when there are no more items.
+       */
+      next_cursor: string | null;
+    };
+    /** CursorPage[EnrollmentOut] */
+    CursorPage_EnrollmentOut_: {
+      /** Items */
+      items: components["schemas"]["EnrollmentOut"][];
       /**
        * Next Cursor
        * @description Opaque cursor for the next page; null when there are no more items.
@@ -549,6 +1137,119 @@ export interface components {
        * @description Opaque cursor for the next page; null when there are no more items.
        */
       next_cursor: string | null;
+    };
+    /** CursorPage[SkillOut] */
+    CursorPage_SkillOut_: {
+      /** Items */
+      items: components["schemas"]["SkillOut"][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for the next page; null when there are no more items.
+       */
+      next_cursor: string | null;
+    };
+    /** CursorPage[VersionOut] */
+    CursorPage_VersionOut_: {
+      /** Items */
+      items: components["schemas"]["VersionOut"][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for the next page; null when there are no more items.
+       */
+      next_cursor: string | null;
+    };
+    /** DraftModule */
+    DraftModule: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Lessons */
+      lessons: components["schemas"]["LessonSummary"][];
+      /** Position */
+      position: number;
+      /** Title */
+      title: string;
+    };
+    /** DraftOut */
+    DraftOut: {
+      course: components["schemas"]["CourseOut"];
+      /** Modules */
+      modules: components["schemas"]["DraftModule"][];
+    };
+    /**
+     * EnrollmentDetail
+     * @description What the course player needs: the pinned version's outline and the student's progress.
+     */
+    EnrollmentDetail: {
+      enrollment: components["schemas"]["EnrollmentOut"];
+      /**
+       * Outline
+       * @description The version snapshot (modules and lessons)
+       */
+      outline: {
+        [key: string]: unknown;
+      };
+      /** Progress */
+      progress: components["schemas"]["LessonProgressOut"][];
+      version: components["schemas"]["EnrollmentVersion"];
+    };
+    /** EnrollmentOut */
+    EnrollmentOut: {
+      /** Completed At */
+      completed_at: string | null;
+      /**
+       * Course Id
+       * Format: uuid
+       */
+      course_id: string;
+      /** Course Title */
+      course_title: string;
+      /**
+       * Enrolled At
+       * Format: date-time
+       */
+      enrolled_at: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Last Accessed At */
+      last_accessed_at: string | null;
+      /** Last Lesson Id */
+      last_lesson_id: string | null;
+      /** Major Version */
+      major_version: number;
+      /** Progress Percent */
+      progress_percent: number;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "active" | "revoked";
+      /**
+       * Version
+       * @description The version the student sees, e.g. "1.2"
+       */
+      version: string | null;
+    };
+    /** EnrollmentVersion */
+    EnrollmentVersion: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Major */
+      major: number;
+      /** Minor */
+      minor: number;
+      /** Title */
+      title: string;
+      /** Version */
+      version: string;
     };
     /** ErrorBody */
     ErrorBody: {
@@ -645,6 +1346,138 @@ export interface components {
       /** User Id */
       user_id: string | null;
     };
+    /** LessonCompletionOut */
+    LessonCompletionOut: {
+      enrollment: components["schemas"]["EnrollmentOut"];
+      lesson: components["schemas"]["LessonProgressOut"];
+    };
+    /** LessonCreate */
+    LessonCreate: {
+      /**
+       * Completion Threshold
+       * @description Video: fraction that must be watched (default 0.9)
+       */
+      completion_threshold?: number | string | null;
+      /** Content */
+      content?: {
+        [key: string]: unknown;
+      };
+      /** Estimated Minutes */
+      estimated_minutes?: number | null;
+      /**
+       * Is Required
+       * @default true
+       */
+      is_required: boolean;
+      lesson_type: components["schemas"]["LessonType"];
+      /** Title */
+      title: string;
+    };
+    /** LessonOut */
+    LessonOut: {
+      /** Completion Threshold */
+      completion_threshold: string | null;
+      /** Content */
+      content: {
+        [key: string]: unknown;
+      };
+      /** Course Revision */
+      course_revision: number;
+      /** Estimated Minutes */
+      estimated_minutes: number | null;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Is Required */
+      is_required: boolean;
+      lesson_type: components["schemas"]["LessonType"];
+      /**
+       * Module Id
+       * Format: uuid
+       */
+      module_id: string;
+      /** Position */
+      position: number;
+      /** Skill Ids */
+      skill_ids: string[];
+      /** Title */
+      title: string;
+    };
+    /** LessonProgressOut */
+    LessonProgressOut: {
+      /** Completed At */
+      completed_at: string | null;
+      /**
+       * Lesson Id
+       * Format: uuid
+       */
+      lesson_id: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "not_started" | "in_progress" | "completed";
+      /** Video Position Seconds */
+      video_position_seconds: number | null;
+      /** Watched Ratio */
+      watched_ratio: string | null;
+    };
+    /** LessonSkillsUpdate */
+    LessonSkillsUpdate: {
+      /** Skill Ids */
+      skill_ids: string[];
+    };
+    /** LessonSummary */
+    LessonSummary: {
+      /** Completion Threshold */
+      completion_threshold: string | null;
+      /** Estimated Minutes */
+      estimated_minutes: number | null;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Is Required */
+      is_required: boolean;
+      lesson_type: components["schemas"]["LessonType"];
+      /**
+       * Module Id
+       * Format: uuid
+       */
+      module_id: string;
+      /** Position */
+      position: number;
+      /** Skill Ids */
+      skill_ids: string[];
+      /** Title */
+      title: string;
+    };
+    /**
+     * LessonType
+     * @enum {string}
+     */
+    LessonType: "video" | "notes" | "pdf" | "quiz" | "lab" | "assignment";
+    /**
+     * LessonUpdate
+     * @description The lesson type can't change: delete the lesson and add a new one instead.
+     */
+    LessonUpdate: {
+      /** Completion Threshold */
+      completion_threshold?: number | string | null;
+      /** Content */
+      content?: {
+        [key: string]: unknown;
+      } | null;
+      /** Estimated Minutes */
+      estimated_minutes?: number | null;
+      /** Is Required */
+      is_required?: boolean | null;
+      /** Title */
+      title?: string | null;
+    };
     /** LivenessResponse */
     LivenessResponse: {
       /**
@@ -697,6 +1530,35 @@ export interface components {
       organization: components["schemas"]["OrganizationSummary"];
       /** Roles */
       roles: components["schemas"]["OrgRole"][];
+    };
+    /** ModuleCreate */
+    ModuleCreate: {
+      /** Title */
+      title: string;
+    };
+    /** ModuleOut */
+    ModuleOut: {
+      /** Course Revision */
+      course_revision: number;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Position */
+      position: number;
+      /** Title */
+      title: string;
+    };
+    /** ModuleUpdate */
+    ModuleUpdate: {
+      /** Title */
+      title: string;
+    };
+    /** OrderUpdate */
+    OrderUpdate: {
+      /** Ids */
+      ids: string[];
     };
     /**
      * OrgRole
@@ -764,6 +1626,40 @@ export interface components {
       /** Status */
       status?: ("active" | "archived") | null;
     };
+    /** PublishBlocker */
+    PublishBlocker: {
+      /**
+       * Code
+       * @enum {string}
+       */
+      code: "empty_course" | "video_not_ready" | "pdf_not_ready" | "course_archived";
+      /** Lesson Ids */
+      lesson_ids?: string[];
+    };
+    /** PublishPreview */
+    PublishPreview: {
+      /** Blockers */
+      blockers: components["schemas"]["PublishBlocker"][];
+      /** Is First Release */
+      is_first_release: boolean;
+      /** Minor Allowed */
+      minor_allowed: boolean;
+      /** Next Major */
+      next_major: string;
+      /** Next Minor */
+      next_minor: string | null;
+      /** Structural Changes */
+      structural_changes: components["schemas"]["StructuralChange"][];
+    };
+    /** PublishRequest */
+    PublishRequest: {
+      /**
+       * Release Notes
+       * @default
+       */
+      release_notes: string;
+      release_type: components["schemas"]["ReleaseType"];
+    };
     /** ReadinessResponse */
     ReadinessResponse: {
       /** Checks */
@@ -775,6 +1671,101 @@ export interface components {
        * @enum {string}
        */
       status: "ok" | "unavailable";
+    };
+    /**
+     * ReleaseType
+     * @enum {string}
+     */
+    ReleaseType: "major" | "minor";
+    /** RevisionOut */
+    RevisionOut: {
+      /** Course Revision */
+      course_revision: number;
+    };
+    /** SkillCreate */
+    SkillCreate: {
+      /**
+       * Description
+       * @default
+       */
+      description: string;
+      /** Name */
+      name: string;
+      /** Parent Id */
+      parent_id?: string | null;
+      /**
+       * Slug
+       * @description One path label: lowercase letters, digits, underscores.
+       */
+      slug: string;
+    };
+    /** SkillOut */
+    SkillOut: {
+      /** Description */
+      description: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /** Parent Id */
+      parent_id: string | null;
+      /** Path */
+      path: string;
+      /** Slug */
+      slug: string;
+    };
+    /** SkillUpdate */
+    SkillUpdate: {
+      /** Description */
+      description?: string | null;
+      /** Name */
+      name?: string | null;
+    };
+    /** StructuralChange */
+    StructuralChange: {
+      /**
+       * Code
+       * @enum {string}
+       */
+      code:
+        | "modules_changed"
+        | "lessons_added"
+        | "lessons_removed"
+        | "lessons_reordered"
+        | "lesson_settings_changed";
+      /** Lesson Ids */
+      lesson_ids?: string[];
+    };
+    /** UpgradeAccepted */
+    UpgradeAccepted: {
+      /** Batch Ids */
+      batch_ids: string[];
+      /**
+       * Course Id
+       * Format: uuid
+       */
+      course_id: string;
+      /**
+       * Status
+       * @default queued
+       * @constant
+       */
+      status: "queued";
+      /** To Major */
+      to_major: number;
+    };
+    /** UpgradeRequest */
+    UpgradeRequest: {
+      /**
+       * Batch Ids
+       * @description Only students in these batches (default: the whole organization)
+       */
+      batch_ids?: string[];
+      /** To Major */
+      to_major: number;
     };
     /** UserOut */
     UserOut: {
@@ -789,6 +1780,101 @@ export interface components {
       id: string;
       /** Status */
       status: string;
+    };
+    /** VersionDetail */
+    VersionDetail: {
+      /**
+       * Course Id
+       * Format: uuid
+       */
+      course_id: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Major */
+      major: number;
+      /** Minor */
+      minor: number;
+      /**
+       * Published At
+       * Format: date-time
+       */
+      published_at: string;
+      /** Published By */
+      published_by: string | null;
+      /** Release Notes */
+      release_notes: string;
+      release_type: components["schemas"]["ReleaseType"];
+      /** Snapshot */
+      snapshot: {
+        [key: string]: unknown;
+      };
+      /** Title */
+      title: string;
+      /**
+       * Version
+       * @description "major.minor", e.g. "1.2"
+       */
+      version: string;
+    };
+    /** VersionOut */
+    VersionOut: {
+      /**
+       * Course Id
+       * Format: uuid
+       */
+      course_id: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Major */
+      major: number;
+      /** Minor */
+      minor: number;
+      /**
+       * Published At
+       * Format: date-time
+       */
+      published_at: string;
+      /** Published By */
+      published_by: string | null;
+      /** Release Notes */
+      release_notes: string;
+      release_type: components["schemas"]["ReleaseType"];
+      /** Title */
+      title: string;
+      /**
+       * Version
+       * @description "major.minor", e.g. "1.2"
+       */
+      version: string;
+    };
+    /** VersionSummary */
+    VersionSummary: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Major */
+      major: number;
+      /** Minor */
+      minor: number;
+      /**
+       * Published At
+       * Format: date-time
+       */
+      published_at: string;
+      release_type: components["schemas"]["ReleaseType"];
+      /**
+       * Version
+       * @description "major.minor", e.g. "1.2"
+       */
+      version: string;
     };
   };
   responses: never;
@@ -1184,6 +2270,1295 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  delete_course_assignment: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  list_courses: {
+    parameters: {
+      query?: {
+        /** @description true: courses the org owns; false: courses assigned to it */
+        owned?: boolean | null;
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_CourseOut_"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  create_course: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CourseCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CourseOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_course: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        course_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CourseOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  archive_course: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        course_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CourseOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  update_course: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        /** @description The course revision this edit is based on */
+        "If-Match"?: string | null;
+      };
+      path: {
+        course_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CourseUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CourseOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  list_course_assignments: {
+    parameters: {
+      query?: {
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        course_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_AssignmentOut_"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  create_course_assignments: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        course_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssignmentCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssignmentOut"][];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_course_draft: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        course_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DraftOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  upgrade_enrollments: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        course_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpgradeRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UpgradeAccepted"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_lesson: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        course_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LessonOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  delete_lesson: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        /** @description The course revision this edit is based on */
+        "If-Match"?: string | null;
+      };
+      path: {
+        course_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RevisionOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  update_lesson: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        /** @description The course revision this edit is based on */
+        "If-Match"?: string | null;
+      };
+      path: {
+        course_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LessonUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LessonOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  set_lesson_skills: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        /** @description The course revision this edit is based on */
+        "If-Match"?: string | null;
+      };
+      path: {
+        course_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LessonSkillsUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LessonOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  create_module: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        /** @description The course revision this edit is based on */
+        "If-Match"?: string | null;
+      };
+      path: {
+        course_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ModuleCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ModuleOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  reorder_modules: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        /** @description The course revision this edit is based on */
+        "If-Match"?: string | null;
+      };
+      path: {
+        course_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OrderUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DraftOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  delete_module: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        /** @description The course revision this edit is based on */
+        "If-Match"?: string | null;
+      };
+      path: {
+        course_id: string;
+        module_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RevisionOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  update_module: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        /** @description The course revision this edit is based on */
+        "If-Match"?: string | null;
+      };
+      path: {
+        course_id: string;
+        module_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ModuleUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ModuleOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  create_lesson: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        /** @description The course revision this edit is based on */
+        "If-Match"?: string | null;
+      };
+      path: {
+        course_id: string;
+        module_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LessonCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LessonOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  reorder_lessons: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        /** @description The course revision this edit is based on */
+        "If-Match"?: string | null;
+      };
+      path: {
+        course_id: string;
+        module_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OrderUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DraftOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_publish_preview: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        course_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublishPreview"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  list_course_versions: {
+    parameters: {
+      query?: {
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        course_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_VersionOut_"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  publish_course: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        course_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PublishRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["VersionOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_course_version: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        course_id: string;
+        version_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["VersionDetail"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  list_my_enrollments: {
+    parameters: {
+      query?: {
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_EnrollmentOut_"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_enrollment: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        enrollment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EnrollmentDetail"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  complete_lesson: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        enrollment_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LessonCompletionOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  visit_lesson: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        enrollment_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EnrollmentOut"];
+        };
       };
       /** @description Client error */
       "4XX": {
@@ -2017,6 +4392,145 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["OrganizationOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  list_skills: {
+    parameters: {
+      query?: {
+        /** @description This skill and its subtree */
+        under?: string | null;
+        q?: string | null;
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_SkillOut_"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  create_skill: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SkillCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SkillOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  update_skill: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        skill_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SkillUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SkillOut"];
         };
       };
       /** @description Client error */

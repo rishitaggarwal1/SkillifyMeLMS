@@ -267,6 +267,17 @@ services:
       migrate: { condition: service_completed_successfully }
       redpanda: { condition: service_healthy }
 
+  # Enrolls / revokes students when they join or leave batches (identity.batch-members.v1).
+  enrollment-consumer:
+    image: skillifyme-api:dev
+    pull_policy: never
+    environment: *api-env
+    command: ["python", "-m", "app.cli.enrollment_consumer"]
+    volumes: ["./apps/api:/app"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redpanda: { condition: service_healthy }
+
   web:
     image: node:22-alpine
     working_dir: /app

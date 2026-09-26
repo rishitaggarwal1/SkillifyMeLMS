@@ -61,6 +61,14 @@ class ConflictError(AppError):
     message = "The request conflicts with the current state of the resource."
 
 
+class UnprocessableError(AppError):
+    """Well-formed input that breaks a business rule (e.g. a batch from another organization)."""
+
+    status_code = HTTPStatus.UNPROCESSABLE_ENTITY
+    code = "validation_error"
+    message = "The request is invalid."
+
+
 class AuthenticationError(AppError):
     status_code = HTTPStatus.UNAUTHORIZED
     code = "unauthenticated"

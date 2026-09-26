@@ -34,7 +34,9 @@ celery_app.conf.beat_schedule = {
         "schedule": 3600.0,  # hourly
     },
 }
-celery_app.autodiscover_tasks(["app.modules.identity"], related_name="tasks")
+celery_app.autodiscover_tasks(
+    ["app.modules.identity", "app.modules.enrollments"], related_name="tasks"
+)
 
 
 @setup_logging.connect

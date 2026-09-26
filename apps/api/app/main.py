@@ -10,6 +10,7 @@ from app.api import health, v1
 from app.core.auth.jwt import HttpJwksSource, JwksCache, JwtValidator
 from app.core.config import Settings, get_settings
 from app.core.errors import register_error_handlers
+from app.core.jobs import CeleryJobQueue
 from app.core.logging import configure_logging, get_logger
 from app.core.middleware import RequestContextMiddleware
 from app.core.ratelimit import RateLimiter
@@ -61,6 +62,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.rate_limiter = RateLimiter(redis)
         app.state.storage = ObjectStorage(settings)
         app.state.enqueue_import = enqueue_import
+        app.state.jobs = CeleryJobQueue()
         logger.info("startup", environment=settings.environment, oidc_issuer=settings.oidc_issuer)
         try:
             yield

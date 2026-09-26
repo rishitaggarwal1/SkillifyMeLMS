@@ -7,10 +7,12 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy import cast, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from uuid_utils.compat import uuid7
 
 from app.db.base import new_id
+from app.db.types import LTree
 from app.modules.audit.models import AuditLog
 from app.modules.courses.models import (
     Course,
@@ -32,7 +34,8 @@ from app.modules.identity.models import (
     Organization,
     User,
 )
-from app.modules.media.models import VideoAsset
+from app.modules.media.models import StoredFile, VideoAsset
+from app.modules.skills.models import Skill
 
 
 def _suffix() -> str:
@@ -224,7 +227,25 @@ class Factory:
                 for lesson in lessons
             )
         )
+        async with self.sessionmaker() as session, session.begin():
+            await session.execute(
+                update(Course).where(Course.id == course.id).values(current_version_id=version.id)
+            )
+        course.current_version_id = version.id
         return version
+
+    async def skill(self, *, parent_path: str = "dsa") -> "Skill":
+        sfx = _suffix()
+        async with self.sessionmaker() as session, session.begin():
+            parent_id = await session.scalar(
+                select(Skill.id).where(Skill.path == cast(parent_path, LTree))
+            )
+            skill = Skill(
+                id=new_id(), parent_id=parent_id, name=f"Skill {sfx}", slug=f"s_{sfx}",
+                path=f"{parent_path}.s_{sfx}",
+            )  # fmt: skip
+            session.add(skill)
+        return skill
 
     async def assignment(
         self,
@@ -255,10 +276,21 @@ class Factory:
         await self._save(enrollment)
         return enrollment
 
-    async def video(self, org: Organization) -> "VideoAsset":
+    async def video(
+        self, org: Organization, *, status: str = "created", duration: int | None = None
+    ) -> "VideoAsset":
         video = VideoAsset(
             id=new_id(), organization_id=org.id, provider="local",
-            provider_video_id=f"v-{_suffix()}", title="Video",
+            provider_video_id=f"v-{_suffix()}", title="Video", status=status,
+            duration_seconds=duration,
         )  # fmt: skip
         await self._save(video)
         return video
+
+    async def pdf(self, org: Organization, *, status: str = "ready") -> "StoredFile":
+        file = StoredFile(
+            id=new_id(), organization_id=org.id, kind="pdf", storage_key=f"pdf/{_suffix()}.pdf",
+            file_name="notes.pdf", content_type="application/pdf", size_bytes=1024, status=status,
+        )  # fmt: skip
+        await self._save(file)
+        return file

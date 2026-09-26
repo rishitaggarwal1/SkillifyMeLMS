@@ -33,7 +33,7 @@ from app.main import create_app
 from app.modules.identity.models import User
 from tests.auth import SigningKey, StaticJwksSource, TokenFactory, make_validator
 from tests.factories import Factory
-from tests.fakes import EnqueueRecorder, FakeKeycloakAdmin
+from tests.fakes import EnqueueRecorder, FakeKeycloakAdmin, RecordingJobQueue
 
 API_ROOT = Path(__file__).resolve().parents[1]
 
@@ -129,6 +129,7 @@ async def app(
         application.state.jwt_validator = make_validator(settings, StaticJwksSource(signing_key))
         application.state.keycloak_admin = FakeKeycloakAdmin()
         application.state.enqueue_import = EnqueueRecorder()
+        application.state.jobs = RecordingJobQueue()
         yield application
 
 
@@ -144,6 +145,13 @@ def enqueued(app: FastAPI) -> EnqueueRecorder:
     recorder: EnqueueRecorder = app.state.enqueue_import
     recorder.jobs.clear()
     return recorder
+
+
+@pytest.fixture
+def jobs(app: FastAPI) -> RecordingJobQueue:
+    queue: RecordingJobQueue = app.state.jobs
+    queue.sent.clear()
+    return queue
 
 
 @pytest.fixture(autouse=True)

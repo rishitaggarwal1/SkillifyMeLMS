@@ -42,6 +42,12 @@ Defined once, in `apps/api/app/modules/identity/authz.py` (`ROLE_PERMISSIONS`).
 | `member.import` | ✓ | | | | CSV imports |
 | `audit.read` | ✓ | | | | Read the audit log |
 | `lab.author` | | | ✓ | | Author coding labs (used from Phase 3) |
+| `course.read` | ✓ | ✓ | | | See courses the org owns or was assigned, and their assignments |
+| `course.edit` | ✓ | ✓ | | | Author the org's own courses: drafts, publishing |
+| `course.assign` | ✓ | ✓ | | | Assign the org's own courses (publisher-made assignments) |
+| `course.distribute` | ✓ | | | | Narrow an org grant to the org's own batches |
+| `enrollment.upgrade` | ✓ | | | | Opt the org's enrollments into a newer major version |
+| `skill.manage` | ✓ | ✓ | ✓ | | Edit the skills taxonomy; the active org must also be a content publisher |
 | `org.manage` | — | — | — | — | Platform only: create, update and archive organizations |
 
 `platform_admin` has every permission, in any organization.
@@ -60,6 +66,16 @@ Defined once, in `apps/api/app/modules/identity/authz.py` (`ROLE_PERMISSIONS`).
 | `POST /invitations`, `GET /invitations`, `DELETE /invitations/{id}`, `POST /invitations/{id}/resend` | org_admin |
 | `POST /imports`, `GET /imports`, `GET /imports/{id}`, `GET /imports/{id}/errors.csv` | org_admin |
 | `GET /audit-log` | org_admin (platform admins with no active org see all orgs) |
+| `GET /skills` | Any signed-in user |
+| `POST /skills`, `PATCH /skills/{id}` | Staff of a content-publisher org; platform admin |
+| `POST /courses`, `GET /courses` | org_admin, instructor (the list covers owned courses and published courses assigned to the org) |
+| `GET /courses/{id}`, `GET /courses/{id}/versions`, `GET /courses/{id}/versions/{version_id}`, `GET /courses/{id}/assignments` | org_admin, instructor of the owner org, or of an org the course is assigned to (published courses only) |
+| `PATCH/DELETE /courses/{id}`, `GET /courses/{id}/draft`, module and lesson routes, `PUT .../order`, `PUT /courses/{id}/lessons/{lesson_id}/skills`, `GET /courses/{id}/publish-preview`, `POST /courses/{id}/versions` | org_admin, instructor of the **owner** org (others get 404) |
+| `POST /courses/{id}/assignments` | Owner org: org_admin, instructor (`course.assign`). Receiving org: org_admin only (`course.distribute`), narrowing its grant to its own batches |
+| `DELETE /course-assignments/{id}` | The org that created the row: owner-org editors for publisher-made rows, the receiving org_admin for rows their org created |
+| `POST /courses/{id}/enrollment-upgrades` | org_admin of the enrollments' org |
+| `GET /enrollments` | Any signed-in user (their own enrollments) |
+| `GET /enrollments/{id}`, `POST /enrollments/{id}/lessons/{lesson_id}/visit`, `.../complete` | The enrolled student only (everyone else gets 404) |
 
 All paths are under `/api/v1`, and platform admins can call every endpoint.
 
@@ -197,6 +213,7 @@ trip it. Production realms must enable it.
 - [ ] **Router:** use `CurrentPrincipal` / `TenantSession`, so the RLS context is set.
 - [ ] **Tests:** add a row to `MATRIX` in `tests/test_endpoint_roles.py`. The meta-test fails until
   you do.
+  Routes that belong to one user (like a student's enrollment) set `denied="404"`.
 - [ ] **New tenant-owned table:** add `organization_id` (indexed), enable RLS, and write one policy
   per operation using the `app.*` helpers. The schema guards fail otherwise.
 - [ ] **Admin action:** record it with `audit.record()` in the same transaction.

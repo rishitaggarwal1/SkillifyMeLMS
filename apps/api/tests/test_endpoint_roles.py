@@ -140,6 +140,104 @@ def _import_body(_: World) -> Awaitable[Request]:
     )
 
 
+# ---------------------------------------------------------------------------- Phase 2 builders
+
+
+async def _course(w: World, *, published: bool = False) -> tuple[Any, Any, Any]:
+    """A course owned by org A with one module and one notes lesson (optionally published)."""
+    course = await w.factory.course(w.org)
+    module = await w.factory.module(course)
+    lesson = await w.factory.lesson(module, lesson_type="notes")
+    if published:
+        await w.factory.version(course, lesson)
+    return course, module, lesson
+
+
+async def _course_path(w: World) -> Request:
+    course, _, _ = await _course(w)
+    return f"/api/v1/courses/{course.id}", {}
+
+
+def _course_sub(suffix: str, *, published: bool = False, **kwargs: Any) -> Builder:
+    async def build(w: World) -> Request:
+        course, module, lesson = await _course(w, published=published)
+        path = suffix.format(m=module.id, lesson=lesson.id)
+        body = kwargs.get("json")
+        if callable(body):
+            body = body(course, module, lesson)
+        return f"/api/v1/courses/{course.id}{path}", {"json": body} if body is not None else {}
+
+    return build
+
+
+async def _version(w: World) -> Request:
+    course, _, lesson = await _course(w)
+    version = await w.factory.version(course, lesson)
+    return f"/api/v1/courses/{course.id}/versions/{version.id}", {}
+
+
+async def _assign(w: World) -> Request:
+    course, _, _ = await _course(w, published=True)
+    batch = await w.factory.batch(w.org)
+    return f"/api/v1/courses/{course.id}/assignments", {"json": {"batch_ids": [str(batch.id)]}}
+
+
+async def _assignment(w: World) -> Request:
+    course, _, _ = await _course(w, published=True)
+    assignment = await w.factory.assignment(course, w.org, batch=await w.factory.batch(w.org))
+    return f"/api/v1/course-assignments/{assignment.id}", {}
+
+
+async def _upgrade(w: World) -> Request:
+    course, _, lesson = await _course(w, published=True)
+    await w.factory.version(course, lesson, major=2)
+    return f"/api/v1/courses/{course.id}/enrollment-upgrades", {"json": {"to_major": 2}}
+
+
+async def _enrollment(w: World) -> tuple[Any, Any]:
+    """Org A's student enrolled (through a batch assignment) in a published course."""
+    course, _, lesson = await _course(w, published=True)
+    batch = await w.factory.batch(w.org)
+    await w.factory.add_to_batch(batch, w.users["student"])
+    await w.factory.assignment(course, w.org, batch=batch)
+    return await w.factory.enrollment(course, w.users["student"], w.org), lesson
+
+
+async def _enrollment_path(w: World) -> Request:
+    enrollment, _ = await _enrollment(w)
+    return f"/api/v1/enrollments/{enrollment.id}", {}
+
+
+def _lesson_action(action: str) -> Builder:
+    async def build(w: World) -> Request:
+        enrollment, lesson = await _enrollment(w)
+        return f"/api/v1/enrollments/{enrollment.id}/lessons/{lesson.id}/{action}", {}
+
+    return build
+
+
+async def _skill(w: World) -> Request:
+    return f"/api/v1/skills/{(await w.factory.skill()).id}", {"json": {"description": "x"}}
+
+
+def _skill_body(_: World) -> Awaitable[Request]:
+    return _static("/api/v1/skills", json={"name": "S", "slug": f"s_{uuid7().hex[-10:]}"})
+
+
+def _course_body(_: World) -> Awaitable[Request]:
+    return _static("/api/v1/courses", json={"title": f"Course {uuid7().hex[-10:]}"})
+
+
+def _lesson_order(course: Any, module: Any, lesson: Any) -> dict[str, list[str]]:
+    del course, module
+    return {"ids": [str(lesson.id)]}
+
+
+def _module_order(course: Any, module: Any, lesson: Any) -> dict[str, list[str]]:
+    del course, lesson
+    return {"ids": [str(module.id)]}
+
+
 @dataclass(frozen=True)
 class Route:
     method: str
@@ -147,6 +245,7 @@ class Route:
     allowed: set[str]
     build: Builder
     names_resource: bool = False  # True: org B's admin gets 404 instead of 2xx
+    denied: str = "403"  # status for signed-in callers outside `allowed`
 
 
 MATRIX = [
@@ -211,6 +310,188 @@ MATRIX = [
     ),
     # --- audit
     Route("GET", "/api/v1/audit-log", ADMINS, at("/api/v1/audit-log")),
+    # --- skills: everyone reads; org A isn't a content publisher, so only platform admins
+    # write.
+    Route("GET", "/api/v1/skills", EVERYONE, at("/api/v1/skills")),
+    Route("POST", "/api/v1/skills", PLATFORM, _skill_body),
+    Route("PATCH", "/api/v1/skills/{skill_id}", PLATFORM, _skill),
+    # --- courses: org A's instructors and org admins author; org B's admin can't see them.
+    Route("POST", "/api/v1/courses", STAFF_READ, _course_body),
+    Route("GET", "/api/v1/courses", STAFF_READ, at("/api/v1/courses")),
+    Route(
+        "GET",
+        "/api/v1/courses/{course_id}",
+        STAFF_READ,
+        _course_path,
+        names_resource=True,
+    ),
+    Route(
+        "PATCH",
+        "/api/v1/courses/{course_id}",
+        STAFF_READ,
+        lambda w: _with_json(_course_path(w), {"description": "x"}),
+        names_resource=True,
+    ),
+    Route(
+        "DELETE",
+        "/api/v1/courses/{course_id}",
+        STAFF_READ,
+        _course_path,
+        names_resource=True,
+    ),
+    Route(
+        "GET",
+        "/api/v1/courses/{course_id}/draft",
+        STAFF_READ,
+        _course_sub("/draft"),
+        names_resource=True,
+    ),
+    Route(
+        "POST",
+        "/api/v1/courses/{course_id}/modules",
+        STAFF_READ,
+        _course_sub("/modules", json={"title": "M"}),
+        names_resource=True,
+    ),
+    Route(
+        "PUT",
+        "/api/v1/courses/{course_id}/modules/order",
+        STAFF_READ,
+        _course_sub("/modules/order", json=_module_order),
+        names_resource=True,
+    ),
+    Route(
+        "PATCH",
+        "/api/v1/courses/{course_id}/modules/{module_id}",
+        STAFF_READ,
+        _course_sub("/modules/{m}", json={"title": "N"}),
+        names_resource=True,
+    ),
+    Route(
+        "DELETE",
+        "/api/v1/courses/{course_id}/modules/{module_id}",
+        STAFF_READ,
+        _course_sub("/modules/{m}"),
+        names_resource=True,
+    ),
+    Route(
+        "POST",
+        "/api/v1/courses/{course_id}/modules/{module_id}/lessons",
+        STAFF_READ,
+        _course_sub("/modules/{m}/lessons", json={"title": "L", "lesson_type": "notes"}),
+        names_resource=True,
+    ),
+    Route(
+        "PUT",
+        "/api/v1/courses/{course_id}/modules/{module_id}/lessons/order",
+        STAFF_READ,
+        _course_sub("/modules/{m}/lessons/order", json=_lesson_order),
+        names_resource=True,
+    ),
+    Route(
+        "GET",
+        "/api/v1/courses/{course_id}/lessons/{lesson_id}",
+        STAFF_READ,
+        _course_sub("/lessons/{lesson}"),
+        names_resource=True,
+    ),
+    Route(
+        "PATCH",
+        "/api/v1/courses/{course_id}/lessons/{lesson_id}",
+        STAFF_READ,
+        _course_sub("/lessons/{lesson}", json={"title": "L2"}),
+        names_resource=True,
+    ),
+    Route(
+        "DELETE",
+        "/api/v1/courses/{course_id}/lessons/{lesson_id}",
+        STAFF_READ,
+        _course_sub("/lessons/{lesson}"),
+        names_resource=True,
+    ),
+    Route(
+        "PUT",
+        "/api/v1/courses/{course_id}/lessons/{lesson_id}/skills",
+        STAFF_READ,
+        _course_sub("/lessons/{lesson}/skills", json={"skill_ids": []}),
+        names_resource=True,
+    ),
+    Route(
+        "GET",
+        "/api/v1/courses/{course_id}/publish-preview",
+        STAFF_READ,
+        _course_sub("/publish-preview"),
+        names_resource=True,
+    ),
+    Route(
+        "POST",
+        "/api/v1/courses/{course_id}/versions",
+        STAFF_READ,
+        _course_sub("/versions", json={"release_type": "major"}),
+        names_resource=True,
+    ),
+    Route(
+        "GET",
+        "/api/v1/courses/{course_id}/versions",
+        STAFF_READ,
+        _course_sub("/versions"),
+        names_resource=True,
+    ),
+    Route(
+        "GET",
+        "/api/v1/courses/{course_id}/versions/{version_id}",
+        STAFF_READ,
+        _version,
+        names_resource=True,
+    ),
+    # --- assignments
+    Route(
+        "GET",
+        "/api/v1/courses/{course_id}/assignments",
+        STAFF_READ,
+        _course_sub("/assignments", published=True),
+        names_resource=True,
+    ),
+    Route(
+        "POST",
+        "/api/v1/courses/{course_id}/assignments",
+        STAFF_READ,
+        _assign,
+        names_resource=True,
+    ),
+    Route(
+        "DELETE",
+        "/api/v1/course-assignments/{assignment_id}",
+        STAFF_READ,
+        _assignment,
+        names_resource=True,
+    ),
+    # --- enrollments: a student's own; anyone else gets 404 (existence isn't revealed).
+    Route("GET", "/api/v1/enrollments", EVERYONE, at("/api/v1/enrollments")),
+    Route(
+        "GET", "/api/v1/enrollments/{enrollment_id}", {"student"}, _enrollment_path, denied="404"
+    ),
+    Route(
+        "POST",
+        "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/visit",
+        {"student"},
+        _lesson_action("visit"),
+        denied="404",
+    ),
+    Route(
+        "POST",
+        "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/complete",
+        {"student"},
+        _lesson_action("complete"),
+        denied="404",
+    ),
+    Route(
+        "POST",
+        "/api/v1/courses/{course_id}/enrollment-upgrades",
+        ADMINS,
+        _upgrade,
+        names_resource=True,
+    ),
 ]
 
 
@@ -223,7 +504,7 @@ def expected_status(route: Route, role: str) -> str:
     if role == "anonymous":
         return "401"
     if role not in route.allowed:
-        return "403"
+        return route.denied
     if role == "other_admin" and route.names_resource:
         return "404"
     return "2xx"

@@ -72,7 +72,7 @@ async def test_who_can_create_skills(
 
 async def test_starter_tree_is_seeded(db_session: AsyncSession) -> None:
     result = await db_session.execute(text("SELECT path::text, name FROM skills"))
-    rows: dict[str, str] = dict(result.tuples().all())
+    rows: dict[str, str] = dict(result.all())
     expected = {
         "aptitude": "Aptitude",
         "aptitude.quantitative": "Quantitative",

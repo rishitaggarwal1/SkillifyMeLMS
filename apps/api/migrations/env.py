@@ -6,11 +6,16 @@ from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import pool
+from sqlalchemy.dialects.postgresql.base import ischema_names
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.config import get_settings
 from app.db.models import Base
+from app.db.types import LTree
+
+# Let autogenerate reflect ltree columns (skills.path) instead of warning about an unknown type.
+ischema_names.setdefault("ltree", LTree)
 
 config = context.config
 if config.config_file_name is not None:

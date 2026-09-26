@@ -11,10 +11,12 @@ With no org set, `app.current_org_id()` is NULL and tenant-scoped policies match
 is read by `app.current_user_is_platform_admin()`. Only the auth layer may set it to true.
 """
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from uuid import UUID
 
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 
 async def set_tenant_context(
@@ -34,3 +36,17 @@ async def set_tenant_context(
             func.set_config("app.platform_admin", "true" if is_platform_admin else "", True),
         )
     )
+
+
+@asynccontextmanager
+async def system_transaction(
+    sessionmaker: async_sessionmaker[AsyncSession], *, organization_id: UUID | None = None
+) -> AsyncIterator[AsyncSession]:
+    """A transaction for background system jobs (enrollment fan-out, consumers): platform-admin
+    RLS context, no acting user. Pass the organization the job works for, so the domain events it
+    writes pass the outbox policy (events belong to the current org)."""
+    async with sessionmaker() as session, session.begin():
+        await set_tenant_context(
+            session, organization_id=organization_id, user_id=None, is_platform_admin=True
+        )
+        yield session

@@ -48,3 +48,18 @@ class EnqueueRecorder:
 
     def __call__(self, job_id: UUID, org_id: UUID, user_id: UUID) -> None:
         self.jobs.append((job_id, org_id, user_id))
+
+
+@dataclass
+class RecordingJobQueue:
+    """Records background jobs instead of sending them to Celery; tests run them with
+    `tests.jobs.run_jobs`."""
+
+    sent: list[tuple[str, tuple[str, ...]]] = field(default_factory=list)
+
+    def send(self, task: str, *args: str) -> None:
+        self.sent.append((task, args))
+
+    def take(self) -> list[tuple[str, tuple[str, ...]]]:
+        jobs, self.sent = self.sent, []
+        return jobs

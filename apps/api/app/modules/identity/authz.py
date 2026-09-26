@@ -27,6 +27,14 @@ class Permission(StrEnum):
     MEMBER_IMPORT = "member.import"
     AUDIT_READ = "audit.read"
     LAB_AUTHOR = "lab.author"  # used from Phase 3
+    # Phase 2: courses and learning content.
+    COURSE_READ = "course.read"  # courses the org owns or was assigned, and their assignments
+    COURSE_EDIT = "course.edit"  # author the org's own courses (drafts, publishing)
+    COURSE_ASSIGN = "course.assign"  # owner-org editors assign their courses (publisher-made rows)
+    COURSE_DISTRIBUTE = "course.distribute"  # narrow an org grant to the org's own batches
+    ENROLLMENT_UPGRADE = "enrollment.upgrade"  # opt the org's enrollments into a new major
+    # Also requires the active org to be a content publisher (checked in the skills service).
+    SKILL_MANAGE = "skill.manage"
 
 
 # Single source of truth for role -> permissions (documented in docs/access-control.md).
@@ -41,12 +49,28 @@ ROLE_PERMISSIONS: Mapping[OrgRole, frozenset[Permission]] = {
             Permission.MEMBER_INVITE,
             Permission.MEMBER_IMPORT,
             Permission.AUDIT_READ,
+            Permission.COURSE_READ,
+            Permission.COURSE_EDIT,
+            Permission.COURSE_ASSIGN,
+            Permission.COURSE_DISTRIBUTE,
+            Permission.ENROLLMENT_UPGRADE,
+            Permission.SKILL_MANAGE,
         }
     ),
     OrgRole.INSTRUCTOR: frozenset(
-        {Permission.ORG_READ, Permission.BATCH_READ, Permission.MEMBER_READ}
+        {
+            Permission.ORG_READ,
+            Permission.BATCH_READ,
+            Permission.MEMBER_READ,
+            Permission.COURSE_READ,
+            Permission.COURSE_EDIT,
+            Permission.COURSE_ASSIGN,
+            Permission.SKILL_MANAGE,
+        }
     ),
-    OrgRole.LAB_AUTHOR: frozenset({Permission.ORG_READ, Permission.LAB_AUTHOR}),
+    OrgRole.LAB_AUTHOR: frozenset(
+        {Permission.ORG_READ, Permission.LAB_AUTHOR, Permission.SKILL_MANAGE}
+    ),
     OrgRole.STUDENT: frozenset({Permission.ORG_READ}),
 }
 

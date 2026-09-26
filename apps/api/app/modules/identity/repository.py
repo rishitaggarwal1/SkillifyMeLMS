@@ -304,6 +304,16 @@ class BatchRepository:
             return []
         return list(await self.session.scalars(select(Batch).where(Batch.id.in_(ids))))
 
+    async def ids_in_org(self, organization_id: UUID, batch_ids: Sequence[UUID]) -> set[UUID]:
+        if not batch_ids:
+            return set()
+        rows = await self.session.scalars(
+            select(Batch.id).where(
+                Batch.organization_id == organization_id, Batch.id.in_(batch_ids)
+            )
+        )
+        return set(rows)
+
     async def member_counts(self, batch_ids: Sequence[UUID]) -> dict[UUID, int]:
         counts: dict[UUID, int] = dict.fromkeys(batch_ids, 0)
         if batch_ids:

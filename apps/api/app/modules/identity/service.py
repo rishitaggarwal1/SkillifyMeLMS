@@ -148,6 +148,29 @@ async def list_org_batches(
     )
 
 
+async def org_is_content_publisher(session: AsyncSession, organization_id: UUID) -> bool:
+    org = await OrganizationRepository(session).get(organization_id)
+    return org is not None and org.is_content_publisher and org.status == "active"
+
+
+async def student_batch_ids(
+    session: AsyncSession, organization_id: UUID, user_id: UUID
+) -> list[UUID]:
+    """Batches of `organization_id` the user belongs to **as a student** (empty if they're not a
+    student there). Used to reconcile one student's enrollments after a membership change."""
+    roles = await MembershipRepository(session).roles_for_users(organization_id, [user_id])
+    if OrgRole.STUDENT not in roles[user_id]:
+        return []
+    return await BatchMemberRepository(session).batch_ids_for_user(organization_id, user_id)
+
+
+async def batch_ids_in_org(
+    session: AsyncSession, organization_id: UUID, batch_ids: Sequence[UUID]
+) -> set[UUID]:
+    """The subset of `batch_ids` that are batches of `organization_id`."""
+    return await BatchRepository(session).ids_in_org(organization_id, batch_ids)
+
+
 # ============================================================================ organizations
 
 

@@ -5,6 +5,7 @@ database session whose RLS context is that principal.
     async def list_things(principal: CurrentPrincipal, session: TenantSession) -> ...
 """
 
+from dataclasses import dataclass
 from typing import Annotated
 from uuid import UUID
 
@@ -14,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth.jwt import JwtValidator
 from app.core.errors import AuthenticationError, PermissionDeniedError, RateLimitedError
+from app.core.jobs import JobQueue
 from app.core.ratelimit import RateLimiter
 from app.core.redis import RedisClient
 from app.db.session import DbSession
@@ -95,3 +97,25 @@ def get_audit_actor(request: Request, principal: CurrentPrincipal) -> AuditActor
 
 
 AuditActorDep = Annotated[AuditActor, Depends(get_audit_actor)]
+
+
+@dataclass(frozen=True, slots=True)
+class RequestContext:
+    """What a service operation needs about the request: the RLS-scoped session, the caller, the
+    audit actor and the background job queue."""
+
+    session: AsyncSession
+    principal: Principal
+    actor: AuditActor
+    jobs: JobQueue
+
+
+async def get_request_context(
+    request: Request, principal: CurrentPrincipal, session: TenantSession, actor: AuditActorDep
+) -> RequestContext:
+    return RequestContext(
+        session=session, principal=principal, actor=actor, jobs=request.app.state.jobs
+    )
+
+
+RequestCtx = Annotated[RequestContext, Depends(get_request_context)]
