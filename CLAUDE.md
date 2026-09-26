@@ -29,15 +29,25 @@ Decided 2026-09-26.
 
 - Every course has exactly one **owner organization** (`courses.organization_id`).
 - `organizations.is_content_publisher` marks orgs that author content for other orgs. SkillifyMe's own org has it.
-- A course is visible to its owner org and to any org it is assigned to through `course_assignments (course_id, organization_id, batch_id NULL)`.
-  - `batch_id IS NULL` means the whole assigned org can see the course.
-  - A `batch_id` limits visibility to that batch's students.
-- Only owner-org members with the `instructor` or `org_admin` role can edit a course. Assigned orgs get read and enroll access only.
+- **Two-level assignment** through `course_assignments (course_id, organization_id, batch_id NULL)`:
+  - `batch_id IS NULL` is an **org grant**: an entitlement for the org, which its `org_admin` distributes. An org grant alone makes the course visible to no students.
+  - A `batch_id` row is a **batch assignment**: the course becomes visible to that batch's students.
+  - A publisher assigns a course to an org (org grant) or directly to specific batches of that org.
+  - The receiving org's `org_admin` chooses which of their batches receive a granted course. Org admins can only narrow within what was assigned to them, never widen it.
+- **Students see a course only when it is assigned to their batch.** This includes students of the owner org.
+- Owner-org members with the `instructor` or `org_admin` role can see, preview (drafts and published versions) and edit a course. No one else can edit. Assigned orgs get read and enroll access only.
 - Any org can author private courses that are visible only to itself.
-- These rules are enforced by **PostgreSQL RLS policies**, not only by service-layer checks. They must be covered by tests proving that:
+- **Versioning:**
+  - Each published version is marked **minor** (corrections only: no lessons added, removed or reordered) or **major**.
+  - Minor versions apply automatically to all existing enrollments.
+  - Major versions apply only to new enrollments. An `org_admin` can opt their org's existing enrollments into the new major version; progress carries over for lessons whose stable lesson ID still exists.
+  - Lessons keep stable IDs across versions.
+- These rules are enforced by **PostgreSQL RLS policies**, written per operation, not only by service-layer checks. They must be covered by tests proving that:
   - an assigned org cannot edit
   - an unassigned org cannot see
   - a batch-level assignment limits visibility to that batch's students
+  - org admins cannot widen an assignment
+  - students cannot see courses not assigned to their batch
 
 ## Stack
 
