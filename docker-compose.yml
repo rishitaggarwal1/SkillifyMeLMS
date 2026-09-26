@@ -9,7 +9,11 @@ x-api-env: &api-env
   LOG_JSON: ${LOG_JSON:-false}
   DATABASE_URL: postgresql+asyncpg://skillify_app:${APP_DB_PASSWORD:?}@postgres:5432/${POSTGRES_DB:?}
   MIGRATION_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:?}
+  RELAY_DATABASE_URL: postgresql+asyncpg://skillify_relay:${RELAY_DB_PASSWORD:?}@postgres:5432/${POSTGRES_DB:?}
+  APP_DB_PASSWORD: ${APP_DB_PASSWORD:?}
+  RELAY_DB_PASSWORD: ${RELAY_DB_PASSWORD:?}
   REDIS_URL: redis://redis:6379/0
+  KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
   OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
   # Windows/macOS bind mounts do not deliver inotify events into Linux containers.
   WATCHFILES_FORCE_POLLING: "true"
@@ -23,11 +27,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
       POSTGRES_DB: ${POSTGRES_DB:?}
-      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?}
     ports: ["${POSTGRES_PORT:-5432}:5432"]
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./infra/local/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -152,7 +154,8 @@ services:
     build: { context: ./apps/api, target: dev }
     image: skillifyme-api:dev
     environment: *api-env
-    command: ["alembic", "upgrade", "head"]
+    # Ensure the login roles (idempotent), then migrate.
+    command: ["sh", "-c", "python -m app.cli.db_roles && alembic upgrade head"]
     volumes: ["./apps/api:/app"]
     depends_on:
       postgres: { condition: service_healthy }
@@ -189,6 +192,26 @@ services:
     depends_on:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
+
+  beat:
+    image: skillifyme-api:dev
+    pull_policy: never
+    environment: *api-env
+    # Schedule lives in app/worker.py (beat_schedule). Single instance only.
+    command: ["celery", "-A", "app.worker", "beat", "--loglevel=INFO", "--schedule=/tmp/celerybeat-schedule"]
+    volumes: ["./apps/api:/app"]
+    depends_on:
+      redis: { condition: service_healthy }
+
+  outbox-relay:
+    image: skillifyme-api:dev
+    pull_policy: never
+    environment: *api-env
+    command: ["python", "-m", "app.cli.outbox_relay"]
+    volumes: ["./apps/api:/app"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redpanda: { condition: service_healthy }
 
   web:
     image: node:22-alpine

@@ -12,44 +12,23 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  # CI-only throwaway credentials for the ephemeral service containers below.
-  POSTGRES_USER: skillify
-  POSTGRES_PASSWORD: ci-owner-pw
-  POSTGRES_DB: skillify
-  APP_DB_PASSWORD: ci-app-pw
-  DATABASE_URL: postgresql+asyncpg://skillify_app:ci-app-pw@localhost:5432/skillify
-  MIGRATION_DATABASE_URL: postgresql+asyncpg://skillify:ci-owner-pw@localhost:5432/skillify
-  REDIS_URL: redis://localhost:6379/0
-  ENVIRONMENT: test
-  LOG_JSON: "false"
-
 jobs:
   # ------------------------------------------------------------------------------------------ API
   api:
     name: API · lint, type-check, test
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: ${{ env.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
-          POSTGRES_DB: ${{ env.POSTGRES_DB }}
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U skillify" --health-interval 5s --health-timeout 3s --health-retries 20
-      redis:
-        image: redis:7-alpine
-        ports: ["6379:6379"]
-        options: >-
-          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 20
     defaults:
       run:
         working-directory: apps/api
     steps:
       - uses: actions/checkout@v5
+      - name: Start Postgres, Redis, Redpanda
+        working-directory: .
+        # Same images and config as local dev; .env.example holds CI/local-only placeholders.
+        run: |
+          cp .env.example .env
+          docker compose up -d --wait postgres redis redpanda
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.12.19"
@@ -62,13 +41,8 @@ jobs:
           uv run ruff format --check .
       - name: Mypy (strict)
         run: uv run mypy
-      - name: Create runtime DB role
-        working-directory: .
-        env:
-          PGHOST: localhost
-          PGPASSWORD: ${{ env.POSTGRES_PASSWORD }}
-        run: bash infra/local/postgres/init/01-app-role.sh
       - name: Pytest
+        # Fixtures create the DB roles and a migrated test database.
         run: uv run pytest
 
   # ------------------------------------------------------------------------------------------ Web
@@ -113,21 +87,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: [api, web]
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: ${{ env.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
-          POSTGRES_DB: ${{ env.POSTGRES_DB }}
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U skillify" --health-interval 5s --health-timeout 3s --health-retries 20
-      redis:
-        image: redis:7-alpine
-        ports: ["6379:6379"]
-        options: >-
-          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 20
     steps:
       - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v6
@@ -144,13 +103,16 @@ jobs:
           cache: pnpm
           cache-dependency-path: apps/web/pnpm-lock.yaml
 
-      - name: Prepare database
-        env:
-          PGHOST: localhost
-          PGPASSWORD: ${{ env.POSTGRES_PASSWORD }}
+      - name: Start backing services
         run: |
-          bash infra/local/postgres/init/01-app-role.sh
-          cd apps/api && uv sync --frozen --no-dev && uv run --no-dev alembic upgrade head
+          cp .env.example .env
+          docker compose up -d --wait postgres redis redpanda
+      - name: Prepare database
+        working-directory: apps/api
+        run: |
+          uv sync --frozen --no-dev
+          uv run --no-dev python -m app.cli.db_roles
+          uv run --no-dev alembic upgrade head
       - name: Start API
         working-directory: apps/api
         run: |

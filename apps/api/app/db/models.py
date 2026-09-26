@@ -2,5 +2,28 @@
 
 from app.db.base import Base
 from app.db.outbox import OutboxEvent
+from app.modules.audit.models import AuditLog
+from app.modules.identity.models import (
+    Batch,
+    BatchMember,
+    ImportJob,
+    ImportJobError,
+    Invitation,
+    Membership,
+    Organization,
+    User,
+)
 
-__all__ = ["Base", "OutboxEvent"]
+__all__ = [
+    "AuditLog",
+    "Base",
+    "Batch",
+    "BatchMember",
+    "ImportJob",
+    "ImportJobError",
+    "Invitation",
+    "Membership",
+    "Organization",
+    "OutboxEvent",
+    "User",
+]

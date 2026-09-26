@@ -31,7 +31,17 @@ class Settings(BaseSettings):
     db_pool_timeout_seconds: float = Field(default=10.0, gt=0)
     db_statement_timeout_ms: int = Field(default=15_000, ge=0)
 
+    # Passwords for the non-owner login roles, used only by `python -m app.cli.db_roles`.
+    app_db_password: SecretStr | None = None
+    relay_db_password: SecretStr | None = None
+
     redis_url: SecretStr
+
+    # Kafka / outbox relay. The relay connects as the `skillify_relay` role.
+    kafka_bootstrap_servers: str = "localhost:19092"
+    relay_database_url: SecretStr | None = None
+    outbox_relay_batch_size: int = Field(default=500, ge=1, le=5000)
+    outbox_relay_poll_interval_seconds: float = Field(default=0.5, gt=0)
 
     # Celery defaults to the main Redis instance when unset.
     celery_broker_url: SecretStr | None = None

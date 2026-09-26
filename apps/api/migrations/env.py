@@ -18,6 +18,16 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
+# Schema objects autogenerate cannot represent faithfully; managed by hand in migrations.
+# fk_import_jobs_batch_org uses `ON DELETE SET NULL (batch_id)` (PG15+ column list).
+_UNMANAGED = frozenset({"fk_import_jobs_batch_org"})
+
+
+def _include_object(
+    obj: object, name: str | None, type_: str, reflected: bool, compare_to: object
+) -> bool:
+    return name not in _UNMANAGED
+
 
 def _database_url() -> str:
     # Tests (and tooling) can point Alembic at another database via `-x url=...` or attributes.
@@ -36,13 +46,19 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
+        include_object=_include_object,
     )
     with context.begin_transaction():
         context.run_migrations()
 
 
 def _do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        compare_type=True,
+        include_object=_include_object,
+    )
     with context.begin_transaction():
         context.run_migrations()
 

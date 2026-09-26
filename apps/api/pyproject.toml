@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "SkillifyMe Portal API (modular monolith)"
 requires-python = ">=3.13,<3.14"
 dependencies = [
+    "aiokafka>=0.14.0",
     "alembic>=1.20.0",
     "asyncpg>=0.31.0",
     "celery>=5.6.3",
@@ -49,9 +50,11 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"**/tests/**" = ["S101", "PLR2004", "S105", "S106"]
-"tests/**" = ["S101", "PLR2004", "S105", "S106"]
-"migrations/**" = ["ERA001", "S608"]  # DDL cannot use bind params; identifiers are constants
+# Tests build SQL from constant table names (S608) to exercise RLS directly.
+"**/tests/**" = ["S101", "PLR2004", "S105", "S106", "S608"]
+"tests/**" = ["S101", "PLR2004", "S105", "S106", "S608"]
+# DDL cannot use bind params (identifiers are constants); schema migrations are long by nature.
+"migrations/**" = ["ERA001", "S608", "PLR0915"]
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
@@ -64,7 +67,7 @@ warn_unreachable = true
 files = ["app", "tests", "migrations"]
 
 [[tool.mypy.overrides]]
-module = ["opentelemetry.instrumentation.*"]
+module = ["opentelemetry.instrumentation.*", "aiokafka", "aiokafka.*"]
 ignore_missing_imports = true
 
 [tool.pydantic-mypy]

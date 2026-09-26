@@ -72,5 +72,13 @@ make clean           # stop and wipe local data volumes
 
 - Upstream MinIO no longer publishes community Docker images, so local S3 uses Chainguard's
   source-built `cgr.dev/chainguard/minio` image.
-- The API connects as `skillify_app`, a non-owner role without BYPASSRLS, so Row-Level Security
-  always applies to it. Migrations run as the owner role.
+- **Database roles.** The API and Celery workers connect as `skillify_app`, and the outbox relay
+  as `skillify_relay`. Neither owns any table, and neither can bypass Row-Level Security, so RLS
+  always applies. Migrations run as the owner role. `python -m app.cli.db_roles` creates or
+  updates both roles and is safe to run repeatedly; the `migrate` job runs it before
+  `alembic upgrade head`.
+- **Background services.** `worker` runs Celery tasks, and `beat` runs the Celery scheduler (keep
+  only one instance). `outbox-relay` publishes outbox events to Kafka (Redpanda locally); see
+  `docs/events.md`.
+- **Port clash on 8080.** If something else already uses port 8080, set `KEYCLOAK_PORT` (and the
+  port in `OIDC_ISSUER`) in your `.env`.
