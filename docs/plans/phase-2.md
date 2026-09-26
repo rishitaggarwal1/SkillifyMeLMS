@@ -1,10 +1,11 @@
 # Phase 2 — Courses and learning content (plan)
 
-**Status:** planned, **blocked on Phase 1** (identity, organizations, roles, RLS).
-Resume by re-reading `CLAUDE.md`, confirming every item in [Prerequisites from Phase 1](#prerequisites-from-phase-1)
-exists, adjusting this plan to Phase 1's actual names, and presenting the updated plan for approval.
+**Status:** ready to start. Phase 1 (identity, organizations, roles, RLS) is complete; see
+[What Phase 1 provides](#what-phase-1-provides). Resume by re-reading `CLAUDE.md` and
+`docs/access-control.md`, then present this plan for approval before coding.
 
-Plan written 2026-09-26 against foundation commit `1ea3650`.
+First written 2026-09-26 against the foundation commit. Updated at the end of Phase 1 to use
+Phase 1's real names and to follow the 8 build steps from the Phase 2 prompt.
 
 ## Scope (as requested)
 
@@ -84,94 +85,106 @@ control, and progress calculation.
    - Lessons have stable IDs across versions.
    - See [Versioning](#versioning-decision-6).
 
-## Prerequisites from Phase 1
+## What Phase 1 provides
 
-Phase 2 assumes Phase 1 delivers the following. If a name differs, adapt this plan; don't duplicate
-Phase 1's work.
+All of this is built and tested. Use it; don't rebuild it.
+Full reference: [`docs/access-control.md`](../access-control.md).
 
-### Data (owned by the identity module)
+### Data (identity module: `apps/api/app/modules/identity`)
 
-- `organizations`: `id`, `name`, `slug`, and **`is_content_publisher boolean NOT NULL DEFAULT false`**.
-  Phase 1 should add the flag so Phase 2 doesn't need an identity migration.
-- `users`: `id`, Keycloak `sub`, `email`, `name`.
-- `org_memberships`:
-  - `organization_id`, `user_id`, `role`
-  - roles used by Phase 2: `org_admin`, `instructor`, `student`
-  - plus a platform-level `super_admin`
-- `batches (id, organization_id, name)` and `batch_members (batch_id, user_id, organization_id)`.
-  - `batches` needs a **`UNIQUE (id, organization_id)`** constraint, so `course_assignments` can use
-    the composite foreign key `(batch_id, organization_id) → batches(id, organization_id)`. That key
-    guarantees an assigned batch belongs to the assigned org (decision 5).
-- All of the above covered by tenant RLS, per `CLAUDE.md`.
-- Roles are **per organization**: one user can be an `instructor` in SkillifyMe and hold no role in
-  Demo College. The role helpers below must evaluate against a specific org, not "any org".
+- `organizations` with `is_content_publisher` (SkillifyMe is seeded as a publisher) and `status`
+  (active or archived; archived orgs grant nothing).
+- `users`: global, keyed by the Keycloak `sub`.
+- `memberships` `(user_id, organization_id, role)`.
+  - Roles: `org_admin`, `instructor`, `lab_author`, `student`. They are **per organization**, and a
+    user may hold several in one org.
+  - The platform role is **`platform_admin`** (a Keycloak realm role in the token), not
+    `super_admin`.
+- `batches` with **`UNIQUE (id, organization_id)`**. `course_assignments` can therefore use the
+  composite foreign key `(batch_id, organization_id) → batches(id, organization_id)`, the same way
+  `batch_members` and `import_jobs` already do.
+- `batch_members` `(batch_id, organization_id, user_id)`.
+- Every table has RLS with per-operation policies. Schema guards (`tests/test_schema_guards.py`)
+  fail if a new table lacks RLS, uses a `FOR ALL` policy, or leaves a foreign key unindexed.
 
-### SQL helpers that RLS policies can call
+### SQL helpers for Phase 2's RLS policies
 
-Other modules' RLS policies must not query identity tables directly (the module-boundary rule). So
-identity should expose `STABLE`, `SECURITY DEFINER` functions in the `app` schema, which act as its
-database-level interface:
+All are `SECURITY DEFINER` with a fixed `search_path`, and executable by the app role only:
 
-- `app.current_org_id()` and `app.current_user_id()` already exist (migration `0001`).
-- `app.current_user_has_role(org uuid, roles text[]) → boolean`. Used for:
-  - owner-org editing and draft preview (`instructor`, `org_admin`), decision 4
-  - an assigned org's `org_admin` narrowing the assignment to batches, decision 5
-  - opting enrollments into a new major version, decision 6
-- `app.current_user_in_batch(batch uuid) → boolean`. Used for batch-level student visibility.
-- `app.org_is_content_publisher(org uuid) → boolean`. Used by the RLS rule that only publishers may
-  assign courses to *other* orgs.
-- Optionally `app.current_user_is_super_admin() → boolean`.
-- These functions must be `SECURITY DEFINER` with a fixed `search_path`, and must not recurse into
-  the RLS on the tables they read.
+| Function | Use in Phase 2 |
+|---|---|
+| `app.current_org_id()`, `app.current_user_id()` | Tenant and user context |
+| `app.current_user_is_platform_admin()` | Platform override |
+| `app.current_user_has_role(org, roles[])` | Owner-org editors and draft preview (`{instructor,org_admin}`); an assigned org's `org_admin` narrowing to batches or opting in to a major version |
+| `app.current_user_is_member(org)` | Any role in an org |
+| `app.current_user_in_batch(batch)` | Batch-level student visibility |
+| `app.org_is_content_publisher(org)` | Only publishers may assign to *other* orgs |
 
-### Request context and auth
+Policy expression constants (`PLATFORM_ADMIN`, `ORG_ADMIN_HERE`, `STAFF_HERE`...) and the
+`enable_rls()` / `policy()` migration helpers are in `apps/api/app/db/rls.py`.
 
-- A FastAPI dependency, for example `CurrentPrincipal`, carrying `user_id`, the active
-  `organization_id`, and the user's roles in that org. It must call `set_tenant_context(...)` inside
-  the request transaction.
-- An httpOnly session cookie, plus CSRF protection for changing requests (POST, PUT, etc.).
-  Reachable through the web `/backend` proxy.
-- Role checks available to service layers, e.g. `identity.service.require_role(principal, {...})`.
-  The service layer does the same checks as RLS so users get clear errors. RLS is the backstop.
+### Request context and authorization
 
-### Service interface (used by the enrollments module)
+- Route dependencies: `CurrentPrincipal`, `TenantSession` (RLS context already set) and
+  `AuditActorDep`, in `identity/dependencies.py`.
+- `Principal` carries `user_id`, `organization_id` (the active org), `roles`, `memberships` and
+  `is_platform_admin`.
+- Service-layer checks: `require_permission`, `require_org_permission`, `require_role`. Add new
+  course permissions (e.g. `course.edit`, `course.assign`) to `ROLE_PERMISSIONS` and to
+  `docs/access-control.md`.
+- Every new endpoint needs a row in `MATRIX` in `tests/test_endpoint_roles.py`; the meta-test
+  enforces it.
+- Admin actions: `app.modules.audit.service.record()`.
+- **Web:** the Next.js BFF handles login and cookies, `useMe()` (`features/auth/queries.ts`) gives
+  the current user and permissions, and `proxy.ts` already protects `/learn` and `/teach`. Browser
+  calls go through `/backend/*` with `X-Organization-Id` set from the org switcher.
 
-- A streaming or paginated list of the student user IDs in a batch, for enrollment fan-out.
-  Enrollment happens per batch only, so there's no org-wide student list (decisions 4 and 5).
-- A way to list an org's batches (for the org_admin's batch picker), and to check that a batch
-  belongs to an org.
-- A membership-change signal (`batch_member_added` / `batch_member_removed`), either as an outbox
-  event or through an in-process subscriber hook, so enrollments can react when a student joins a
-  batch after a course was assigned to it. **Phase 1 should choose the mechanism; Phase 2 consumes
-  it.**
+### Service interface (for enrollments)
 
-### Platform pieces (Phase 1 builds these if it needs them; otherwise Phase 2 does)
+In `app.modules.identity.service`:
 
-- The outbox → Kafka relay service (see [Events](#events-outbox-relay-caching-catalog)).
-- A Celery beat service in `docker-compose.yml`.
+- `iter_batch_student_ids(session, batch_id, page_size=500)`: keyset pages of **student** user ids
+  in a batch, for enrollment fan-out.
+- `batch_belongs_to_org(session, batch_id, org_id)` and `list_org_batches(session, org_id, params)`.
+- **Batch join/leave events** (the membership-change signal):
+  - `batch_member_added` / `batch_member_removed` on Kafka topic `identity.batch-members.v1`,
+    keyed by `batch_id`
+  - the schemas are in `docs/events.md`
+  - reasons include `added`, `invitation`, `import`, `removed`, `left_organization` and
+    `invitation_revoked`
 
-### Seed data and test support
+  Phase 2 adds a consumer (a Kafka consumer group in a new worker service) that enrolls or revokes.
+  It must be idempotent: dedupe on the event `id`, and treat an `added` for an existing enrollment
+  as a no-op.
 
-- `make seed`, creating:
-  - **SkillifyMe**: `is_content_publisher = true`, with an instructor.
-  - **Demo College** with two batches, **CSE 2026** and **ECE 2026**, and these users:
-    - an org_admin
-    - an instructor
-    - a student in CSE 2026
-    - a student in ECE 2026 (needed for the batch-visibility test)
-  - **Other College**: an unrelated org with a student, an instructor and an org_admin, needed for
-    the unassigned-org test and the "an org_admin of another org can't upgrade" test.
-  - The Demo College org_admin is needed for the narrowing and major-upgrade flows (decisions 5
-    and 6).
-- The matching Keycloak dev-realm users, so Playwright can log in through the real login page.
-- pytest helpers:
-  - factories for orgs, users, memberships and batches
-  - an authenticated test client for a given principal, without going through Keycloak
+### Platform pieces already running
 
-### Web
+- Outbox → Kafka relay (`outbox-relay` service, role `skillify_relay`). Add Phase 2 topics to
+  `TOPICS` in `app/events/envelope.py`.
+- Celery `beat` (schedule in `app/worker.py`), a `worker`, and after-commit hooks
+  (`run_after_commit` / `run_after_commit_async` in `app/db/session.py`).
+- S3: `app.core.storage.ObjectStorage` (boto3; MinIO locally). Extend it with presigned URLs rather
+  than adding aiobotocore.
+- Redis sliding-window `RateLimiter` (`app/core/ratelimit.py`).
 
-- Login and logout, and a `useMe()` query.
-- Route protection in `proxy.ts` for `/learn` and `/teach`.
+### Seed data (`make seed`) and test support
+
+- **Orgs:** SkillifyMe (publisher), Demo College (batches **CSE 2026** and **ECE 2026**), Other
+  College (MECH 2026).
+- **Users** (password `Local-Dev-Only-1`):
+  - SkillifyMe: `platform.admin@`, `content.admin@` (org_admin), `author@` (instructor),
+    `lab.author@`, all `@skillifyme.local`
+  - Demo College: `admin@`, `instructor@`, `cse.student@`, `ece.student@`, all
+    `@demo-college.local`
+  - Other College: `admin@`, `instructor@`, `student@`, all `@other-college.local`
+  - `multi@skillifyme.local`: instructor in SkillifyMe and Demo College
+- **pytest:**
+  - `factory` (orgs, users, memberships, batches, invitations, import jobs)
+  - `tenant_session(org=..., user=..., platform_admin=...)` for RLS tests
+  - `auth_headers(user, org=..., platform_admin=...)` with locally signed JWTs
+  - `org_setup` (one user per role plus a batch)
+- **Playwright:** `e2e/helpers.ts` `signIn(page, email, path)` goes through the real Keycloak login
+  page.
 
 ## Backend design
 
@@ -443,19 +456,15 @@ batch belongs to the receiving org. Uniqueness is `(course_id, organization_id, 
 
 ### Events, outbox relay, caching, catalog
 
-- **Outbox relay (`outbox-relay` compose service, aiokafka):**
-  - claims up to 500 unpublished rows at a time with `FOR UPDATE SKIP LOCKED`, so several relays can
-    run safely
-  - publishes keyed by aggregate ID to `learning.enrollments.v1`, `learning.progress.v1` and
-    `courses.v1`
-  - then stamps `published_at`
-  - topics are created automatically in dev
+- **Outbox relay:** already running (Phase 1). Add `learning.enrollments.v1`,
+  `learning.progress.v1` and `courses.v1` to `TOPICS` in `app/events/envelope.py`.
 - **Events:**
   - `enrollment_created`
   - `lesson_completed`
   - `video_progress`
   - `course_published` (used for cache and catalog invalidation)
-- **`docs/events.md`:**
+  - `enrollment_version_changed` (an org_admin opted enrollments into a new major version)
+- **`docs/events.md`** (the envelope and relay are already documented; add):
   - the shared envelope: `id`, `type`, `version`, `occurred_at`, `organization_id`, `aggregate`,
     `data`
   - a JSON Schema for each event
@@ -503,7 +512,8 @@ batch belongs to the receiving org. Uniqueness is `(course_id, organization_id, 
 
 ## Infra changes
 
-- **New compose services:** `beat` and `outbox-relay` (unless Phase 1 added them).
+- **Compose:** `beat` and `outbox-relay` already exist. Add a Kafka consumer service for the batch
+  membership events.
 - **Config changes:**
   - MinIO CORS for the web origin
   - the Postgres `ltree` extension
@@ -514,21 +524,30 @@ batch belongs to the receiving org. Uniqueness is `(course_id, organization_id, 
     `BUNNY_WEBHOOK_SECRET` (left empty)
   - `REVALIDATE_SECRET`
   - `PROGRESS_FLUSH_INTERVAL_SECONDS`
-- **New API dependencies:** `aiokafka`, `aiobotocore`, `nh3`, `pygments`, and `respx` (dev only).
+- **New API dependencies:** `nh3` and `pygments`. `aiokafka`, `boto3`, `httpx` and `respx` are
+  already installed.
 - **New web dependencies:** `hls.js`, `tus-js-client`, `@tiptap/react` and extensions, `@dnd-kit/core`
   and `@dnd-kit/sortable`.
 
 ## Tests
 
-- **Versioning:**
+- **Versioning (decision 6):**
   - publishing takes a snapshot, and later draft edits don't change an enrolled student's outline or
     content
-  - new enrollments get the latest version, and upgrading is explicit
-  - version numbers increase
+  - the first publish is 1.0; major bumps to `(n+1).0`; minor bumps to `n.(m+1)`
+  - a minor is rejected (`409 minor_not_allowed`) when modules or lessons were added, removed,
+    reordered or moved, or when a lesson's type, `is_required` or `completion_threshold` changed
+  - a **minor** release reaches existing enrollments automatically, across orgs, and their progress
+    percentages are unchanged
+  - a **major** release reaches only new enrollments
+  - an org_admin's opt-in upgrade moves only their own org's enrollments, carries over completions
+    for surviving lesson ids, recomputes percentages, and emits `enrollment_version_changed`;
+    nobody else can perform it
+  - a lesson moved between modules keeps its id and its progress
   - publishing is rejected for an empty course or when a video isn't ready
-  - progress survives a republish
 - **Access control (RLS and service layer):**
-  - all five RLS tests listed [above](#visibility-and-rls-decision-3)
+  - every RLS test listed [above](#visibility-and-rls-decisions-35), plus every new endpoint in the
+    role matrix
   - students can't edit
   - a revoked assignment removes access
   - unauthorized requests return 404, not 403
@@ -561,31 +580,41 @@ batch belongs to the receiving org. Uniqueness is `(course_id, organization_id, 
   - the reorder logic
   - the heartbeat hook (fake timers, visibility changes, keepalive)
   - the progress and outline components
-- **Playwright (the done-when flow):**
-  1. The instructor logs in through the real Keycloak login page.
-  2. They build a course with video (MP4 fixture, local provider), notes and PDF lessons.
-  3. They publish it and assign it to CSE 2026.
-  4. The CSE 2026 student sees it under "Continue learning", watches the video, marks the notes and
-     PDF complete, and ends at 100%.
-  5. An ECE 2026 student and an Other College student don't see the course.
+- **Playwright (the done-when flow, from the Phase 2 prompt):**
+  1. The publisher (`author@skillifyme.local`) builds a course with video (MP4 fixture, local
+     provider), notes and PDF lessons, and publishes it.
+  2. They assign it to Demo College.
+  3. The Demo College admin assigns it to CSE 2026.
+  4. `cse.student@` completes it with correct progress.
+  5. `ece.student@` cannot see it.
+  6. The student UI is also checked on a 360px viewport.
 
 ## Build order
 
-Run `make lint` and `make test` after each step.
+These are the Phase 2 prompt's 8 steps. After each: lint, type-check, all tests, fix, commit and
+push, summarize, and wait for "continue".
 
-1. Check the Phase 1 prerequisites. Build the relay and beat if Phase 1 didn't.
-2. `skills`, and the `courses` draft tree plus builder API (with RLS).
-3. Versioning, `course_assignments`, and enrollments with fan-out.
-4. `media`: video providers, PDF files, notes rendering, and `scripts/smoke_test_bunny.py`.
-5. Progress (heartbeat, flush, completion rules) and events plus `docs/events.md`.
-6. Web instructor builder.
-7. Web student player and dashboard.
-8. Public catalog, caching, and the end-to-end Playwright test.
+1. Data model, migrations and RLS (skills, courses and draft tree, versions, assignments,
+   enrollments, progress, media tables).
+2. Services and APIs (builder, publish minor/major, assignments and narrowing, enrollments and the
+   batch-event consumer, upgrades, progress rules).
+3. Video (`VideoProvider`, local and Bunny, heartbeat → Redis → Celery flush, resume).
+4. Notes and PDFs.
+5. Caching and events.
+6. Instructor UI.
+7. Student UI.
+8. End-to-end tests and `scripts/smoke_test_bunny.py`.
 
 ## Open points to confirm when resuming
 
-- Students of the owner org see a course only once it's assigned to them (see
-  [Visibility](#visibility-and-rls-decision-3)).
-- Whether an assigned org's `org_admin` may narrow an org-wide assignment down to their own batches.
-- Whether new enrollments default to the latest version, with "upgrade" only for existing
-  enrollments (planned: yes).
+Decisions 4–6 settled the original questions. These smaller assumptions remain; confirm them before
+implementing:
+
+- **Publisher-made batch assignments:** an org_admin **cannot remove** batch assignments the
+  publisher created directly for their org's batches; they can remove only rows their own org
+  created.
+- **Assigned-org instructors** can read the published course but can't distribute it to batches.
+- **Major-version opt-in** applies to a whole org, or to a chosen subset of its batches; never to
+  individual students.
+- **A video replaced in a minor release:** completions are kept, and partially watched progress for
+  that lesson restarts.

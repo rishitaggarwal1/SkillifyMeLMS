@@ -1,7 +1,8 @@
 # Phase 1 — Identity, organizations and access control (plan)
 
-**Status:** approved 2026-09-26; in progress. Built in 5 steps. After each step: lint, type-check,
-all tests, fix, commit and push to `main`, summarize, and wait for "continue".
+**Status:** complete (2026-09-26). Built in 5 steps, each committed and pushed to `main`.
+Reference for what exists: [`docs/access-control.md`](../access-control.md) and
+[`docs/events.md`](../events.md).
 
 This phase also delivers everything in the "Prerequisites from Phase 1" section of
 [`phase-2.md`](phase-2.md). Where the two differ, this plan wins:
