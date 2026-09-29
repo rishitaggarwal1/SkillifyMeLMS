@@ -1,8 +1,11 @@
 # Phase 2 — Courses and learning content (plan)
 
-**Status:** ready to start. Phase 1 (identity, organizations, roles, RLS) is complete; see
-[What Phase 1 provides](#what-phase-1-provides). Resume by re-reading `CLAUDE.md` and
-`docs/access-control.md`, then present this plan for approval before coding.
+**Status (2026-09-29):** steps 1–2 are complete and committed (`41dd7d5`, `878985b`). Step 3
+(video) exists in the working tree but is **not committed** and has not been re-verified with
+`make lint` / `make test`. Steps 4–8 are not started. See
+[Implementation status](#implementation-status). Phase 1 (identity, organizations, roles, RLS) is
+complete; see [What Phase 1 provides](#what-phase-1-provides). Resume by re-reading `CLAUDE.md`
+and `docs/access-control.md`, then present this plan for approval before coding.
 
 First written 2026-09-26 against the foundation commit. Updated at the end of Phase 1 to use
 Phase 1's real names and to follow the 8 build steps from the Phase 2 prompt.
@@ -42,6 +45,104 @@ Phase 1's real names and to follow the 8 build steps from the Phase 2 prompt.
 **Done when:** an instructor builds and publishes a course with video, notes and PDF lessons, and a
 student in an assigned batch completes it with correct progress. Tests cover versioning, access
 control, and progress calculation.
+
+## Implementation status
+
+Checked against `git log` and the module code on 2026-09-29.
+
+### Step 1 — data model, migrations and RLS (`41dd7d5`)
+
+- **Migrations:** `0004_learning_content` (enables `ltree`; tables, the `lesson_type` enum,
+  RLS helpers `app.course_readable` and `app.is_org_grant`, per-operation policies) and
+  `0005_seed_skills` (starter taxonomy).
+- **Tables:** `skills`, `lesson_skills`, `courses`, `course_modules`, `lessons`,
+  `course_versions`, `course_version_lessons`, `course_assignments`, `catalog_entries`,
+  `enrollments`, `lesson_progress`, `video_assets`, `files`.
+- **RLS tests:** `courses/tests/test_course_rls.py`, `enrollments/tests/test_enrollment_rls.py`,
+  `skills/tests/test_skills_rls.py`.
+
+### Step 2 — services and APIs (`878985b`)
+
+All under `/api/v1`, each with a row in `MATRIX` (`tests/test_endpoint_roles.py`).
+
+| Area | Endpoints |
+|---|---|
+| Skills | `GET /skills`, `POST /skills`, `PATCH /skills/{skill_id}` |
+| Courses | `POST /courses`, `GET /courses`, `GET /courses/{course_id}`, `PATCH /courses/{course_id}`, `DELETE /courses/{course_id}` (archives) |
+| Draft builder | `GET /courses/{course_id}/draft`; `POST /courses/{course_id}/modules`; `PUT /courses/{course_id}/modules/order`; `PATCH`, `DELETE /courses/{course_id}/modules/{module_id}`; `POST /courses/{course_id}/modules/{module_id}/lessons`; `PUT /courses/{course_id}/modules/{module_id}/lessons/order`; `GET`, `PATCH`, `DELETE /courses/{course_id}/lessons/{lesson_id}`; `PUT /courses/{course_id}/lessons/{lesson_id}/skills` |
+| Publishing | `GET /courses/{course_id}/publish-preview`, `POST /courses/{course_id}/versions`, `GET /courses/{course_id}/versions`, `GET /courses/{course_id}/versions/{version_id}` |
+| Assignments | `GET /courses/{course_id}/assignments`, `POST /courses/{course_id}/assignments`, `DELETE /course-assignments/{assignment_id}` |
+| Enrollments | `GET /enrollments`, `GET /enrollments/{enrollment_id}`, `POST /enrollments/{enrollment_id}/lessons/{lesson_id}/visit`, `POST /enrollments/{enrollment_id}/lessons/{lesson_id}/complete`, `POST /courses/{course_id}/enrollment-upgrades` |
+
+Also committed: the enrollment Celery jobs, the Kafka batch-member consumer
+(`app/cli/enrollment_consumer.py`, a compose service), outbox events `course_published`,
+`enrollment_created`, `lesson_completed` and `enrollment_version_changed`, and the tests
+`test_builder_api`, `test_versioning`, `test_assignments_api`, `test_progress` and
+`test_versions_and_upgrades`.
+
+### Step 3 — video (working tree, uncommitted)
+
+Present but uncommitted:
+
+- **Backend:** `media/providers.py` (the `VideoProvider` protocol, `LocalVideoProvider`,
+  `BunnyStreamProvider`), `mp4.py`, `tasks.py`, `router.py` and `repository.py`; the
+  `enrollments/video_buffer.py` and `video_flush.py` modules; migration `0006_video_playback`;
+  and tests `test_providers.py` and `test_video_progress.py`.
+- **Endpoints:** `POST`, `GET /videos`, `GET /videos/{video_id}`,
+  `POST /videos/{video_id}/uploaded`, `GET /videos/{video_id}/playback`,
+  `POST /progress/heartbeat`, `GET /enrollments/{enrollment_id}/lessons/{lesson_id}/playback`,
+  `GET /enrollments/{enrollment_id}/lessons/{lesson_id}/resume`, and
+  `POST /webhooks/video/bunny/{secret}` (hidden from the schema).
+- **Web:** `/teach/videos`, `/learn/enrollments/[enrollmentId]/video/[lessonId]`,
+  `features/video/*`, and `e2e/video.spec.ts`.
+
+See the step 3 notes under [Build order](#build-order).
+
+### Deviations between this plan and the committed code
+
+1. **Skills are global.** The code has no `skills.organization_id`, following `CLAUDE.md`
+   ("global in this phase"; writes only by `platform_admin` and publisher staff). The
+   [Skills](#skills) section above still describes org-scoped skills and is out of date.
+2. **More publish blockers.** Besides `empty_course` and `video_not_ready`, publishing also
+   rejects `pdf_not_ready` and `course_archived`.
+3. **Catalog and `course_published` arrived early.** Step 2 already writes and deletes
+   `catalog_entries` (on publish and archive) and emits `course_published`. Step 5 still owns
+   the Redis outline cache, the Next.js static catalog and its revalidation, and the topic
+   routing.
+4. **Topics not registered yet.** At HEAD, `TOPICS` maps only `batch_member`, so Phase 2 events
+   go to the default `platform.events.v1`. The working tree adds `video_progress` →
+   `learning.progress.v1`. `learning.enrollments.v1` and `courses.v1` remain for step 5, as do
+   the Phase 2 event schemas in `docs/events.md`.
+5. **The consumer reconciles instead of deduping (accepted 2026-09-29).** The batch-member
+   consumer keeps no event-`id` dedupe record. Each event runs `reconcile_student`, which
+   recomputes that student's enrollments from the current batch memberships and batch
+   assignments. Reasons:
+   - It is idempotent by construction: a replayed event recomputes the same state.
+   - It is safe under reordering. Kafka orders events only per `batch_id` key, so an
+     `added`/`removed` pair for one student across two batches can arrive in either order.
+     Applying event deltas could then leave the wrong result, but reading current state cannot.
+   - It self-heals. A missed or failed event is repaired by the next event or course
+     reconciliation for that student, and there is no dedupe table to grow or expire.
+   - The cost is one read of the student's memberships and assignments per event. That is small,
+     and batch-member events are low-volume.
+6. **`If-Match` was optional; it is now required (decided 2026-09-29).** At `878985b`, an omitted
+   header skipped the revision check. It is now required on every endpoint that changes the
+   course outline or lessons: modules, lessons, both reorders and skill tags. A missing header
+   returns `428 precondition_required`, and a stale one returns `409`. This landed with step 3.
+7. **`DELETE /courses/{id}` archives** the course and removes its catalog entry. It does not
+   hard-delete.
+8. **Endpoints not named in the plan:** `GET /courses/{id}/draft`,
+   `GET /courses/{id}/publish-preview` (backs the publish dialog's structural diff),
+   `GET /courses/{id}/lessons/{lesson_id}` and `POST /enrollments/{id}/lessons/{lesson_id}/visit`
+   (feeds `last_lesson_id` for "Continue learning").
+9. **All open points are settled.** All four
+   [open points](#open-points-to-confirm-when-resuming) are now recorded in `CLAUDE.md`. The
+   video-replaced-in-a-minor-release rule was added on 2026-09-29.
+
+All other deviations were accepted as documented on 2026-09-29. Deviation 1 is resolved by
+rewriting the [Skills](#skills) section.
+10. **Notes are not validated yet.** `NotesContent.doc` is still an unvalidated `dict`. The
+    allow-list validation, rendering and 200 KB cap are step 4, as planned.
 
 ## Decisions (2026-09-26)
 
@@ -154,8 +255,9 @@ In `app.modules.identity.service`:
     `invitation_revoked`
 
   Phase 2 adds a consumer (a Kafka consumer group in a new worker service) that enrolls or revokes.
-  It must be idempotent: dedupe on the event `id`, and treat an `added` for an existing enrollment
-  as a no-op.
+  It must be idempotent. It gets there by **reconciling from current state**, not by deduping on
+  the event `id`: see deviation 5 under
+  [Implementation status](#deviations-between-this-plan-and-the-committed-code).
 
 ### Platform pieces already running
 
@@ -214,7 +316,10 @@ Each module follows the `CLAUDE.md` layout and talks to other modules only throu
 - **Drag-and-drop ordering:** `PUT /courses/{id}/modules/order` and `PUT /modules/{id}/lessons/order`
   take the full ordered list of IDs.
   - Every edit bumps the course's `revision`.
-  - Clients send the revision they started from (`If-Match`). A stale save gets `409 conflict`.
+  - Clients must send the revision they started from (`If-Match`) on every endpoint that changes
+    the course outline or lessons.
+    - A missing header gets `428 precondition_required`.
+    - A stale revision gets `409 conflict`.
   - Moving a lesson between modules is one call.
 
 ### Versioning (decision 6)
@@ -269,13 +374,17 @@ Each module follows the `CLAUDE.md` layout and talks to other modules only throu
 
 ### Skills
 
-- `skills (id, organization_id NULL, parent_id, name, slug, path ltree)` with a GiST index on `path`.
-  Subtree queries use `path <@ 'dsa.arrays'`.
-- `organization_id IS NULL` means a platform-wide skill, which is read-only for org users. The RLS
-  policy lets users see global skills plus their own org's.
+- The taxonomy is **global** in this phase (see `CLAUDE.md`, "Content ownership & sharing"):
+  `skills (id, parent_id, name, slug, path ltree, description)` has **no `organization_id`**.
+  `path` is unique and has a GiST index. Subtree queries use `path <@ 'dsa.arrays'`.
+- **Who can do what:**
+  - Everyone can read every skill.
+  - Only `platform_admin` and staff (`org_admin`, `instructor`, `lab_author`) of a
+    content-publisher org can create or edit skills.
+  - This is enforced by per-operation RLS policies and by the service layer.
 - `lesson_skills (lesson_id, skill_id)`. Questions and problems get tagged the same way in later
   phases.
-- The migration enables the `ltree` extension.
+- The migration enables the `ltree` extension, and `0005_seed_skills` seeds a starter tree.
 
 ### Visibility and RLS (decisions 3–5)
 
@@ -591,8 +700,26 @@ batch belongs to the receiving org. Uniqueness is `(course_id, organization_id, 
 
 ## Build order
 
-These are the Phase 2 prompt's 8 steps. After each: lint, type-check, all tests, fix, commit and
-push, summarize, and wait for "continue".
+These are the Phase 2 prompt's 8 steps. After each step:
+
+1. Run lint, type-check and all tests (the `CLAUDE.md` workflow), and fix failures.
+2. Add every new endpoint to `MATRIX` and run `make gen-api`.
+3. Commit, **push**, summarize, and wait for "continue".
+
+Step 3 implementation notes:
+- Local uploads use signed MinIO PUTs; content type is signed, and size/MP4 duration are checked
+  before marking an asset ready. Bunny uses signed TUS uploads and mocked HTTP tests.
+- Playback URLs expire after five minutes by default; the player renews them before expiry.
+- `/teach/videos` exposes the reusable uploader. The focused video route is
+  `/learn/enrollments/[enrollmentId]/video/[lessonId]`; the full course UIs remain steps 6–7.
+- Heartbeats include `video_asset_id` and `playback_rate`. A stale asset gets `409 video_changed`.
+- Redis stores 5-second watched-segment bitmaps and partial intervals; seeking grants no watch time.
+  Flushes sample up to 500 dirty entries without removing them, acknowledge only after commit,
+  and compare revisions so crashes and concurrent writes are safe. This replaces destructive
+  `SPOP` claiming. A Postgres advisory lock serializes flushes, and database work is batched per org.
+- Clean buffer entries expire after seven days; dirty entries have no expiry. Redis must use
+  persistent storage and a no-eviction policy for acknowledged heartbeats to survive a Redis outage.
+- The manual real-credential Bunny smoke script remains in step 8, as listed below.
 
 1. Data model, migrations and RLS (skills, courses and draft tree, versions, assignments,
    enrollments, progress, media tables).
@@ -607,8 +734,8 @@ push, summarize, and wait for "continue".
 
 ## Open points to confirm when resuming
 
-Decisions 4–6 settled the original questions. These smaller assumptions remain; confirm them before
-implementing:
+All confirmed, and recorded in `CLAUDE.md` under "Content ownership & sharing" (the last one on
+2026-09-29):
 
 - **Publisher-made batch assignments:** an org_admin **cannot remove** batch assignments the
   publisher created directly for their org's batches; they can remove only rows their own org

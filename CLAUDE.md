@@ -45,6 +45,7 @@ Decided 2026-09-26.
   - Major versions apply only to new enrollments. An `org_admin` can opt their org's existing enrollments into the new major version; progress carries over for lessons whose stable lesson ID still exists.
   - Opt-in applies to a **whole organization or chosen batches**, never to individual students.
   - Lessons keep stable IDs across versions.
+  - A video replaced in a minor release: lessons already completed stay completed; partially watched progress for that lesson restarts.
 - **Lesson types** are a database enum that already includes the placeholder types `quiz`, `lab` and `assignment` alongside `video`, `notes` and `pdf`, so later phases need no enum migration.
 - **Skills taxonomy** is global (no `organization_id`) in this phase. Everyone can read it; only `platform_admin` and staff (`org_admin`, `instructor`, `lab_author`) of a content-publisher org can create or edit skills.
 - These rules are enforced by **PostgreSQL RLS policies**, written per operation, not only by service-layer checks. They must be covered by tests proving that:
