@@ -585,6 +585,26 @@ batch belongs to the receiving org. Uniqueness is `(course_id, organization_id, 
     with a long TTL
   - the pointer `course:{id}:current` is deleted on publish
   - a student's progress is merged on top with a single query per request
+- <a id="heartbeat-validation-cache-step-5"></a>**Heartbeat validation cache (step 5):**
+  - Today each heartbeat makes about 4 Postgres queries: the enrollment, the pinned version, the
+    lesson in that version, and the baseline progress row. At 100k concurrent students that is
+    roughly 6.7k heartbeats per second.
+  - Cache the validation result in Redis with a short TTL (about 60 s), keyed by
+    `(enrollment_id, lesson_id)`. The cached value is the enrollment's org, user, status and
+    major, plus the lesson's `video_asset_id` and duration. Read Postgres only on a miss.
+  - Skip the baseline read when the Redis buffer entry already exists.
+  - **Revocation is still immediate for playback.** `playback` and `resume` keep reading through
+    RLS. A heartbeat accepted from cache within the TTL after revocation only buffers watch data
+    for an enrollment the student already had. The flush re-checks the enrollment status before
+    writing.
+  - Invalidation:
+    - delete the key on enrollment revocation and on upgrade
+    - a publish changes the version pointer, so version-dependent fields also expire by TTL
+  - Tests:
+    - a cache hit makes no Postgres query
+    - a revoked enrollment stops being credited at flush
+    - a replaced asset gets `409 video_changed` within one TTL (until then, the buffer key
+      includes the old asset id, so its data never merges into the new asset's progress)
 - **Public catalog:**
   - `catalog_entries` is a non-tenant table with public fields only, written on publish for courses
     with `is_public_catalog`
@@ -736,9 +756,18 @@ Step 3 implementation notes:
 - **Deferred:**
   - The Bunny playback-token digest is checked only for structure and expiry. Real verification
     is the step 8 smoke script.
-  - Each heartbeat reads the Postgres baseline even when the Redis entry exists: a performance
-    follow-up.
-  - The enrollment and resume GETs reset replaced-video progress, so they write.
+  - ~~Each heartbeat re-validates against Postgres~~: **scheduled into step 5**. See
+    [Heartbeat validation cache](#heartbeat-validation-cache-step-5).
+  - **The enrollment and resume GETs write.** They reset progress when a video was replaced in a
+    minor release (`reset_replaced_videos`). Constraints on them:
+    - **Idempotent.** The UPDATE only touches rows whose `video_asset_id IS DISTINCT FROM` the
+      current one, so a repeat or concurrent call changes nothing. Keep it that way: no counters
+      or events on this path.
+    - **Never assume the primary.** `docs/architecture.md` plans Aurora read replicas. When
+      read routing is added, these endpoints must either run their write on the writer
+      explicitly or move it off the read path (for example into the heartbeat or the flush).
+      They must not rely on the read session happening to be the primary. A replica may lag, so
+      the response must be correct even if it reads a pre-reset row.
   - The player shows a generic error on `409 video_changed` instead of reloading the lesson. It is
     reworked in the step 7 course player.
   - Event-payload validation against `docs/events.md` is a step 5 test.
@@ -749,7 +778,7 @@ Step 3 implementation notes:
    batch-event consumer, upgrades, progress rules).
 3. Video (`VideoProvider`, local and Bunny, heartbeat → Redis → Celery flush, resume).
 4. Notes and PDFs.
-5. Caching and events.
+5. Caching and events (including the heartbeat validation cache).
 6. Instructor UI.
 7. Student UI.
 8. End-to-end tests and `scripts/smoke_test_bunny.py`.
