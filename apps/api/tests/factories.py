@@ -211,6 +211,7 @@ class Factory:
         major: int = 1,
         minor: int = 0,
         video: "VideoAsset | None" = None,
+        files: "list[StoredFile] | None" = None,
     ) -> "CourseVersion":
         version = CourseVersion(
             id=new_id(),
@@ -237,6 +238,7 @@ class Factory:
                     is_required=True,
                     video_asset_id=video.id if video else None,
                     video_duration_seconds=video.duration_seconds if video else None,
+                    file_ids=[f.id for f in files or []],
                 )
                 for lesson in lessons
             )
@@ -300,6 +302,15 @@ class Factory:
         )  # fmt: skip
         await self._save(video)
         return video
+
+    async def image(self, org: Organization, *, status: str = "ready") -> "StoredFile":
+        file = StoredFile(
+            id=new_id(), organization_id=org.id, kind="image",
+            storage_key=f"files/{org.id}/{_suffix()}/image", file_name="diagram.png",
+            content_type="image/png", size_bytes=512, status=status,
+        )  # fmt: skip
+        await self._save(file)
+        return file
 
     async def pdf(self, org: Organization, *, status: str = "ready") -> "StoredFile":
         file = StoredFile(

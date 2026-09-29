@@ -1,4 +1,5 @@
-"""Media HTTP API: video uploads and previews for course editors, and the provider webhook."""
+"""Media HTTP API: video and file (PDF, image) uploads and previews for course editors, and the
+video provider webhook."""
 
 from typing import Annotated, Any
 from uuid import UUID
@@ -8,9 +9,15 @@ from fastapi import APIRouter, Depends, Query, Request, status
 from app.core.config import Settings
 from app.core.errors import NotFoundError
 from app.core.pagination import CursorPage, PageParams
+from app.core.storage import ObjectStorage
 from app.modules.identity.dependencies import RequestCtx
 from app.modules.media import service
 from app.modules.media.schemas import (
+    FileCreate,
+    FileDownloadOut,
+    FileKindName,
+    FileOut,
+    FileUploadOut,
     PlaybackOut,
     VideoCreate,
     VideoOut,
@@ -31,7 +38,13 @@ def get_settings_dep(request: Request) -> Settings:
     return settings
 
 
+def get_storage(request: Request) -> ObjectStorage:
+    storage: ObjectStorage = request.app.state.storage
+    return storage
+
+
 Providers = Annotated[service.Providers, Depends(get_providers)]
+Storage = Annotated[ObjectStorage, Depends(get_storage)]
 AppSettings = Annotated[Settings, Depends(get_settings_dep)]
 
 videos = APIRouter(prefix="/videos", tags=["media"])
@@ -75,6 +88,48 @@ async def preview(
     return await service.editor_playback(ctx, providers, settings, video_id)
 
 
+files = APIRouter(prefix="/files", tags=["media"])
+
+
+@files.post("", status_code=status.HTTP_201_CREATED, operation_id="create_file")
+async def create_file(
+    ctx: RequestCtx, storage: Storage, settings: AppSettings, body: FileCreate
+) -> FileUploadOut:
+    """Create a pending PDF or image and get a presigned POST: send `upload.fields` as form
+    fields and the file last, straight to storage. Then call `POST /files/{id}/confirm`."""
+    return await service.create_file(ctx, storage, settings, body)
+
+
+@files.get("", operation_id="list_files")
+async def list_files(
+    ctx: RequestCtx, page: PageParams, kind: FileKindName | None = None
+) -> CursorPage[FileOut]:
+    items, cursor = await service.list_files(ctx, page, kind)
+    return CursorPage(items=items, next_cursor=cursor)
+
+
+@files.get("/{file_id}", operation_id="get_file")
+async def get_file(ctx: RequestCtx, file_id: UUID) -> FileOut:
+    return await service.get_file(ctx, file_id)
+
+
+@files.post("/{file_id}/confirm", operation_id="confirm_file")
+async def confirm_file(
+    ctx: RequestCtx, storage: Storage, settings: AppSettings, file_id: UUID
+) -> FileOut:
+    """Check the upload's size and contents (a PDF must start with `%PDF-`). The file is
+    `ready` to attach to lessons, or `rejected` with an `error` (and the object is deleted)."""
+    return await service.confirm_file(ctx, storage, settings, file_id)
+
+
+@files.get("/{file_id}/download", operation_id="get_file_download")
+async def download(
+    ctx: RequestCtx, storage: Storage, settings: AppSettings, file_id: UUID
+) -> FileDownloadOut:
+    """A signed download URL (a few minutes) for the course editors."""
+    return await service.editor_download(ctx, storage, settings, file_id)
+
+
 webhooks = APIRouter(prefix="/webhooks", include_in_schema=False)
 
 
@@ -95,4 +150,5 @@ async def bunny_webhook(
 
 
 router.include_router(videos)
+router.include_router(files)
 router.include_router(webhooks)

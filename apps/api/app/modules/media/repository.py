@@ -1,5 +1,5 @@
-"""Data access for media tables (RLS: owner-org editors; readers of a course see the videos its
-published versions use)."""
+"""Data access for media tables (RLS: owner-org editors; enrolled students see the videos and
+files their course version uses)."""
 
 from typing import Any
 from uuid import UUID
@@ -8,7 +8,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.pagination import CursorParams, paginate_by_id
-from app.modules.media.models import VideoAsset
+from app.modules.media.models import StoredFile, VideoAsset
 
 
 class VideoRepository:
@@ -43,5 +43,39 @@ class VideoRepository:
         await self.session.execute(
             update(VideoAsset)
             .where(VideoAsset.id == video_id)
+            .values(**values, updated_at=func.now())
+        )
+
+
+class FileRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def get(self, file_id: UUID) -> StoredFile | None:
+        return await self.session.get(StoredFile, file_id, populate_existing=True)
+
+    async def get_many(self, ids: list[UUID]) -> list[StoredFile]:
+        if not ids:
+            return []
+        return list(await self.session.scalars(select(StoredFile).where(StoredFile.id.in_(ids))))
+
+    async def list_page(
+        self, organization_id: UUID, params: CursorParams, *, kind: str | None
+    ) -> tuple[list[StoredFile], str | None]:
+        stmt = select(StoredFile).where(StoredFile.organization_id == organization_id)
+        if kind is not None:
+            stmt = stmt.where(StoredFile.kind == kind)
+        return await paginate_by_id(self.session, stmt, StoredFile.id, params)
+
+    async def create(self, file: StoredFile) -> StoredFile:
+        self.session.add(file)
+        await self.session.flush()
+        await self.session.refresh(file)
+        return file
+
+    async def update(self, file_id: UUID, values: dict[str, Any]) -> None:
+        await self.session.execute(
+            update(StoredFile)
+            .where(StoredFile.id == file_id)
             .values(**values, updated_at=func.now())
         )

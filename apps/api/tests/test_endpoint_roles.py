@@ -254,6 +254,51 @@ class Route:
 
 
 MATRIX = [
+    Route(
+        "POST",
+        "/api/v1/files",
+        STAFF_READ,
+        at(
+            "/api/v1/files",
+            json={"kind": "pdf", "file_name": "a.pdf", "content_type": "application/pdf"},
+        ),
+    ),
+    Route("GET", "/api/v1/files", STAFF_READ, at("/api/v1/files")),
+    Route(
+        "GET",
+        "/api/v1/files/{file_id}",
+        STAFF_READ,
+        lambda w: _file_path(w),  # noqa: PLW0108 - builder defined after the matrix
+        names_resource=True,
+    ),
+    Route(
+        "POST",
+        "/api/v1/files/{file_id}/confirm",
+        STAFF_READ,
+        lambda w: _file_path(w, "/confirm"),  # an already-confirmed file: idempotent 200
+        names_resource=True,
+    ),
+    Route(
+        "GET",
+        "/api/v1/files/{file_id}/download",
+        STAFF_READ,
+        lambda w: _file_path(w, "/download"),
+        names_resource=True,
+    ),
+    Route(
+        "POST",
+        "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/pdf-access",
+        {"student"},
+        lambda w: _file_action(w, "pdf"),
+        denied="404",
+    ),
+    Route(
+        "GET",
+        "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/images",
+        {"student"},
+        lambda w: _file_action(w, "notes"),
+        denied="404",
+    ),
     Route("POST", "/api/v1/videos", STAFF_READ, at("/api/v1/videos", json={"title": "Video"})),
     Route("GET", "/api/v1/videos", STAFF_READ, at("/api/v1/videos")),
     Route(
@@ -439,6 +484,13 @@ MATRIX = [
     ),
     Route(
         "GET",
+        "/api/v1/courses/{course_id}/lessons/{lesson_id}/preview",
+        STAFF_READ,
+        _course_sub("/lessons/{lesson}/preview"),
+        names_resource=True,
+    ),
+    Route(
+        "GET",
         "/api/v1/courses/{course_id}/lessons/{lesson_id}",
         STAFF_READ,
         _course_sub("/lessons/{lesson}"),
@@ -542,6 +594,26 @@ MATRIX = [
         names_resource=True,
     ),
 ]
+
+
+async def _file_path(w: World, suffix: str = "") -> Request:
+    file = await w.factory.pdf(w.org)
+    return f"/api/v1/files/{file.id}{suffix}", {}
+
+
+async def _file_action(w: World, lesson_type: str) -> Request:
+    """A student enrolled in a version whose pdf (or notes) lesson uses a file."""
+    course = await w.factory.course(w.org)
+    module = await w.factory.module(course)
+    lesson = await w.factory.lesson(module, lesson_type=lesson_type)
+    file = await (w.factory.pdf(w.org) if lesson_type == "pdf" else w.factory.image(w.org))
+    await w.factory.version(course, lesson, files=[file])
+    batch = await w.factory.batch(w.org)
+    await w.factory.add_to_batch(batch, w.users["student"])
+    await w.factory.assignment(course, w.org, batch=batch)
+    enrollment = await w.factory.enrollment(course, w.users["student"], w.org)
+    action = "pdf-access" if lesson_type == "pdf" else "images"
+    return f"/api/v1/enrollments/{enrollment.id}/lessons/{lesson.id}/{action}", {}
 
 
 async def _video_path(w: World, suffix: str = "") -> Request:

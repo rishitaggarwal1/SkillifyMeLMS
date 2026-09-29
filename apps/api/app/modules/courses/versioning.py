@@ -9,6 +9,8 @@ A snapshot is the full published outline, stored immutably in `course_versions.s
                                "completion_threshold", "estimated_minutes", "content",
                                "skill_ids", "video_duration_seconds"}]}]}
 
+`content` is the lesson's content, except notes: `{"html", "image_file_ids"}` rendered at publish.
+
 A **minor** release may only correct content. Compared with the previous version it must keep the
 same modules in the same order, the same lessons in the same modules and order, and each lesson's
 type, `is_required` and `completion_threshold`.
@@ -19,7 +21,8 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from app.modules.courses.models import Course, CourseModule, Lesson
+from app.modules.courses import notes
+from app.modules.courses.models import Course, CourseModule, Lesson, LessonType
 from app.modules.courses.schemas import StructuralChange
 
 SNAPSHOT_SCHEMA = 1
@@ -32,6 +35,28 @@ def version_label(major: int, minor: int) -> str:
 
 def threshold_text(value: Decimal | None) -> str | None:
     return None if value is None else f"{value:.2f}"
+
+
+def published_content(lesson_type: LessonType, content: Mapping[str, Any]) -> dict[str, Any]:
+    """What a version stores for a lesson's content. Notes are rendered once, at publish, to
+    sanitized HTML (readers never receive the editor's JSON); images stay as `data-file-id`
+    placeholders that readers resolve to short-lived signed URLs."""
+    if lesson_type != LessonType.NOTES:
+        return dict(content)
+    doc = content.get("doc")
+    return {
+        "html": notes.render_html(doc),
+        "image_file_ids": [str(i) for i in notes.image_file_ids(doc)] if doc else [],
+    }
+
+
+def lesson_file_ids(lesson_type: LessonType, content: Mapping[str, Any]) -> list[UUID]:
+    """Files a published lesson uses (readable by its enrolled students)."""
+    if lesson_type == LessonType.PDF and (file_id := content.get("file_id")):
+        return [UUID(str(file_id))]
+    if lesson_type == LessonType.NOTES and (doc := content.get("doc")):
+        return notes.image_file_ids(doc)
+    return []
 
 
 def build_snapshot(
@@ -55,7 +80,7 @@ def build_snapshot(
             "is_required": lesson.is_required,
             "completion_threshold": threshold_text(lesson.completion_threshold),
             "estimated_minutes": lesson.estimated_minutes,
-            "content": lesson.content,
+            "content": published_content(lesson.lesson_type, lesson.content),
             "skill_ids": [str(s) for s in skill_ids.get(lesson.id, [])],
             "video_duration_seconds": video_durations.get(UUID(video_id)) if video_id else None,
         }

@@ -27,6 +27,9 @@ class LessonProgressOut(BaseModel):
     status: Literal["not_started", "in_progress", "completed"]
     video_position_seconds: int | None
     watched_ratio: Decimal | None
+    pdf_opened_at: datetime | None = Field(
+        description="When the student first opened the lesson's PDF (required before completing it)"
+    )
     completed_at: datetime | None
 
 
@@ -88,3 +91,10 @@ class VideoResume(BaseModel):
     video_asset_id: UUID
     position_seconds: float
     watched_ratio: float
+
+
+class LessonImagesOut(BaseModel):
+    """Signed URLs for a notes lesson's images, keyed by the `data-file-id` in its HTML."""
+
+    urls: dict[UUID, str]
+    expires_at: datetime | None

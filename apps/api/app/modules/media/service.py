@@ -5,35 +5,56 @@ browser uploads directly to the provider (never through our API); the asset beco
 processing finishes (a Celery task for the local provider, the Bunny webhook in production).
 Playback URLs are short-lived and signed; students get them only for videos in courses they can
 read (RLS on `video_assets`, migration 0006).
+
+Files (PDFs for pdf lessons, images for notes): an editor creates a pending file and gets a
+presigned POST limited to one key, one Content-Type and a size range; `confirm` then checks the
+stored object's size and leading bytes. Downloads are signed GET URLs that expire in minutes;
+students get them only for files their course version uses (RLS on `files`, migration 0007).
 """
 
+import asyncio
 import hmac
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import Settings
-from app.core.errors import ConflictError, NotFoundError
+from app.core.errors import ConflictError, NotFoundError, UnprocessableError
 from app.core.logging import get_logger
 from app.core.pagination import CursorParams
+from app.core.storage import ObjectStorage
 from app.db.base import new_id
-from app.db.session import run_after_commit
+from app.db.session import run_after_commit, run_after_commit_async
 from app.db.tenancy import system_transaction
 from app.modules.audit import service as audit
 from app.modules.identity.authz import Permission, require_org_permission
 from app.modules.identity.dependencies import RequestContext
-from app.modules.media.models import FileStatus, StoredFile, VideoAsset, VideoStatus
+from app.modules.media.models import FileKind, FileStatus, StoredFile, VideoAsset, VideoStatus
 from app.modules.media.providers import (
     Playback,
     ProviderStatus,
     VideoProvider,
+    _expires_at,
 )
-from app.modules.media.repository import VideoRepository
+from app.modules.media.repository import FileRepository, VideoRepository
+from app.modules.media.schemas import (
+    FileCreate,
+    FileOut,
+    FileUploadOut,
+    PresignedPostOut,
+    UploadTicketOut,
+    VideoOut,
+    VideoUploadOut,
+)
+from app.modules.media.schemas import (
+    FileDownloadOut as FileDownloadOut,  # noqa: PLC0414 - public interface
+)
 from app.modules.media.schemas import PlaybackOut as PlaybackOut  # noqa: PLC0414 - public interface
-from app.modules.media.schemas import UploadTicketOut, VideoOut, VideoUploadOut
 
 logger = get_logger(__name__)
 Providers = Mapping[str, VideoProvider]
@@ -271,3 +292,175 @@ async def handle_bunny_webhook(
         if asset is not None:
             await refresh_video(session, providers, asset)
     return True
+
+
+# ============================================================================ files (PDF, image)
+
+# Leading bytes each accepted content type must start with (checked on confirm; the browser's
+# declared Content-Type alone proves nothing about the bytes).
+_MAGIC: dict[str, tuple[bytes, ...]] = {
+    "application/pdf": (b"%PDF-",),
+    "image/png": (b"\x89PNG\r\n\x1a\n",),
+    "image/jpeg": (b"\xff\xd8\xff",),
+}
+_ASCII_NAME = re.compile(r"[^A-Za-z0-9._ -]")
+
+
+@dataclass(frozen=True, slots=True)
+class FileDownload:
+    url: str
+    file_name: str
+    expires_at: datetime
+
+
+def _max_bytes(settings: Settings, kind: str) -> int:
+    return (
+        settings.pdf_upload_max_bytes if kind == FileKind.PDF else settings.image_upload_max_bytes
+    )
+
+
+def _matches(content_type: str, head: bytes) -> bool:
+    if content_type == "image/webp":
+        return head[:4] == b"RIFF" and head[8:12] == b"WEBP"
+    return any(head.startswith(magic) for magic in _MAGIC.get(content_type, ()))
+
+
+def _file_out(file: StoredFile) -> FileOut:
+    return FileOut.model_validate(file)
+
+
+def _sign_download(storage: ObjectStorage, file: StoredFile, ttl: int) -> FileDownload:
+    # The header value must be plain ASCII; the display name keeps the original.
+    ascii_name = _ASCII_NAME.sub("_", file.file_name) or file.kind
+    url = storage.presigned_get(file.storage_key, expires_in=ttl, download_name=ascii_name)
+    return FileDownload(url=url, file_name=file.file_name, expires_at=_expires_at(ttl))
+
+
+async def _own_file(ctx: RequestContext, file_id: UUID) -> StoredFile:
+    org_id = require_org_permission(ctx.principal, Permission.COURSE_EDIT)
+    file = await FileRepository(ctx.session).get(file_id)
+    # Enrolled students may read a file through RLS; managing it is the owner's.
+    if file is None or (file.organization_id != org_id and not ctx.principal.is_platform_admin):
+        raise NotFoundError("File not found.")
+    return file
+
+
+async def create_file(
+    ctx: RequestContext, storage: ObjectStorage, settings: Settings, body: FileCreate
+) -> FileUploadOut:
+    """A pending file plus a presigned POST that storage restricts to this key, this exact
+    Content-Type and the kind's size limit. The browser then calls `POST /files/{id}/confirm`."""
+    org_id = require_org_permission(ctx.principal, Permission.COURSE_EDIT)
+    if (body.kind == "pdf") != (body.content_type == "application/pdf"):
+        raise UnprocessableError(
+            "PDF files must be application/pdf; images must be PNG, JPEG or WebP.",
+            code="invalid_content_type",
+        )
+    file_id = new_id()
+    key = f"files/{org_id}/{file_id}/{body.kind}"  # never the user's file name
+    max_bytes = _max_bytes(settings, body.kind)
+    ttl = settings.file_upload_ttl_seconds
+    post = await asyncio.to_thread(
+        storage.presigned_post,
+        key,
+        content_type=body.content_type,
+        max_bytes=max_bytes,
+        expires_in=ttl,
+    )
+    file = await FileRepository(ctx.session).create(
+        StoredFile(
+            id=file_id, organization_id=org_id, kind=body.kind, storage_key=key,
+            file_name=body.file_name, content_type=body.content_type, status=FileStatus.PENDING,
+            created_by=ctx.principal.user_id,
+        )
+    )  # fmt: skip
+    await audit.record(
+        ctx.session,
+        ctx.actor,
+        action="file.created",
+        target_type="file",
+        target_id=file.id,
+        after={"kind": body.kind, "file_name": body.file_name},
+    )
+    return FileUploadOut(
+        file=_file_out(file),
+        upload=PresignedPostOut(
+            url=post.url, fields=post.fields, max_bytes=max_bytes, expires_at=_expires_at(ttl)
+        ),
+    )
+
+
+async def confirm_file(
+    ctx: RequestContext, storage: ObjectStorage, settings: Settings, file_id: UUID
+) -> FileOut:
+    """Check the uploaded object's size and leading bytes. A mismatch answers `status: rejected`
+    with an `error` and deletes the object; a missing object leaves the file pending (409), so the
+    browser can retry. Idempotent."""
+    file = await _own_file(ctx, file_id)
+    if file.status == FileStatus.READY:
+        return _file_out(file)
+    if file.status == FileStatus.REJECTED:
+        raise ConflictError(
+            "This upload was rejected. Upload the file again.", code="file_rejected"
+        )
+    size = await asyncio.to_thread(storage.size, file.storage_key)
+    if size is None:
+        raise ConflictError("The upload hasn't arrived yet.", code="upload_not_found")
+    head = await asyncio.to_thread(storage.read_range, file.storage_key, 0, 16) if size else b""
+    error: str | None = None
+    if not 0 < size <= _max_bytes(settings, file.kind):
+        error = "The file exceeds the size limit."
+    elif not _matches(file.content_type, head):
+        error = "The file's contents don't match its type."
+    repo = FileRepository(ctx.session)
+    if error is None:
+        await repo.update(file_id, {"status": FileStatus.READY, "size_bytes": size})
+    else:
+        await repo.update(file_id, {"status": FileStatus.REJECTED, "size_bytes": size})
+        key = file.storage_key
+        run_after_commit_async(ctx.session, lambda: asyncio.to_thread(storage.delete, key))
+    await audit.record(
+        ctx.session,
+        ctx.actor,
+        action="file.confirmed" if error is None else "file.rejected",
+        target_type="file",
+        target_id=file_id,
+        after={"size_bytes": size, **({"error": error} if error else {})},
+    )
+    refreshed = await repo.get(file_id)
+    assert refreshed is not None  # noqa: S101
+    # A rejection is a result, not an error: answering 4xx would roll back the rejected status.
+    return _file_out(refreshed).model_copy(update={"error": error})
+
+
+async def get_file(ctx: RequestContext, file_id: UUID) -> FileOut:
+    return _file_out(await _own_file(ctx, file_id))
+
+
+async def list_files(
+    ctx: RequestContext, params: CursorParams, kind: str | None
+) -> tuple[list[FileOut], str | None]:
+    org_id = require_org_permission(ctx.principal, Permission.COURSE_EDIT)
+    rows, cursor = await FileRepository(ctx.session).list_page(org_id, params, kind=kind)
+    return [_file_out(f) for f in rows], cursor
+
+
+async def editor_download(
+    ctx: RequestContext, storage: ObjectStorage, settings: Settings, file_id: UUID
+) -> FileDownloadOut:
+    file = await _own_file(ctx, file_id)
+    if file.status != FileStatus.READY:
+        raise ConflictError("The file isn't confirmed yet.", code="file_not_ready")
+    signed = _sign_download(storage, file, settings.file_download_ttl_seconds)
+    return FileDownloadOut(url=signed.url, file_name=signed.file_name, expires_at=signed.expires_at)
+
+
+async def download_urls(
+    session: AsyncSession, storage: ObjectStorage, ids: Sequence[UUID], ttl_seconds: int
+) -> dict[UUID, FileDownload]:
+    """Signed, short-lived download URLs for ready files the caller may read (RLS: editors of the
+    owner org, or students enrolled in a version that uses the file). Others are absent."""
+    files = await FileRepository(session).get_many(list(ids))
+    return {
+        f.id: _sign_download(storage, f, ttl_seconds) for f in files if f.status == FileStatus.READY
+    }

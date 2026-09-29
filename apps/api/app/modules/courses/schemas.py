@@ -7,6 +7,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
+from app.modules.courses import notes
 from app.modules.courses.models import LessonType, ReleaseType
 
 Title = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
@@ -29,7 +30,7 @@ def _unique_ids(ids: list[UUID]) -> list[UUID]:
 
 # ============================================================================ lesson content
 # `lessons.content` is JSONB; each lesson type has its own shape. Notes documents are checked
-# against the Tiptap allow-list (and rendered) in the notes step.
+# against the Tiptap allow-list in `notes.py` (images are then checked to be the org's files).
 
 MAX_NOTES_BYTES = 200_000
 
@@ -41,7 +42,18 @@ class VideoContent(BaseModel):
 
 class NotesContent(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    doc: dict[str, Any] | None = Field(default=None, description="Tiptap JSON document")
+    doc: dict[str, Any] | None = Field(
+        default=None,
+        description="Tiptap JSON document, limited to the notes allow-list (see notes.py). "
+        "Images reference uploaded image files: {type: image, attrs: {file_id, alt}}.",
+    )
+
+    @field_validator("doc")
+    @classmethod
+    def _allowed(cls, doc: dict[str, Any] | None) -> dict[str, Any] | None:
+        if doc is not None:
+            notes.validate_doc(doc)  # NotesValidationError is a ValueError -> 422 with its path
+        return doc
 
 
 class PdfContent(BaseModel):
@@ -165,6 +177,12 @@ class LessonSummary(BaseModel):
 class LessonOut(LessonSummary):
     content: dict[str, Any]
     course_revision: int
+
+
+class NotesPreviewOut(BaseModel):
+    html: str = Field(description="Sanitized HTML; images are `<img data-file-id>` placeholders")
+    image_urls: dict[UUID, str] = Field(description="Signed URLs for the images, by file id")
+    expires_at: datetime | None
 
 
 class ModuleOut(BaseModel):

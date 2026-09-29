@@ -32,6 +32,11 @@ class FileStatus(StrEnum):
     REJECTED = "rejected"
 
 
+class FileKind(StrEnum):
+    PDF = "pdf"  # pdf lessons
+    IMAGE = "image"  # images in notes lessons
+
+
 class VideoAsset(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "video_assets"
     __table_args__ = (
@@ -60,14 +65,16 @@ class StoredFile(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("storage_key", name="uq_files_storage_key"),
         CheckConstraint("status IN ('pending', 'ready', 'rejected')", name="ck_files_status"),
+        CheckConstraint("kind IN ('pdf', 'image')", name="ck_files_kind"),
         Index("ix_files_organization_id_status", "organization_id", "status"),
+        Index("ix_files_organization_id_kind", "organization_id", "kind"),
         Index("ix_files_created_by", "created_by"),
     )
 
     organization_id: Mapped[UUID] = mapped_column(
         ForeignKey("organizations.id", ondelete="CASCADE")
     )
-    kind: Mapped[str] = mapped_column(String(20))  # "pdf" (more kinds later)
+    kind: Mapped[str] = mapped_column(String(20))  # FileKind
     storage_key: Mapped[str] = mapped_column(String(500))
     file_name: Mapped[str] = mapped_column(String(255))
     content_type: Mapped[str] = mapped_column(String(100))

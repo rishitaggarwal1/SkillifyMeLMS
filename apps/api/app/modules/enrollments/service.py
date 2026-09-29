@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.errors import ConflictError, NotFoundError, UnprocessableError
 from app.core.logging import get_logger
 from app.core.pagination import CursorParams
+from app.core.storage import ObjectStorage
 from app.db.tenancy import set_tenant_context
 from app.modules.audit import service as audit
 from app.modules.courses import service as courses
@@ -37,6 +38,7 @@ from app.modules.enrollments.schemas import (
     EnrollmentOut,
     EnrollmentVersion,
     LessonCompletionOut,
+    LessonImagesOut,
     LessonProgressOut,
     UpgradeAccepted,
     UpgradeRequest,
@@ -48,7 +50,7 @@ from app.modules.identity import service as identity
 from app.modules.identity.authz import Permission, require_org, require_org_permission
 from app.modules.identity.dependencies import RequestContext
 from app.modules.media import service as media
-from app.modules.media.service import PlaybackOut
+from app.modules.media.service import FileDownloadOut, PlaybackOut
 
 logger = get_logger(__name__)
 Ctx = RequestContext
@@ -263,6 +265,7 @@ def _progress_out(p: LessonProgress) -> LessonProgressOut:
         status=p.status,  # type: ignore[arg-type]
         video_position_seconds=p.video_position_seconds,
         watched_ratio=p.watched_ratio,
+        pdf_opened_at=p.pdf_opened_at,
         completed_at=p.completed_at,
     )
 
@@ -324,6 +327,44 @@ async def _lesson_in_version(ctx: Ctx, version: VersionRef, lesson_id: UUID) -> 
     if lesson is None:
         raise NotFoundError("Lesson not found.")
     return lesson
+
+
+async def open_pdf(
+    ctx: Ctx, storage: ObjectStorage, enrollment_id: UUID, lesson_id: UUID, ttl_seconds: int
+) -> FileDownloadOut:
+    """A short-lived signed URL for a pdf lesson's file. Issuing it counts as opening the PDF,
+    which the lesson's completion rule requires."""
+    enrollment, version = await _my_enrollment(ctx, enrollment_id)
+    lesson = await _lesson_in_version(ctx, version, lesson_id)
+    if lesson.lesson_type != "pdf" or not lesson.file_ids:
+        raise NotFoundError("PDF lesson not found.")
+    file_id = lesson.file_ids[0]
+    download = (await media.download_urls(ctx.session, storage, [file_id], ttl_seconds)).get(
+        file_id
+    )
+    if download is None:
+        raise NotFoundError("PDF not found.")
+    await LessonProgressRepository(ctx.session).mark_pdf_opened(
+        enrollment, lesson_id, datetime.now(UTC)
+    )
+    return FileDownloadOut(
+        url=download.url, file_name=download.file_name, expires_at=download.expires_at
+    )
+
+
+async def lesson_images(
+    ctx: Ctx, storage: ObjectStorage, enrollment_id: UUID, lesson_id: UUID, ttl_seconds: int
+) -> LessonImagesOut:
+    """Signed URLs for the images in a notes lesson's pre-rendered HTML."""
+    _, version = await _my_enrollment(ctx, enrollment_id)
+    lesson = await _lesson_in_version(ctx, version, lesson_id)
+    if lesson.lesson_type != "notes":
+        raise NotFoundError("Notes lesson not found.")
+    found = await media.download_urls(ctx.session, storage, lesson.file_ids, ttl_seconds)
+    return LessonImagesOut(
+        urls={file_id: d.url for file_id, d in found.items()},
+        expires_at=min((d.expires_at for d in found.values()), default=None),
+    )
 
 
 async def visit_lesson(ctx: Ctx, enrollment_id: UUID, lesson_id: UUID) -> EnrollmentOut:

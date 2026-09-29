@@ -25,9 +25,10 @@ from app.core.errors import (
     UnprocessableError,
 )
 from app.core.pagination import CursorParams
+from app.core.storage import ObjectStorage
 from app.db.base import new_id
 from app.modules.audit import service as audit
-from app.modules.courses import events
+from app.modules.courses import events, notes
 from app.modules.courses.models import (
     PLACEHOLDER_LESSON_TYPES,
     Course,
@@ -61,6 +62,7 @@ from app.modules.courses.schemas import (
     LessonSummary,
     LessonUpdate,
     ModuleOut,
+    NotesPreviewOut,
     PublishBlocker,
     PublishPreview,
     PublishRequest,
@@ -71,6 +73,7 @@ from app.modules.courses.schemas import (
 )
 from app.modules.courses.versioning import (
     build_snapshot,
+    lesson_file_ids,
     snapshot_lessons,
     structural_changes,
     version_label,
@@ -111,6 +114,7 @@ class VersionLessonRef:
     completion_threshold: Decimal | None
     video_asset_id: UUID | None
     video_duration_seconds: int | None = None
+    file_ids: tuple[UUID, ...] = ()  # the pdf lesson's PDF, a notes lesson's images
 
     @property
     def counts_toward_progress(self) -> bool:
@@ -155,9 +159,13 @@ async def version_lesson(
     row = await VersionRepository(session).lesson(version_id, lesson_id)
     if row is None:
         return None
+    return _lesson_ref(row)
+
+
+def _lesson_ref(row: CourseVersionLesson) -> VersionLessonRef:
     return VersionLessonRef(
         row.lesson_id, row.lesson_type, row.is_required, row.completion_threshold,
-        row.video_asset_id, row.video_duration_seconds,
+        row.video_asset_id, row.video_duration_seconds, tuple(row.file_ids or ()),
     )  # fmt: skip
 
 
@@ -167,16 +175,7 @@ async def version_lessons_many(
     rows = await VersionRepository(session).lessons_many(version_ids)
     result: dict[UUID, list[VersionLessonRef]] = {vid: [] for vid in version_ids}
     for row in rows:
-        result[row.version_id].append(
-            VersionLessonRef(
-                row.lesson_id,
-                row.lesson_type,
-                row.is_required,
-                row.completion_threshold,
-                row.video_asset_id,
-                row.video_duration_seconds,
-            )
-        )
+        result[row.version_id].append(_lesson_ref(row))
     return result
 
 
@@ -523,6 +522,27 @@ async def _validate_content(
         file = (await media.files(ctx.session, [UUID(file_id)])).get(UUID(file_id))
         if file is None or file.organization_id != course.organization_id or file.kind != "pdf":
             raise UnprocessableError("Unknown PDF file.", code="invalid_file")
+        if not file.is_ready:
+            raise UnprocessableError(
+                "Confirm the PDF upload before attaching it.", code="file_not_ready"
+            )
+    if lesson_type == LessonType.NOTES and (doc := clean.get("doc")):
+        image_ids = notes.image_file_ids(doc)
+        found = await media.files(ctx.session, image_ids)
+        bad = [
+            str(i)
+            for i in image_ids
+            if (f := found.get(i)) is None
+            or f.organization_id != course.organization_id
+            or f.kind != "image"
+            or not f.is_ready
+        ]
+        if bad:
+            raise UnprocessableError(
+                "Notes images must be confirmed image uploads of this organization.",
+                code="invalid_image",
+                details={"file_ids": bad},
+            )
     return clean
 
 
@@ -571,6 +591,25 @@ async def _lesson(ctx: Ctx, course_id: UUID, lesson_id: UUID) -> Lesson:
 async def get_lesson(ctx: Ctx, course_id: UUID, lesson_id: UUID) -> LessonOut:
     course = await _editable(ctx, course_id)
     return await _lesson_out(ctx, await _lesson(ctx, course_id, lesson_id), course.revision)
+
+
+async def preview_notes(
+    ctx: Ctx, storage: ObjectStorage, course_id: UUID, lesson_id: UUID, ttl_seconds: int
+) -> NotesPreviewOut:
+    """The draft notes lesson rendered exactly as publishing would, with signed image URLs."""
+    await _editable(ctx, course_id)
+    lesson = await _lesson(ctx, course_id, lesson_id)
+    if lesson.lesson_type != LessonType.NOTES:
+        raise NotFoundError("Notes lesson not found.")
+    doc = lesson.content.get("doc")
+    images = await media.download_urls(
+        ctx.session, storage, notes.image_file_ids(doc) if doc else [], ttl_seconds
+    )
+    return NotesPreviewOut(
+        html=notes.render_html(doc),
+        image_urls={file_id: d.url for file_id, d in images.items()},
+        expires_at=min((d.expires_at for d in images.values()), default=None),
+    )
 
 
 async def update_lesson(
@@ -750,6 +789,7 @@ async def publish(ctx: Ctx, course_id: UUID, data: PublishRequest) -> VersionOut
             completion_threshold=lesson.completion_threshold,
             video_asset_id=(v := lesson.content.get("video_asset_id")) and UUID(v),
             video_duration_seconds=draft.video_durations.get(UUID(v)) if v else None,
+            file_ids=lesson_file_ids(lesson.lesson_type, lesson.content),
         )
         for lesson in draft.lessons
     ]

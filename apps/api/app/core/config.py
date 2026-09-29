@@ -95,6 +95,12 @@ class Settings(BaseSettings):
     bunny_webhook_secret: SecretStr | None = None
     bunny_api_url: str = "https://video.bunnycdn.com"
 
+    # ---- Files: PDFs and notes images (presigned POST uploads, signed GET downloads).
+    pdf_upload_max_bytes: int = Field(default=25 * 1024**2, ge=1)
+    image_upload_max_bytes: int = Field(default=5 * 1024**2, ge=1)
+    file_upload_ttl_seconds: int = Field(default=600, ge=60, le=3600)
+    file_download_ttl_seconds: int = Field(default=300, ge=30, le=3600)
+
     # ---- Video watch progress (heartbeats buffered in Redis, flushed by Celery beat).
     heartbeat_interval_seconds: int = Field(default=15, ge=5)
     progress_flush_interval_seconds: float = Field(default=30.0, gt=0)

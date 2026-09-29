@@ -12,13 +12,14 @@ from app.modules.enrollments.schemas import (
     EnrollmentDetail,
     EnrollmentOut,
     LessonCompletionOut,
+    LessonImagesOut,
     UpgradeAccepted,
     UpgradeRequest,
     VideoHeartbeat,
     VideoResume,
 )
 from app.modules.identity.dependencies import RequestCtx
-from app.modules.media.service import PlaybackOut
+from app.modules.media.service import FileDownloadOut, PlaybackOut
 
 router = APIRouter(tags=["enrollments"])
 
@@ -55,6 +56,35 @@ async def video_resume(
     ctx: RequestCtx, redis: RedisClient, enrollment_id: UUID, lesson_id: UUID
 ) -> VideoResume:
     return await service.video_resume(ctx, redis, enrollment_id, lesson_id)
+
+
+@router.post("/enrollments/{enrollment_id}/lessons/{lesson_id}/pdf-access", operation_id="open_pdf")
+async def open_pdf(
+    ctx: RequestCtx, request: Request, enrollment_id: UUID, lesson_id: UUID
+) -> FileDownloadOut:
+    """A signed URL for a pdf lesson's file (valid a few minutes; ask again when it expires).
+    Records that the student opened the PDF, which completing the lesson requires."""
+    return await service.open_pdf(
+        ctx,
+        request.app.state.storage,
+        enrollment_id,
+        lesson_id,
+        request.app.state.settings.file_download_ttl_seconds,
+    )
+
+
+@router.get("/enrollments/{enrollment_id}/lessons/{lesson_id}/images", operation_id="notes_images")
+async def notes_images(
+    ctx: RequestCtx, request: Request, enrollment_id: UUID, lesson_id: UUID
+) -> LessonImagesOut:
+    """Signed URLs for a notes lesson's images (`<img data-file-id>` in its HTML)."""
+    return await service.lesson_images(
+        ctx,
+        request.app.state.storage,
+        enrollment_id,
+        lesson_id,
+        request.app.state.settings.file_download_ttl_seconds,
+    )
 
 
 @router.get("/enrollments", operation_id="list_my_enrollments")

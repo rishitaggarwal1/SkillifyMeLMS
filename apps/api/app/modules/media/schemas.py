@@ -46,3 +46,61 @@ class PlaybackOut(BaseModel):
     url: str
     kind: Literal["mp4", "hls"]
     expires_at: datetime
+
+
+# ============================================================================ files
+
+FileKindName = Literal["pdf", "image"]
+FileStatusName = Literal["pending", "ready", "rejected"]
+ImageContentType = Literal["image/png", "image/jpeg", "image/webp"]
+# Shown to users and used in the download's Content-Disposition: no control characters, quotes,
+# backslashes or path separators.
+FileName = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True, min_length=1, max_length=255, pattern=r'^[^\x00-\x1f\x7f"\/]+$'
+    ),
+]
+
+
+class FileCreate(BaseModel):
+    kind: FileKindName
+    file_name: FileName
+    content_type: Literal["application/pdf"] | ImageContentType = Field(
+        description="application/pdf for kind=pdf; image/png, image/jpeg or image/webp for "
+        "kind=image. Storage only accepts an upload with exactly this Content-Type."
+    )
+
+
+class FileOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    kind: FileKindName
+    file_name: str
+    content_type: str
+    size_bytes: int | None
+    status: FileStatusName
+    error: str | None = Field(default=None, description="Why confirm rejected the upload.")
+    created_at: datetime
+    updated_at: datetime
+
+
+class PresignedPostOut(BaseModel):
+    url: str
+    fields: dict[str, str] = Field(
+        description="Send these as form fields, then the file as the last field named `file`."
+    )
+    max_bytes: int
+    expires_at: datetime
+
+
+class FileUploadOut(BaseModel):
+    file: FileOut
+    upload: PresignedPostOut
+
+
+class FileDownloadOut(BaseModel):
+    url: str
+    file_name: str
+    expires_at: datetime

@@ -292,6 +292,25 @@ class LessonProgressRepository:
             .on_conflict_do_nothing()
         )
 
+    async def mark_pdf_opened(self, enrollment: Enrollment, lesson_id: UUID, at: datetime) -> None:
+        """Record the first time the student got the lesson's PDF (a signed URL was issued).
+        Later openings keep the first timestamp."""
+        stmt = pg_insert(LessonProgress).values(
+            enrollment_id=enrollment.id,
+            lesson_id=lesson_id,
+            organization_id=enrollment.organization_id,
+            user_id=enrollment.user_id,
+            status=LessonProgressStatus.IN_PROGRESS,
+            pdf_opened_at=at,
+        )
+        await self.session.execute(
+            stmt.on_conflict_do_update(
+                index_elements=[LessonProgress.enrollment_id, LessonProgress.lesson_id],
+                set_={"pdf_opened_at": at, "updated_at": func.now()},
+                where=LessonProgress.pdf_opened_at.is_(None),
+            )
+        )
+
     async def complete(self, enrollment: Enrollment, lesson_id: UUID, at: datetime) -> bool:
         """Mark a lesson completed; False if it already was (so events fire once)."""
         stmt = pg_insert(LessonProgress).values(

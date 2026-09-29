@@ -243,6 +243,26 @@ export interface paths {
     patch: operations["update_lesson"];
     trace?: never;
   };
+  "/api/v1/courses/{course_id}/lessons/{lesson_id}/preview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Preview Notes
+     * @description A draft notes lesson rendered as students will see it once published (editors only).
+     */
+    get: operations["preview_notes"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/courses/{course_id}/lessons/{lesson_id}/skills": {
     parameters: {
       query?: never;
@@ -470,6 +490,47 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/images": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Notes Images
+     * @description Signed URLs for a notes lesson's images (`<img data-file-id>` in its HTML).
+     */
+    get: operations["notes_images"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/pdf-access": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Open Pdf
+     * @description A signed URL for a pdf lesson's file (valid a few minutes; ask again when it expires).
+     *     Records that the student opened the PDF, which completing the lesson requires.
+     */
+    post: operations["open_pdf"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/playback": {
     parameters: {
       query?: never;
@@ -518,6 +579,86 @@ export interface paths {
      * @description Record that the student opened a lesson (resume and "Continue learning").
      */
     post: operations["visit_lesson"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/files": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Files */
+    get: operations["list_files"];
+    put?: never;
+    /**
+     * Create File
+     * @description Create a pending PDF or image and get a presigned POST: send `upload.fields` as form
+     *     fields and the file last, straight to storage. Then call `POST /files/{id}/confirm`.
+     */
+    post: operations["create_file"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/files/{file_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get File */
+    get: operations["get_file"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/files/{file_id}/confirm": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Confirm File
+     * @description Check the upload's size and contents (a PDF must start with `%PDF-`). The file is
+     *     `ready` to attach to lessons, or `rejected` with an `error` (and the object is deleted).
+     */
+    post: operations["confirm_file"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/files/{file_id}/download": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Download
+     * @description A signed download URL (a few minutes) for the course editors.
+     */
+    get: operations["get_file_download"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -1228,6 +1369,16 @@ export interface components {
        */
       next_cursor: string | null;
     };
+    /** CursorPage[FileOut] */
+    CursorPage_FileOut_: {
+      /** Items */
+      items: components["schemas"]["FileOut"][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for the next page; null when there are no more items.
+       */
+      next_cursor: string | null;
+    };
     /** CursorPage[ImportJobOut] */
     CursorPage_ImportJobOut_: {
       /** Items */
@@ -1404,6 +1555,77 @@ export interface components {
     ErrorResponse: {
       error: components["schemas"]["ErrorBody"];
     };
+    /** FileCreate */
+    FileCreate: {
+      /**
+       * Content Type
+       * @description application/pdf for kind=pdf; image/png, image/jpeg or image/webp for kind=image. Storage only accepts an upload with exactly this Content-Type.
+       */
+      content_type: "application/pdf" | ("image/png" | "image/jpeg" | "image/webp");
+      /** File Name */
+      file_name: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "pdf" | "image";
+    };
+    /** FileDownloadOut */
+    FileDownloadOut: {
+      /**
+       * Expires At
+       * Format: date-time
+       */
+      expires_at: string;
+      /** File Name */
+      file_name: string;
+      /** Url */
+      url: string;
+    };
+    /** FileOut */
+    FileOut: {
+      /** Content Type */
+      content_type: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /**
+       * Error
+       * @description Why confirm rejected the upload.
+       */
+      error?: string | null;
+      /** File Name */
+      file_name: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "pdf" | "image";
+      /** Size Bytes */
+      size_bytes: number | null;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "pending" | "ready" | "rejected";
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
+    };
+    /** FileUploadOut */
+    FileUploadOut: {
+      file: components["schemas"]["FileOut"];
+      upload: components["schemas"]["PresignedPostOut"];
+    };
     /** ImportJobOut */
     ImportJobOut: {
       /** Batch Id */
@@ -1513,6 +1735,18 @@ export interface components {
       /** Title */
       title: string;
     };
+    /**
+     * LessonImagesOut
+     * @description Signed URLs for a notes lesson's images, keyed by the `data-file-id` in its HTML.
+     */
+    LessonImagesOut: {
+      /** Expires At */
+      expires_at: string | null;
+      /** Urls */
+      urls: {
+        [key: string]: string;
+      };
+    };
     /** LessonOut */
     LessonOut: {
       /** Completion Threshold */
@@ -1554,6 +1788,11 @@ export interface components {
        * Format: uuid
        */
       lesson_id: string;
+      /**
+       * Pdf Opened At
+       * @description When the student first opened the lesson's PDF (required before completing it)
+       */
+      pdf_opened_at: string | null;
       /**
        * Status
        * @enum {string}
@@ -1695,6 +1934,23 @@ export interface components {
       /** Title */
       title: string;
     };
+    /** NotesPreviewOut */
+    NotesPreviewOut: {
+      /** Expires At */
+      expires_at: string | null;
+      /**
+       * Html
+       * @description Sanitized HTML; images are `<img data-file-id>` placeholders
+       */
+      html: string;
+      /**
+       * Image Urls
+       * @description Signed URLs for the images, by file id
+       */
+      image_urls: {
+        [key: string]: string;
+      };
+    };
     /** OrderUpdate */
     OrderUpdate: {
       /** Ids */
@@ -1778,6 +2034,25 @@ export interface components {
        * @enum {string}
        */
       kind: "mp4" | "hls";
+      /** Url */
+      url: string;
+    };
+    /** PresignedPostOut */
+    PresignedPostOut: {
+      /**
+       * Expires At
+       * Format: date-time
+       */
+      expires_at: string;
+      /**
+       * Fields
+       * @description Send these as form fields, then the file as the last field named `file`.
+       */
+      fields: {
+        [key: string]: string;
+      };
+      /** Max Bytes */
+      max_bytes: number;
       /** Url */
       url: string;
     };
@@ -3140,6 +3415,50 @@ export interface operations {
       };
     };
   };
+  preview_notes: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        course_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotesPreviewOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
   set_lesson_skills: {
     parameters: {
       query?: never;
@@ -3795,6 +4114,94 @@ export interface operations {
       };
     };
   };
+  notes_images: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        enrollment_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LessonImagesOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  open_pdf: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        enrollment_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FileDownloadOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
   video_playback: {
     parameters: {
       query?: never;
@@ -3905,6 +4312,225 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["EnrollmentOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  list_files: {
+    parameters: {
+      query?: {
+        kind?: ("pdf" | "image") | null;
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_FileOut_"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  create_file: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["FileCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FileUploadOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_file: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        file_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FileOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  confirm_file: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        file_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FileOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_file_download: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        file_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FileDownloadOut"];
         };
       };
       /** @description Client error */

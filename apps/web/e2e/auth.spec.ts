@@ -9,7 +9,11 @@ test("protected pages send you through Keycloak and back", async ({ page }) => {
   await page.waitForURL("**/admin/batches");
 
   await expect(page.getByRole("heading", { level: 1, name: "Batches" })).toBeVisible();
-  await expect(page.getByRole("list", { name: "Batches" })).toContainText("CSE 2026");
+  // The org's batches load after the round trip. (Not a specific seeded batch: admin-import adds
+  // batches on every run, so a seeded one eventually moves off the first page.)
+  await expect(
+    page.getByRole("list", { name: "Batches" }).getByRole("listitem").first(),
+  ).toContainText("members");
 });
 
 test("tokens live only in encrypted httpOnly cookies", async ({ page, context }) => {

@@ -1,8 +1,8 @@
 # Phase 2 — Courses and learning content (plan)
 
-**Status (2026-09-29):** steps 1–3 are complete and committed. Step 3 (video) also made
-`If-Match` required on outline and lesson edits. Step 4 (notes and PDFs) is next. Steps 4–8 are
-not started. See
+**Status (2026-09-29):** steps 1–4 are complete and committed. Step 3 (video) also made
+`If-Match` required on outline and lesson edits. Step 5 (caching and events) is next. Steps 5–8
+are not started. See
 [Implementation status](#implementation-status). Phase 1 (identity, organizations, roles, RLS) is
 complete; see [What Phase 1 provides](#what-phase-1-provides). Resume by re-reading `CLAUDE.md`
 and `docs/access-control.md`, then present this plan for approval before coding.
@@ -97,6 +97,22 @@ Contents:
   `features/video/*`, and `e2e/video.spec.ts`.
 
 See the step 3 notes under [Build order](#build-order).
+
+### Step 4 — notes and PDFs
+
+- **Backend:** `courses/notes.py` (the allow-list validator and the renderer plus nh3), the
+  `media` file service, migration `0007_lesson_files`, and new settings `PDF_UPLOAD_MAX_BYTES`,
+  `IMAGE_UPLOAD_MAX_BYTES`, `FILE_UPLOAD_TTL_SECONDS` and `FILE_DOWNLOAD_TTL_SECONDS`.
+- **Endpoints:**
+  - `POST`, `GET /files`
+  - `GET /files/{file_id}`, `POST /files/{file_id}/confirm`, `GET /files/{file_id}/download`
+  - `GET /courses/{course_id}/lessons/{lesson_id}/preview`
+  - `POST /enrollments/{enrollment_id}/lessons/{lesson_id}/pdf-access`
+  - `GET /enrollments/{enrollment_id}/lessons/{lesson_id}/images`
+- **Tests:** `test_notes` (allow-list, XSS, highlighting), `test_notes_api`, `test_files` (real
+  MinIO: POST policy, size, content type, magic bytes, signed downloads) and `test_pdf_access`
+  (opened-before-complete, RLS, minor replacement).
+- No web UI in this step. The editors come in step 6 and the player in step 7.
 
 ### Deviations between this plan and the committed code
 
@@ -771,6 +787,44 @@ Step 3 implementation notes:
   - The player shows a generic error on `409 video_changed` instead of reloading the lesson. It is
     reworked in the step 7 course player.
   - Event-payload validation against `docs/events.md` is a step 5 test.
+
+Step 4 implementation notes:
+- **Notes allow-list** (`courses/notes.py`): the Tiptap node set is the plan's list plus
+  `hardBreak` (Shift+Enter; renders `<br>`). Everything else is rejected with a JSON path:
+  - unknown nodes, marks, keys or attributes
+  - non-absolute or non-http(s) links
+  - headings other than 2–4
+  - code languages outside a fixed list of 16
+  - nesting deeper than 16, more than 50 images, and documents over 200 KB
+- **Rendering:** HTML is built from the validated tree with every text and attribute escaped,
+  then sanitized by nh3. The sanitizer allows only the tags and attributes the renderer emits,
+  and only Pygments token classes for `class`.
+  - Links get `target="_blank" rel="noopener noreferrer nofollow"`.
+  - Code is highlighted by Pygments with class-based output. The stylesheet comes from
+    `notes.stylesheet()` and ships with the step 7 player.
+- **Versions store only the HTML.** Readers get `{"html", "image_file_ids"}` for notes, never
+  the editor JSON. Editors preview drafts through `GET /courses/{id}/lessons/{lesson_id}/preview`.
+- **Notes images** are `image` files (PNG, JPEG, WebP; 5 MB). SVG is excluded: it can carry
+  script. In HTML they are `<img data-file-id>` without `src`. Readers fetch short-lived signed
+  URLs from `GET /enrollments/{id}/lessons/{lesson_id}/images`, because a signed URL can't live
+  in an immutable snapshot. Images must be this org's confirmed image files.
+- **Files:** `POST /files` issues a presigned POST pinned to one key (never the user's file
+  name), the exact Content-Type and the size limit (PDF 25 MB).
+  - `POST /files/{id}/confirm` checks the stored size and the leading bytes (`%PDF-`, or the
+    PNG, JPEG or WebP signature).
+  - A mismatch answers `200` with `status: rejected` and an `error`, and the object is deleted
+    after commit. A 4xx would roll back the rejection. A missing object is `409` and stays
+    pending.
+  - Only confirmed PDFs can be attached to lessons (`422 file_not_ready`).
+  - File names are validated because they go into `Content-Disposition` (no quotes, control
+    characters or path separators), and the header uses an ASCII fallback.
+- **Downloads** are signed GETs valid for `FILE_DOWNLOAD_TTL_SECONDS` (300 s).
+  `POST /enrollments/{id}/lessons/{lesson_id}/pdf-access` is a POST because it records
+  `pdf_opened_at` (first opening kept), which completing a pdf lesson requires.
+- **File RLS** (migration 0007): `course_version_lessons.file_ids` (GIN-indexed) lists each
+  published lesson's files, backfilled for existing pdf lessons. `app.file_readable` mirrors
+  `app.video_readable`. Staff of an assigned org read outlines but not files. A PDF replaced in a
+  minor release: students can read only the latest minor's file.
 
 1. Data model, migrations and RLS (skills, courses and draft tree, versions, assignments,
    enrollments, progress, media tables).

@@ -79,6 +79,9 @@ Defined once, in `apps/api/app/modules/identity/authz.py` (`ROLE_PERMISSIONS`).
 | `POST /videos`, `GET /videos`, `GET /videos/{id}`, `POST /videos/{id}/uploaded`, `GET /videos/{id}/playback` | Owner-org course editors (`course.edit`); item routes return 404 across orgs |
 | `GET /enrollments/{id}/lessons/{lesson_id}/playback`, `.../resume`, `POST /progress/heartbeat` | The active enrollment's student, with a current batch assignment; video must be in their pinned major's latest minor |
 | `POST /webhooks/video/bunny/{secret}` | Provider webhook secret (constant-time check); status is fetched from Bunny, never trusted from the body |
+| `POST /files`, `GET /files`, `GET /files/{id}`, `POST /files/{id}/confirm`, `GET /files/{id}/download` | Owner-org course editors (`course.edit`); item routes return 404 across orgs |
+| `GET /courses/{id}/lessons/{lesson_id}/preview` | org_admin, instructor of the **owner** org (draft notes preview; others get 404) |
+| `POST /enrollments/{id}/lessons/{lesson_id}/pdf-access`, `GET .../images` | The active enrollment's student, with a current batch assignment; the file must be used by that lesson in their pinned major's latest minor |
 
 All paths are under `/api/v1`, and platform admins can call every endpoint.
 
@@ -142,7 +145,7 @@ org.
 | course_assignments | Owner-org editors*; the receiving org's org_admins and instructors | Publisher-made rows: owner-org editors* (to other orgs only if the owner is a content publisher). Narrowing rows: the receiving org's org_admin, batch rows under an existing org grant only. Removal: only the org that created the row. No UPDATE |
 | enrollments, lesson_progress (the student's org) | The student; org_admin and instructors of that org | The student (own progress); org_admin; system jobs |
 | video_assets | Owner-org editors*; enrolled students for assets in their pinned major's latest minor, with current batch access | Owner-org editors* |
-| files | Owner-org editors* | Owner-org editors* |
+| files | Owner-org editors*; enrolled students for files (a pdf lesson's PDF, a notes lesson's images) in their pinned major's latest minor, with current batch access | Owner-org editors* |
 | catalog_entries | Everyone | Owner-org editors* |
 
 \* **Editors**: `instructor` or `org_admin` of the course's owner org, acting in that org, or platform
@@ -160,6 +163,9 @@ so policies on `courses` and `course_assignments` don't recurse into each other.
 `app.video_readable(asset)` additionally checks the current student's active enrollment, pinned
 major, latest minor and current assignment. Playback services first authorize the enrollment and
 lesson. Signed URLs remain usable until their short expiry; revocation prevents issuing new URLs.
+`app.file_readable(file)` (migration 0007) applies the same checks to files, through
+`course_version_lessons.file_ids`. Staff of an assigned org can read the course outline but not
+its files; downloads are for enrolled students and owner-org editors.
 
 **Assignment rules (confirmed 2026-09-26):**
 1. Assignments the publisher made, including publisher-made batch assignments, can be removed only

@@ -26,6 +26,7 @@ from sqlalchemy import (
     Uuid,
     false,
     func,
+    text,
     true,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
@@ -226,6 +227,7 @@ class CourseVersionLesson(Base):
         Index("ix_course_version_lessons_course_id", "course_id"),
         Index("ix_course_version_lessons_organization_id", "organization_id"),
         Index("ix_course_version_lessons_video_asset_id", "video_asset_id"),
+        Index("ix_course_version_lessons_file_ids", "file_ids", postgresql_using="gin"),
     )
 
     version_id: Mapped[UUID] = mapped_column(
@@ -242,6 +244,11 @@ class CourseVersionLesson(Base):
     completion_threshold: Mapped[Decimal | None] = mapped_column(Numeric(3, 2))
     video_asset_id: Mapped[UUID | None] = mapped_column(Uuid)
     video_duration_seconds: Mapped[int | None] = mapped_column(Integer)
+    # Files the lesson uses (a pdf lesson's PDF, a notes lesson's images): what enrolled students
+    # may download (RLS `app.file_readable`).
+    file_ids: Mapped[list[UUID]] = mapped_column(
+        ARRAY(Uuid), server_default=text("'{}'::uuid[]"), default=list
+    )
 
 
 class CourseAssignment(UUIDPrimaryKeyMixin, Base):

@@ -10,7 +10,7 @@ optionally.
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, Query, status
+from fastapi import APIRouter, Depends, Header, Query, Request, status
 
 from app.core.errors import PreconditionRequiredError, UnprocessableError
 from app.core.pagination import CursorPage, PageParams
@@ -29,6 +29,7 @@ from app.modules.courses.schemas import (
     ModuleCreate,
     ModuleOut,
     ModuleUpdate,
+    NotesPreviewOut,
     OrderUpdate,
     PublishPreview,
     PublishRequest,
@@ -172,6 +173,20 @@ async def reorder_lessons(
 @courses.get("/{course_id}/lessons/{lesson_id}", operation_id="get_lesson")
 async def get_lesson(ctx: RequestCtx, course_id: UUID, lesson_id: UUID) -> LessonOut:
     return await service.get_lesson(ctx, course_id, lesson_id)
+
+
+@courses.get("/{course_id}/lessons/{lesson_id}/preview", operation_id="preview_notes")
+async def preview_notes(
+    ctx: RequestCtx, request: Request, course_id: UUID, lesson_id: UUID
+) -> NotesPreviewOut:
+    """A draft notes lesson rendered as students will see it once published (editors only)."""
+    return await service.preview_notes(
+        ctx,
+        request.app.state.storage,
+        course_id,
+        lesson_id,
+        request.app.state.settings.file_download_ttl_seconds,
+    )
 
 
 @courses.patch("/{course_id}/lessons/{lesson_id}", operation_id="update_lesson")
