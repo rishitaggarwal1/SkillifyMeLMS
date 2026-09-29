@@ -185,6 +185,13 @@ class NotesPreviewOut(BaseModel):
     expires_at: datetime | None
 
 
+class ImageUrlsOut(BaseModel):
+    """Signed URLs for a notes lesson's images, keyed by the `data-file-id` in its HTML."""
+
+    urls: dict[UUID, str]
+    expires_at: datetime | None
+
+
 class ModuleOut(BaseModel):
     id: UUID
     title: str

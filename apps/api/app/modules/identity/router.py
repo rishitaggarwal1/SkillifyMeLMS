@@ -150,9 +150,15 @@ async def create_batch(ctx: Ctx, body: BatchCreate) -> BatchOut:
 
 @batches.get("", operation_id="list_batches")
 async def list_batches(
-    ctx: Ctx, page: PageParams, status_: StatusFilter = None
+    ctx: Ctx,
+    page: PageParams,
+    status_: StatusFilter = None,
+    name: Annotated[
+        str | None,
+        Query(min_length=1, max_length=120, description="Exact batch name (case-insensitive)"),
+    ] = None,
 ) -> CursorPage[BatchOut]:
-    items, cursor = await service.list_batches(ctx, page, status_)
+    items, cursor = await service.list_batches(ctx, page, status_, name)
     return CursorPage(items=items, next_cursor=cursor)
 
 

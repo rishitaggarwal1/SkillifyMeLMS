@@ -29,8 +29,8 @@ from app.core.logging import get_logger
 from app.core.pagination import CursorParams
 from app.core.storage import ObjectStorage
 from app.db.base import new_id
-from app.db.session import run_after_commit, run_after_commit_async
-from app.db.tenancy import system_transaction
+from app.db.session import run_after_commit
+from app.db.tenancy import independent_transaction, system_transaction
 from app.modules.audit import service as audit
 from app.modules.identity.authz import Permission, require_org_permission
 from app.modules.identity.dependencies import RequestContext
@@ -302,6 +302,7 @@ _MAGIC: dict[str, tuple[bytes, ...]] = {
     "application/pdf": (b"%PDF-",),
     "image/png": (b"\x89PNG\r\n\x1a\n",),
     "image/jpeg": (b"\xff\xd8\xff",),
+    "image/gif": (b"GIF87a", b"GIF89a"),
 }
 _ASCII_NAME = re.compile(r"[^A-Za-z0-9._ -]")
 
@@ -353,7 +354,7 @@ async def create_file(
     org_id = require_org_permission(ctx.principal, Permission.COURSE_EDIT)
     if (body.kind == "pdf") != (body.content_type == "application/pdf"):
         raise UnprocessableError(
-            "PDF files must be application/pdf; images must be PNG, JPEG or WebP.",
+            "PDF files must be application/pdf; images must be PNG, JPEG, WebP or GIF.",
             code="invalid_content_type",
         )
     file_id = new_id()
@@ -393,44 +394,60 @@ async def create_file(
 async def confirm_file(
     ctx: RequestContext, storage: ObjectStorage, settings: Settings, file_id: UUID
 ) -> FileOut:
-    """Check the uploaded object's size and leading bytes. A mismatch answers `status: rejected`
-    with an `error` and deletes the object; a missing object leaves the file pending (409), so the
-    browser can retry. Idempotent."""
+    """Check the uploaded object's size and leading bytes; `ready` on success. A mismatch is
+    `422 file_rejected` (the reason in `details`): the rejected status is committed first, so the
+    file can never be attached, and the object is deleted. A missing object is `409` and leaves
+    the file pending, so the browser can retry. Idempotent."""
     file = await _own_file(ctx, file_id)
     if file.status == FileStatus.READY:
         return _file_out(file)
     if file.status == FileStatus.REJECTED:
-        raise ConflictError(
-            "This upload was rejected. Upload the file again.", code="file_rejected"
-        )
+        raise _rejected("This upload was rejected. Upload the file again.")
     size = await asyncio.to_thread(storage.size, file.storage_key)
     if size is None:
         raise ConflictError("The upload hasn't arrived yet.", code="upload_not_found")
     head = await asyncio.to_thread(storage.read_range, file.storage_key, 0, 16) if size else b""
-    error: str | None = None
+    reason: str | None = None
     if not 0 < size <= _max_bytes(settings, file.kind):
-        error = "The file exceeds the size limit."
+        reason = "The file exceeds the size limit."
     elif not _matches(file.content_type, head):
-        error = "The file's contents don't match its type."
+        reason = "The file's contents don't match its type."
+
+    if reason is not None:
+        # The request transaction rolls back when we answer 4xx, so record the rejection in its
+        # own transaction (same caller, same RLS) and commit it before raising.
+        principal = ctx.principal
+        async with independent_transaction(
+            ctx.session,
+            organization_id=principal.organization_id,
+            user_id=principal.user_id,
+            is_platform_admin=principal.is_platform_admin,
+        ) as session:
+            await FileRepository(session).update(
+                file_id, {"status": FileStatus.REJECTED, "size_bytes": size}
+            )
+            await audit.record(
+                session, ctx.actor, action="file.rejected", target_type="file",
+                target_id=file_id, after={"size_bytes": size, "reason": reason},
+            )  # fmt: skip
+        await asyncio.to_thread(storage.delete, file.storage_key)
+        raise _rejected(reason)
+
     repo = FileRepository(ctx.session)
-    if error is None:
-        await repo.update(file_id, {"status": FileStatus.READY, "size_bytes": size})
-    else:
-        await repo.update(file_id, {"status": FileStatus.REJECTED, "size_bytes": size})
-        key = file.storage_key
-        run_after_commit_async(ctx.session, lambda: asyncio.to_thread(storage.delete, key))
+    await repo.update(file_id, {"status": FileStatus.READY, "size_bytes": size})
     await audit.record(
-        ctx.session,
-        ctx.actor,
-        action="file.confirmed" if error is None else "file.rejected",
-        target_type="file",
-        target_id=file_id,
-        after={"size_bytes": size, **({"error": error} if error else {})},
-    )
+        ctx.session, ctx.actor, action="file.confirmed", target_type="file", target_id=file_id,
+        after={"size_bytes": size},
+    )  # fmt: skip
     refreshed = await repo.get(file_id)
     assert refreshed is not None  # noqa: S101
-    # A rejection is a result, not an error: answering 4xx would roll back the rejected status.
-    return _file_out(refreshed).model_copy(update={"error": error})
+    return _file_out(refreshed)
+
+
+def _rejected(reason: str) -> UnprocessableError:
+    return UnprocessableError(
+        "The upload was rejected.", code="file_rejected", details={"reason": reason}
+    )
 
 
 async def get_file(ctx: RequestContext, file_id: UUID) -> FileOut:

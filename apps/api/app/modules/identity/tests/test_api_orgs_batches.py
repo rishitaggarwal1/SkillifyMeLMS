@@ -102,6 +102,25 @@ async def test_current_org_for_members(client: AsyncClient, org_setup: OrgSetup)
 # ---------------------------------------------------------------------------- batches
 
 
+async def test_batches_filter_by_exact_name(
+    client: AsyncClient, org_setup: OrgSetup, factory: Factory
+) -> None:
+    h = org_setup.h(org_setup.admin)
+    for name in ("Filter Me", "Filter Me Too"):
+        assert (await client.post("/api/v1/batches", headers=h, json={"name": name})).is_success
+    other_org = await factory.org()
+    await factory.batch(other_org, name="Filter Me")
+
+    async def names(query: str) -> list[str]:
+        response = await client.get(f"/api/v1/batches?name={query}", headers=h)
+        assert response.status_code == 200, response.text
+        return [b["name"] for b in response.json()["items"]]
+
+    assert await names("filter%20me") == ["Filter Me"]  # case-insensitive, exact, this org only
+    assert await names("Filter") == []
+    assert (await client.get("/api/v1/batches?name=", headers=h)).status_code == 422
+
+
 async def test_batch_lifecycle(
     client: AsyncClient, org_setup: OrgSetup, owner_sessionmaker: async_sessionmaker[AsyncSession]
 ) -> None:

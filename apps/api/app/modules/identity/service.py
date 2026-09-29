@@ -281,11 +281,11 @@ async def create_batch(ctx: Ctx, data: BatchCreate) -> BatchOut:
 
 
 async def list_batches(
-    ctx: Ctx, params: CursorParams, status: str | None
+    ctx: Ctx, params: CursorParams, status: str | None, name: str | None = None
 ) -> tuple[list[BatchOut], str | None]:
     org_id = require_org_permission(ctx.principal, Permission.BATCH_READ)
     repo = BatchRepository(ctx.session)
-    batches, cursor = await repo.list_page(org_id, params, status=status)
+    batches, cursor = await repo.list_page(org_id, params, status=status, name=name)
     counts = await repo.member_counts([b.id for b in batches])
     return [_batch_out(b, counts[b.id]) for b in batches], cursor
 

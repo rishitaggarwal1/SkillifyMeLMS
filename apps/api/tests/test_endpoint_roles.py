@@ -253,6 +253,13 @@ class Route:
     denied: str = "403"  # status for signed-in callers outside `allowed`
 
 
+def _content(kind: str) -> Builder:
+    async def build(w: World) -> Request:
+        return await _version_content(w, kind)  # defined after the matrix
+
+    return build
+
+
 MATRIX = [
     Route(
         "POST",
@@ -545,6 +552,16 @@ MATRIX = [
         _version,
         names_resource=True,
     ),
+    *(
+        Route(
+            "GET",
+            f"/api/v1/courses/{{course_id}}/versions/{{version_id}}/lessons/{{lesson_id}}/{kind}",
+            STAFF_READ,
+            _content(kind),
+            names_resource=True,
+        )
+        for kind in ("playback", "pdf", "images")
+    ),
     # --- assignments
     Route(
         "GET",
@@ -594,6 +611,21 @@ MATRIX = [
         names_resource=True,
     ),
 ]
+
+
+async def _version_content(w: World, kind: str) -> Request:
+    """A published version of an org A course whose lesson uses a video, a PDF or an image."""
+    lesson_type = {"playback": "video", "pdf": "pdf", "images": "notes"}[kind]
+    course = await w.factory.course(w.org)
+    module = await w.factory.module(course)
+    lesson = await w.factory.lesson(module, lesson_type=lesson_type)
+    if kind == "playback":
+        video = await w.factory.video(w.org, status="ready", duration=120)
+        version = await w.factory.version(course, lesson, video=video)
+    else:
+        file = await (w.factory.pdf(w.org) if kind == "pdf" else w.factory.image(w.org))
+        version = await w.factory.version(course, lesson, files=[file])
+    return f"/api/v1/courses/{course.id}/versions/{version.id}/lessons/{lesson.id}/{kind}", {}
 
 
 async def _file_path(w: World, suffix: str = "") -> Request:

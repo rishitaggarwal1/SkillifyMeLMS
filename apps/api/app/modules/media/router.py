@@ -117,8 +117,9 @@ async def get_file(ctx: RequestCtx, file_id: UUID) -> FileOut:
 async def confirm_file(
     ctx: RequestCtx, storage: Storage, settings: AppSettings, file_id: UUID
 ) -> FileOut:
-    """Check the upload's size and contents (a PDF must start with `%PDF-`). The file is
-    `ready` to attach to lessons, or `rejected` with an `error` (and the object is deleted)."""
+    """Check the upload's size and contents (a PDF must start with `%PDF-`): the file becomes
+    `ready` to attach to lessons. Otherwise `422 file_rejected` with the reason in `details`; the
+    file stays rejected and the object is deleted."""
     return await service.confirm_file(ctx, storage, settings, file_id)
 
 

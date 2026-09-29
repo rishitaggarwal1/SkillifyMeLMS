@@ -50,3 +50,25 @@ async def system_transaction(
             session, organization_id=organization_id, user_id=None, is_platform_admin=True
         )
         yield session
+
+
+@asynccontextmanager
+async def independent_transaction(
+    session: AsyncSession,
+    *,
+    organization_id: UUID | None,
+    user_id: UUID | None,
+    is_platform_admin: bool = False,
+) -> AsyncIterator[AsyncSession]:
+    """A separate transaction on `session`'s engine, with the given tenant context (RLS still
+    applies). It commits on its own, so its writes survive the request transaction rolling back:
+    use it to record an outcome, then raise an error to the client. Keep it short, and don't touch
+    rows the request transaction has locked (it would wait on itself)."""
+    async with AsyncSession(session.bind, expire_on_commit=False) as other, other.begin():
+        await set_tenant_context(
+            other,
+            organization_id=organization_id,
+            user_id=user_id,
+            is_platform_admin=is_platform_admin,
+        )
+        yield other

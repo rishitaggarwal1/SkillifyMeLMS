@@ -89,7 +89,7 @@ async def test_file_rls_follows_enrollment_and_assignment(
     assert await visible(campus.cse, campus.c)
     assert await visible(campus.author, campus.p)  # owner-org editor
     assert not await visible(campus.ece, campus.c)  # same org, other batch
-    assert not await visible(campus.c_admin, campus.c)  # staff of an assigned org
+    assert await visible(campus.c_admin, campus.c)  # staff of an assigned org read content
     assert not await visible(campus.o_admin, campus.o)
 
     assignments = ok(

@@ -52,7 +52,8 @@ class PlaybackOut(BaseModel):
 
 FileKindName = Literal["pdf", "image"]
 FileStatusName = Literal["pending", "ready", "rejected"]
-ImageContentType = Literal["image/png", "image/jpeg", "image/webp"]
+# The only image types accepted; everything else (SVG, BMP, TIFF, HEIC...) is refused.
+ImageContentType = Literal["image/png", "image/jpeg", "image/webp", "image/gif"]
 # Shown to users and used in the download's Content-Disposition: no control characters, quotes,
 # backslashes or path separators.
 FileName = Annotated[
@@ -67,8 +68,8 @@ class FileCreate(BaseModel):
     kind: FileKindName
     file_name: FileName
     content_type: Literal["application/pdf"] | ImageContentType = Field(
-        description="application/pdf for kind=pdf; image/png, image/jpeg or image/webp for "
-        "kind=image. Storage only accepts an upload with exactly this Content-Type."
+        description="application/pdf for kind=pdf; image/png, image/jpeg, image/webp or "
+        "image/gif for kind=image. Storage only accepts an upload with exactly this Content-Type."
     )
 
 
@@ -81,7 +82,6 @@ class FileOut(BaseModel):
     content_type: str
     size_bytes: int | None
     status: FileStatusName
-    error: str | None = Field(default=None, description="Why confirm rejected the upload.")
     created_at: datetime
     updated_at: datetime
 

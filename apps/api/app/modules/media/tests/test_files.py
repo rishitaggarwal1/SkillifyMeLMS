@@ -12,6 +12,7 @@ from tests.course_api import Campus, CourseApi, ok
 PDF = b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n"
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 24
 JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 24
+GIF = b"GIF89a" + b"\x00" * 24
 WEBP = b"RIFF\x10\x00\x00\x00WEBPVP8 " + b"\x00" * 16
 
 
@@ -86,14 +87,19 @@ async def test_confirm_rejects_non_pdf_bytes_and_deletes_them(
     file, upload = created["file"], created["upload"]
     assert (await post_upload(upload, b"<html><script>alert(1)</script></html>")).status_code == 204
 
-    rejected = ok(await confirm(api, campus, file["id"]))
+    rejected = await confirm(api, campus, file["id"])
 
-    assert rejected["status"] == "rejected"
-    assert "don't match" in rejected["error"]
+    assert rejected.status_code == 422
+    error = rejected.json()["error"]
+    assert error["code"] == "file_rejected"
+    assert "don't match" in error["details"]["reason"]
+    # The 4xx rolled the request back, but the rejection was committed first.
+    detail = ok(await api.request("GET", f"/files/{file['id']}", campus.author, campus.p))
+    assert detail["status"] == "rejected"
     storage = ObjectStorage(api.app.state.settings)
     assert storage.size(f"files/{campus.p.id}/{file['id']}/pdf") is None
     again = await confirm(api, campus, file["id"])
-    assert again.status_code == 409
+    assert again.status_code == 422
     assert again.json()["error"]["code"] == "file_rejected"
     # A rejected file can never be attached to a lesson.
     course = await api.build(campus.author, campus.p, [()])
@@ -120,7 +126,9 @@ async def test_confirm_before_upload_keeps_the_file_pending(api: CourseApi, camp
         ("image/png", PNG, "ready"),
         ("image/jpeg", JPEG, "ready"),
         ("image/webp", WEBP, "ready"),
+        ("image/gif", GIF, "ready"),
         ("image/png", JPEG, "rejected"),  # declared PNG, bytes are JPEG
+        ("image/gif", PNG, "rejected"),
         ("image/png", PDF, "rejected"),
     ],
 )
@@ -130,7 +138,12 @@ async def test_image_contents_must_match_the_declared_type(
     created = await create(api, campus, "image", content_type, "diagram")
     assert created["upload"]["max_bytes"] == 5 * 1024**2
     assert (await post_upload(created["upload"], content)).status_code == 204
-    assert ok(await confirm(api, campus, created["file"]["id"]))["status"] == status
+    response = await confirm(api, campus, created["file"]["id"])
+    if status == "ready":
+        assert ok(response)["status"] == "ready"
+    else:
+        assert response.status_code == 422
+        assert response.json()["error"]["code"] == "file_rejected"
 
 
 @pytest.mark.parametrize(
@@ -139,6 +152,9 @@ async def test_image_contents_must_match_the_declared_type(
         {"kind": "pdf", "file_name": "a.pdf", "content_type": "image/png"},
         {"kind": "image", "file_name": "a.png", "content_type": "application/pdf"},
         {"kind": "image", "file_name": "a.svg", "content_type": "image/svg+xml"},
+        {"kind": "image", "file_name": "a.bmp", "content_type": "image/bmp"},
+        {"kind": "image", "file_name": "a.tiff", "content_type": "image/tiff"},
+        {"kind": "image", "file_name": "a.heic", "content_type": "image/heic"},
         {"kind": "pdf", "file_name": 'a".pdf', "content_type": "application/pdf"},
         {"kind": "pdf", "file_name": "a\r\nX-Injected: 1", "content_type": "application/pdf"},
         {"kind": "pdf", "file_name": "../../etc/passwd", "content_type": "application/pdf"},

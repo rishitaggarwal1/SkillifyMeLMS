@@ -24,17 +24,10 @@ async function api(
   );
 }
 
-// Other specs (admin-import) add batches on every run, so walk every page instead of the first.
+// Other specs (admin-import) add batches on every run: look the seeded one up by name.
 async function findBatch(page: Page, name: string): Promise<{ id: string } | undefined> {
-  let cursor: string | null = null;
-  do {
-    const query: string = cursor ? `&cursor=${encodeURIComponent(cursor)}` : "";
-    const result = await api(page, "GET", `/batches?limit=100${query}`);
-    const match = result.items.find((item: { name: string }) => item.name === name);
-    if (match) return match;
-    cursor = result.next_cursor;
-  } while (cursor);
-  return undefined;
+  const result = await api(page, "GET", `/batches?name=${encodeURIComponent(name)}`);
+  return result.items[0];
 }
 
 test("upload, signed playback and student resume on a real video", async ({ page, browser }) => {

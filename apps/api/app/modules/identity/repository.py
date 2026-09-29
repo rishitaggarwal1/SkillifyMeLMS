@@ -326,11 +326,19 @@ class BatchRepository:
         return counts
 
     async def list_page(
-        self, organization_id: UUID, params: CursorParams, *, status: str | None = None
+        self,
+        organization_id: UUID,
+        params: CursorParams,
+        *,
+        status: str | None = None,
+        name: str | None = None,
     ) -> tuple[list[Batch], str | None]:
         stmt = select(Batch).where(Batch.organization_id == organization_id)
         if status is not None:
             stmt = stmt.where(Batch.status == status)
+        if name is not None:
+            # Case-insensitive exact match: uses uq_batches_org_name (organization_id, lower(name)).
+            stmt = stmt.where(func.lower(Batch.name) == name.lower())
         return await paginate_by_id(self.session, stmt, Batch.id, params)
 
     async def create(

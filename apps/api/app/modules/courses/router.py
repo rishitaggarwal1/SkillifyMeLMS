@@ -22,6 +22,7 @@ from app.modules.courses.schemas import (
     CourseOut,
     CourseUpdate,
     DraftOut,
+    ImageUrlsOut,
     LessonCreate,
     LessonOut,
     LessonSkillsUpdate,
@@ -38,6 +39,7 @@ from app.modules.courses.schemas import (
     VersionOut,
 )
 from app.modules.identity.dependencies import RequestCtx
+from app.modules.media.service import FileDownloadOut, PlaybackOut
 
 router = APIRouter(tags=["courses"])
 
@@ -242,6 +244,43 @@ async def list_versions(
 @courses.get("/{course_id}/versions/{version_id}", operation_id="get_course_version")
 async def get_version(ctx: RequestCtx, course_id: UUID, version_id: UUID) -> VersionDetail:
     return await service.get_version(ctx, course_id, version_id)
+
+
+_VERSION_LESSON = "/{course_id}/versions/{version_id}/lessons/{lesson_id}"
+
+
+@courses.get(f"{_VERSION_LESSON}/playback", operation_id="get_version_video")
+async def version_video(
+    ctx: RequestCtx, request: Request, course_id: UUID, version_id: UUID, lesson_id: UUID
+) -> PlaybackOut:
+    """Signed playback for a video lesson of a published version, for staff who can read the
+    course (owner-org editors; org admins and instructors of an assigned org)."""
+    return await service.version_video(
+        ctx, request.app.state.video_providers, course_id, version_id, lesson_id,
+        ttl_seconds=request.app.state.settings.video_playback_ttl_seconds,
+    )  # fmt: skip
+
+
+@courses.get(f"{_VERSION_LESSON}/pdf", operation_id="get_version_pdf")
+async def version_pdf(
+    ctx: RequestCtx, request: Request, course_id: UUID, version_id: UUID, lesson_id: UUID
+) -> FileDownloadOut:
+    """A signed download URL for a pdf lesson of a published version (course readers' staff)."""
+    return await service.version_pdf(
+        ctx, request.app.state.storage, course_id, version_id, lesson_id,
+        ttl_seconds=request.app.state.settings.file_download_ttl_seconds,
+    )  # fmt: skip
+
+
+@courses.get(f"{_VERSION_LESSON}/images", operation_id="get_version_images")
+async def version_images(
+    ctx: RequestCtx, request: Request, course_id: UUID, version_id: UUID, lesson_id: UUID
+) -> ImageUrlsOut:
+    """Signed URLs for a notes lesson's images in a published version (course readers' staff)."""
+    return await service.version_images(
+        ctx, request.app.state.storage, course_id, version_id, lesson_id,
+        ttl_seconds=request.app.state.settings.file_download_ttl_seconds,
+    )  # fmt: skip
 
 
 # ============================================================================ assignments

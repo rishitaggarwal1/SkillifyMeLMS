@@ -9,11 +9,17 @@ test("protected pages send you through Keycloak and back", async ({ page }) => {
   await page.waitForURL("**/admin/batches");
 
   await expect(page.getByRole("heading", { level: 1, name: "Batches" })).toBeVisible();
-  // The org's batches load after the round trip. (Not a specific seeded batch: admin-import adds
-  // batches on every run, so a seeded one eventually moves off the first page.)
-  await expect(
-    page.getByRole("list", { name: "Batches" }).getByRole("listitem").first(),
-  ).toContainText("members");
+  // The session reaches the org's data: find the seeded batch by name (it can be past the
+  // list's first page, since other specs add batches) and open it.
+  const found = await page.evaluate(async () => {
+    const response = await fetch("/backend/api/v1/batches?name=CSE%202026");
+    return (await response.json()) as { items: { id: string; name: string }[] };
+  });
+  expect(found.items.map((batch) => batch.name)).toEqual(["CSE 2026"]);
+  const [seeded] = found.items;
+  if (!seeded) throw new Error("Seeded batch CSE 2026 not found");
+  await page.goto(`/admin/batches/${seeded.id}`);
+  await expect(page.getByRole("heading", { level: 1, name: "CSE 2026" })).toBeVisible();
 });
 
 test("tokens live only in encrypted httpOnly cookies", async ({ page, context }) => {

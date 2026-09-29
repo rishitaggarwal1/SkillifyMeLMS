@@ -135,7 +135,8 @@ async def test_video_rls_and_immediate_revocation(
     api: CourseApi, campus: Campus, tenant_session: TenantSessionFactory
 ) -> None:
     ids = await video_setup(api, campus)
-    for user, visible in [(campus.cse, True), (campus.ece, False), (campus.c_admin, False)]:
+    # c_admin: staff of an assigned org read the content (migration 0008); ece: not in the batch.
+    for user, visible in [(campus.cse, True), (campus.ece, False), (campus.c_admin, True)]:
         async with tenant_session(org=campus.c.id, user=user.id) as session:
             found = await session.scalar(select(VideoAsset.id).where(VideoAsset.id == UUID(ids[2])))
             assert (found is not None) == visible

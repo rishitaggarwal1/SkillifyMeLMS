@@ -57,6 +57,7 @@ from app.modules.courses.schemas import (
     CourseUpdate,
     DraftModule,
     DraftOut,
+    ImageUrlsOut,
     LessonCreate,
     LessonOut,
     LessonSummary,
@@ -83,6 +84,7 @@ from app.modules.identity import service as identity
 from app.modules.identity.authz import Permission, require_org_permission
 from app.modules.identity.dependencies import RequestContext
 from app.modules.media import service as media
+from app.modules.media.service import FileDownloadOut, PlaybackOut
 from app.modules.skills import service as skills
 
 Ctx = RequestContext
@@ -839,6 +841,81 @@ async def get_version(ctx: Ctx, course_id: UUID, version_id: UUID) -> VersionDet
     if version is None or version.course_id != course_id:
         raise NotFoundError("Version not found.")
     return VersionDetail(**_version_out(version).model_dump(), snapshot=version.snapshot)
+
+
+# ============================================================================ reader content
+# Staff of an org that reads the course (owner-org editors, and org_admins and instructors of an
+# assigned org) may open any published version's lesson content. RLS (`app.video_readable`,
+# `app.file_readable`) enforces the same rule underneath.
+
+
+async def _reader_lesson(
+    ctx: Ctx, course_id: UUID, version_id: UUID, lesson_id: UUID, lesson_type: LessonType
+) -> VersionLessonRef:
+    await _readable(ctx, course_id)
+    version = await VersionRepository(ctx.session).get(version_id)
+    if version is None or version.course_id != course_id:
+        raise NotFoundError("Version not found.")
+    lesson = await version_lesson(ctx.session, version_id, lesson_id)
+    if lesson is None or lesson.lesson_type != lesson_type:
+        raise NotFoundError("Lesson not found.")
+    return lesson
+
+
+async def version_video(
+    ctx: Ctx,
+    providers: media.Providers,
+    course_id: UUID,
+    version_id: UUID,
+    lesson_id: UUID,
+    *,
+    ttl_seconds: int,
+) -> PlaybackOut:
+    lesson = await _reader_lesson(ctx, course_id, version_id, lesson_id, LessonType.VIDEO)
+    playback = (
+        await media.playback_for(ctx.session, providers, lesson.video_asset_id, ttl_seconds)
+        if lesson.video_asset_id
+        else None
+    )
+    if playback is None:
+        raise NotFoundError("Video not found.")
+    return PlaybackOut(url=playback.url, kind=playback.kind, expires_at=playback.expires_at)
+
+
+async def version_pdf(
+    ctx: Ctx,
+    storage: ObjectStorage,
+    course_id: UUID,
+    version_id: UUID,
+    lesson_id: UUID,
+    *,
+    ttl_seconds: int,
+) -> FileDownloadOut:
+    lesson = await _reader_lesson(ctx, course_id, version_id, lesson_id, LessonType.PDF)
+    found = await media.download_urls(ctx.session, storage, lesson.file_ids[:1], ttl_seconds)
+    if not found:
+        raise NotFoundError("PDF not found.")
+    download = next(iter(found.values()))
+    return FileDownloadOut(
+        url=download.url, file_name=download.file_name, expires_at=download.expires_at
+    )
+
+
+async def version_images(
+    ctx: Ctx,
+    storage: ObjectStorage,
+    course_id: UUID,
+    version_id: UUID,
+    lesson_id: UUID,
+    *,
+    ttl_seconds: int,
+) -> ImageUrlsOut:
+    lesson = await _reader_lesson(ctx, course_id, version_id, lesson_id, LessonType.NOTES)
+    found = await media.download_urls(ctx.session, storage, lesson.file_ids, ttl_seconds)
+    return ImageUrlsOut(
+        urls={file_id: d.url for file_id, d in found.items()},
+        expires_at=min((d.expires_at for d in found.values()), default=None),
+    )
 
 
 # ============================================================================ assignments

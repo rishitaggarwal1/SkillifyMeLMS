@@ -804,17 +804,18 @@ Step 4 implementation notes:
     `notes.stylesheet()` and ships with the step 7 player.
 - **Versions store only the HTML.** Readers get `{"html", "image_file_ids"}` for notes, never
   the editor JSON. Editors preview drafts through `GET /courses/{id}/lessons/{lesson_id}/preview`.
-- **Notes images** are `image` files (PNG, JPEG, WebP; 5 MB). SVG is excluded: it can carry
-  script. In HTML they are `<img data-file-id>` without `src`. Readers fetch short-lived signed
+- **Notes images** are `image` files, 5 MB. There is an allow-list of PNG, JPEG, WebP and GIF,
+  each checked by signature. Everything else is refused (SVG, BMP, TIFF, HEIC...). In HTML they are `<img data-file-id>` without `src`. Readers fetch short-lived signed
   URLs from `GET /enrollments/{id}/lessons/{lesson_id}/images`, because a signed URL can't live
   in an immutable snapshot. Images must be this org's confirmed image files.
 - **Files:** `POST /files` issues a presigned POST pinned to one key (never the user's file
   name), the exact Content-Type and the size limit (PDF 25 MB).
   - `POST /files/{id}/confirm` checks the stored size and the leading bytes (`%PDF-`, or the
     PNG, JPEG or WebP signature).
-  - A mismatch answers `200` with `status: rejected` and an `error`, and the object is deleted
-    after commit. A 4xx would roll back the rejection. A missing object is `409` and stays
-    pending.
+  - A mismatch is `422 file_rejected` with the reason in `details`. The rejected status is
+    committed first, in a separate transaction with the caller's own RLS context
+    (`independent_transaction`), then the object is deleted and the error raised, so the file
+    can never be attached. A missing object is `409` and stays pending.
   - Only confirmed PDFs can be attached to lessons (`422 file_not_ready`).
   - File names are validated because they go into `Content-Disposition` (no quotes, control
     characters or path separators), and the header uses an ASCII fallback.
@@ -823,8 +824,22 @@ Step 4 implementation notes:
   `pdf_opened_at` (first opening kept), which completing a pdf lesson requires.
 - **File RLS** (migration 0007): `course_version_lessons.file_ids` (GIN-indexed) lists each
   published lesson's files, backfilled for existing pdf lessons. `app.file_readable` mirrors
-  `app.video_readable`. Staff of an assigned org read outlines but not files. A PDF replaced in a
-  minor release: students can read only the latest minor's file.
+  `app.video_readable`. A PDF replaced in a minor release: students can read only the latest
+  minor's file.
+- **Backfill in 0007:** for every existing `course_version_lessons` row of type `pdf`, `file_ids`
+  becomes `[content.file_id]` of the lesson with the same id in that row's own version snapshot
+  (any module). Other rows keep `{}`: pdf lessons without a file, and notes and video lessons.
+  Notes images only exist from 0007 on, so there is nothing older to backfill. Tested in
+  `tests/test_migrations.py` by seeding rows at 0006 and upgrading.
+- **Step 4 follow-up (2026-09-30):**
+  - **Read access means the content** (migration 0008). Staff (`org_admin`, `instructor`) of an
+    org that reads a course may play its videos and open its files in any published version,
+    through `GET /courses/{id}/versions/{version_id}/lessons/{lesson_id}/playback`, `/pdf` and
+    `/images`. RLS: `app.video_readable` and `app.file_readable` gain a staff branch using
+    `app.course_readable`. Editing stays owner-org only.
+  - `GET /batches` gains an exact, case-insensitive `name` filter, backed by
+    `uq_batches_org_name`. The e2e tests find seeded batches with it instead of depending on the
+    first page.
 
 1. Data model, migrations and RLS (skills, courses and draft tree, versions, assignments,
    enrollments, progress, media tables).
