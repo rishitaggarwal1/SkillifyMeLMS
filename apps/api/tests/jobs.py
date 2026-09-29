@@ -4,6 +4,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.modules.courses.jobs import REVALIDATE_CATALOG
 from app.modules.enrollments import service as enrollments
 from app.modules.enrollments.jobs import RECONCILE_COURSE_ORG, UPGRADE_ENROLLMENTS
 from app.modules.enrollments.tasks import parse_upgrade_args, run_reconcile_course_org
@@ -17,6 +18,8 @@ async def run_jobs(queue: RecordingJobQueue, sessionmaker: async_sessionmaker[As
         for task, args in jobs:
             if task == RECONCILE_COURSE_ORG:
                 await run_reconcile_course_org(sessionmaker, UUID(args[0]), UUID(args[1]))
+            elif task == REVALIDATE_CATALOG:
+                continue  # an HTTP call to the web app (test_catalog.py, respx); not counted
             elif task == UPGRADE_ENROLLMENTS:
                 await enrollments.run_upgrade(sessionmaker, **parse_upgrade_args(*args))  # type: ignore[arg-type]
             else:

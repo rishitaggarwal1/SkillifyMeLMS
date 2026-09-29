@@ -10,14 +10,16 @@ optionally.
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, Query, Request, status
+from fastapi import APIRouter, Depends, Header, Path, Query, Request, status
 
 from app.core.errors import PreconditionRequiredError, UnprocessableError
 from app.core.pagination import CursorPage, PageParams
+from app.db.session import DbSession
 from app.modules.courses import service
 from app.modules.courses.schemas import (
     AssignmentCreate,
     AssignmentOut,
+    CatalogEntryOut,
     CourseCreate,
     CourseOut,
     CourseUpdate,
@@ -320,5 +322,22 @@ async def delete_assignment(ctx: RequestCtx, assignment_id: UUID) -> None:
     await service.delete_assignment(ctx, assignment_id)
 
 
+catalog = APIRouter(prefix="/catalog", tags=["catalog"])
+CatalogSlug = Annotated[str, Path(min_length=1, max_length=160, pattern=r"^[a-z0-9-]+$")]
+
+
+@catalog.get("", operation_id="list_catalog")
+async def list_catalog(session: DbSession, page: PageParams) -> CursorPage[CatalogEntryOut]:
+    """The public course catalog (no sign-in): courses published with `is_public_catalog`."""
+    items, cursor = await service.list_catalog(session, page)
+    return CursorPage(items=items, next_cursor=cursor)
+
+
+@catalog.get("/{slug}", operation_id="get_catalog_entry")
+async def get_catalog_entry(session: DbSession, slug: CatalogSlug) -> CatalogEntryOut:
+    return await service.get_catalog_entry(session, slug)
+
+
 router.include_router(courses)
+router.include_router(catalog)
 router.include_router(assignments)

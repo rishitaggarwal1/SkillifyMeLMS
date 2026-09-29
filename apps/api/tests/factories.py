@@ -15,6 +15,7 @@ from app.db.base import new_id
 from app.db.types import LTree
 from app.modules.audit.models import AuditLog
 from app.modules.courses.models import (
+    CatalogEntry,
     Course,
     CourseAssignment,
     CourseModule,
@@ -302,6 +303,15 @@ class Factory:
         )  # fmt: skip
         await self._save(video)
         return video
+
+    async def catalog_entry(self, course: "Course", version: "CourseVersion") -> "CatalogEntry":
+        entry = CatalogEntry(
+            course_id=course.id, organization_id=course.organization_id, version_id=version.id,
+            slug=f"public-{_suffix()}", title=course.title, description="Public course",
+            skill_names=["Arrays"], lesson_count=1, published_at=datetime.now(UTC),
+        )  # fmt: skip
+        await self._save(entry)
+        return entry
 
     async def image(self, org: Organization, *, status: str = "ready") -> "StoredFile":
         file = StoredFile(

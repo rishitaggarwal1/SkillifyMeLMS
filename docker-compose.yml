@@ -12,6 +12,9 @@ x-api-env: &api-env
   RELAY_DATABASE_URL: postgresql+asyncpg://skillify_relay:${RELAY_DB_PASSWORD:?}@postgres:5432/${POSTGRES_DB:?}
   APP_DB_PASSWORD: ${APP_DB_PASSWORD:?}
   RELAY_DB_PASSWORD: ${RELAY_DB_PASSWORD:?}
+  # The API/worker ask the web app to revalidate the static public catalog after a publish.
+  WEB_INTERNAL_URL: http://web:3000
+  REVALIDATE_SECRET: ${REVALIDATE_SECRET:?}
   REDIS_URL: redis://redis:6379/0
   KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
   # Issuer is derived from KEYCLOAK_PORT (http://localhost:<port>/realms/<realm>); containers fetch
@@ -316,6 +319,7 @@ services:
       KC_WEB_CLIENT_SECRET: ${KC_WEB_CLIENT_SECRET:?}
       WEB_ORIGIN: http://localhost:${WEB_PORT:?}
       SESSION_SECRET: ${SESSION_SECRET:?}
+      REVALIDATE_SECRET: ${REVALIDATE_SECRET:?}
       REDIS_URL: redis://redis:6379/1
       AUTH_RATE_LIMIT_PER_MINUTE: ${AUTH_RATE_LIMIT_PER_MINUTE:-20}
       COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"

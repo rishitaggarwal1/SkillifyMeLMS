@@ -20,8 +20,12 @@ from typing import Any
 from app.db.outbox import OutboxEvent
 
 # Topic per aggregate type. Unlisted aggregate types go to the catch-all topic.
+# A topic follows the aggregate: the message key is the aggregate id, so one aggregate's events
+# stay on one topic and partition, in order.
 TOPICS: dict[str, str] = {
     "batch_member": "identity.batch-members.v1",
+    "course": "courses.v1",
+    "enrollment": "learning.enrollments.v1",
     "video_progress": "learning.progress.v1",
 }
 DEFAULT_TOPIC = "platform.events.v1"

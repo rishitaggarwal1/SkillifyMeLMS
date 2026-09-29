@@ -11,6 +11,7 @@ from uuid import UUID
 
 from fastapi import Depends, Header, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth.jwt import JwtValidator
@@ -108,14 +109,16 @@ class RequestContext:
     principal: Principal
     actor: AuditActor
     jobs: JobQueue
+    redis: Redis  # caches (course versions, heartbeat checks); never the source of truth
 
 
 async def get_request_context(
     request: Request, principal: CurrentPrincipal, session: TenantSession, actor: AuditActorDep
 ) -> RequestContext:
     return RequestContext(
-        session=session, principal=principal, actor=actor, jobs=request.app.state.jobs
-    )
+        session=session, principal=principal, actor=actor, jobs=request.app.state.jobs,
+        redis=request.app.state.redis,
+    )  # fmt: skip
 
 
 RequestCtx = Annotated[RequestContext, Depends(get_request_context)]

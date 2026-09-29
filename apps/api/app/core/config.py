@@ -95,6 +95,11 @@ class Settings(BaseSettings):
     bunny_webhook_secret: SecretStr | None = None
     bunny_api_url: str = "https://video.bunnycdn.com"
 
+    # ---- Public catalog: after a publish or archive commits, a Celery task asks the web app to
+    # revalidate its statically generated catalog pages (POST <web>/api/revalidate).
+    web_internal_url: str | None = None  # e.g. http://web:3000 (unset: revalidation is skipped)
+    revalidate_secret: SecretStr | None = None  # shared with the web app's REVALIDATE_SECRET
+
     # ---- Files: PDFs and notes images (presigned POST uploads, signed GET downloads).
     pdf_upload_max_bytes: int = Field(default=25 * 1024**2, ge=1)
     image_upload_max_bytes: int = Field(default=5 * 1024**2, ge=1)

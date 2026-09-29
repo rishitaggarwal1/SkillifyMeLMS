@@ -251,6 +251,7 @@ class Route:
     build: Builder
     names_resource: bool = False  # True: org B's admin gets 404 instead of 2xx
     denied: str = "403"  # status for signed-in callers outside `allowed`
+    public: bool = False  # True: everyone, signed in or not, gets 2xx
 
 
 def _content(kind: str) -> Builder:
@@ -261,6 +262,14 @@ def _content(kind: str) -> Builder:
 
 
 MATRIX = [
+    Route("GET", "/api/v1/catalog", set(ROLES), at("/api/v1/catalog"), public=True),
+    Route(
+        "GET",
+        "/api/v1/catalog/{slug}",
+        set(ROLES),
+        lambda w: _catalog_path(w),  # noqa: PLW0108 - builder defined after the matrix
+        public=True,
+    ),
     Route(
         "POST",
         "/api/v1/files",
@@ -613,6 +622,12 @@ MATRIX = [
 ]
 
 
+async def _catalog_path(w: World) -> Request:
+    course, _, lesson = await _course(w)
+    entry = await w.factory.catalog_entry(course, await w.factory.version(course, lesson))
+    return f"/api/v1/catalog/{entry.slug}", {}
+
+
 async def _version_content(w: World, kind: str) -> Request:
     """A published version of an org A course whose lesson uses a video, a PDF or an image."""
     lesson_type = {"playback": "video", "pdf": "pdf", "images": "notes"}[kind]
@@ -682,6 +697,8 @@ async def _with_json(request: Awaitable[Request], body: dict[str, Any]) -> Reque
 
 
 def expected_status(route: Route, role: str) -> str:
+    if route.public:
+        return "2xx"
     if role == "anonymous":
         return "401"
     if role not in route.allowed:

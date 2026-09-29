@@ -39,7 +39,8 @@ celery_app.conf.beat_schedule = {
     },
 }
 celery_app.autodiscover_tasks(
-    ["app.modules.identity", "app.modules.enrollments", "app.modules.media"], related_name="tasks"
+    ["app.modules.identity", "app.modules.courses", "app.modules.enrollments", "app.modules.media"],
+    related_name="tasks",
 )
 
 

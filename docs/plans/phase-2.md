@@ -1,8 +1,8 @@
 # Phase 2 — Courses and learning content (plan)
 
-**Status (2026-09-29):** steps 1–4 are complete and committed. Step 3 (video) also made
-`If-Match` required on outline and lesson edits. Step 5 (caching and events) is next. Steps 5–8
-are not started. See
+**Status (2026-09-30):** steps 1–5 are complete and committed. Step 3 (video) also made
+`If-Match` required on outline and lesson edits. Step 6 (instructor UI) is next. Steps 6–8 are
+not started. See
 [Implementation status](#implementation-status). Phase 1 (identity, organizations, roles, RLS) is
 complete; see [What Phase 1 provides](#what-phase-1-provides). Resume by re-reading `CLAUDE.md`
 and `docs/access-control.md`, then present this plan for approval before coding.
@@ -113,6 +113,15 @@ See the step 3 notes under [Build order](#build-order).
   MinIO: POST policy, size, content type, magic bytes, signed downloads) and `test_pdf_access`
   (opened-before-complete, RLS, minor replacement).
 - No web UI in this step. The editors come in step 6 and the player in step 7.
+
+### Step 5 — caching, catalog and events
+
+- **Backend:** `courses/cache.py`, `enrollments/heartbeat_cache.py`, the `courses/tasks.py`
+  revalidation task, and `RequestContext.redis`.
+- **Endpoints:** `GET /catalog`, `GET /catalog/{slug}` (public).
+- **Web:** `/catalog`, `/catalog/[slug]`, `POST /api/revalidate`.
+- **Tests:** `test_caching`, `test_catalog` (respx for the revalidation call), `test_event_schemas`,
+  the `revalidate` Vitest suite, and `e2e/catalog.spec.ts`.
 
 ### Deviations between this plan and the committed code
 
@@ -840,6 +849,59 @@ Step 4 implementation notes:
   - `GET /batches` gains an exact, case-insensitive `name` filter, backed by
     `uq_batches_org_name`. The e2e tests find seeded batches with it instead of depending on the
     first page.
+
+Step 5 implementation notes:
+- **Version cache** (`courses/cache.py`):
+  - `course:v:{version_id}` holds a version's snapshot plus its lesson rows (immutable; 7 days).
+  - `course:{id}:major:{n}:latest` is the pointer (5 minutes). It is deleted after the publish
+    commits. Its TTL bounds the race with a reader that resolved the old version just before
+    the commit.
+  - This replaces the plan's `course:v:{id}:outline` / `course:{id}:current`: enrollments pin a
+    major, so the pointer is per major.
+  - **Authorization isn't cached.** Each hit runs one query that evaluates the `course_versions`
+    SELECT policy (editor, platform admin, or `app.course_readable`) for the courses involved.
+    Removing an assignment still hides the course immediately.
+  - Request-path student reads (enrollment detail, player, playback, resume, visit, complete)
+    use the cache through `RequestContext.redis`. Background jobs keep reading Postgres.
+- **Heartbeat validation cache** (`enrollments/heartbeat_cache.py`, TTL 60 s):
+  - A steady heartbeat now makes no Postgres reads. `test_caching` counts the statements.
+  - A hit is used only by the same user and org, and only while the version pointer still names
+    the version it was validated against. So a new release, such as a replaced video, gives
+    `409 video_changed` on the very next heartbeat.
+  - The progress baseline is read only when the Redis entry doesn't exist yet. The Lua write
+    returns "needs baseline" instead of creating the entry empty, so an expiry between the check
+    and the write can't wipe stored progress.
+  - What a stale entry could still do within the TTL is bounded by the flush, which skips
+    non-active enrollments and assets that no longer match.
+  - Known limit: after an assignment is removed, and before reconciliation marks the enrollment
+    revoked, up to 60 s of watching can still be credited. Playback itself is refused at once.
+- **Public catalog:**
+  - `GET /catalog` and `GET /catalog/{slug}` are public (no sign-in; RLS `USING (true)`) and
+    return public fields only. The role matrix gained a `public` flag.
+  - Web: `/catalog` and `/catalog/[slug]` use the pre-Cache-Components model (the project
+    doesn't enable `cacheComponents`), following the bundled docs:
+    - fetches tagged `catalog`, and `revalidate = 300`
+    - `generateStaticParams` for the first page
+    - `next build` prerenders empty when the API is unreachable (Docker build); at runtime
+      errors are thrown, so Next keeps serving the last good page
+  - Revalidation: after a publish or archive commits, the Celery task
+    `courses.revalidate_catalog` POSTs `{"tags": ["catalog"]}` to `WEB_INTERNAL_URL/api/revalidate`
+    with the `x-revalidate-secret` header, retried with backoff on failure.
+    - The route compares the secret in constant time, accepts only allow-listed tags, and calls
+      `revalidateTag(tag, { expire: 0 })`, which the docs give for calls from another service.
+    - New env: `REVALIDATE_SECRET` (API, worker, web) and `WEB_INTERNAL_URL` (API/worker).
+  - Compose runs the web app with `next dev`, which never caches, so Playwright checks the
+    content and the secret. ISR itself was verified with a production `next build` while the
+    API was unreachable.
+- **Events:**
+  - Topics follow the aggregate type: `courses.v1` (`course_published`),
+    `learning.enrollments.v1` (`enrollment_created`, `lesson_completed`,
+    `enrollment_version_changed`) and `learning.progress.v1` (`video_progress`).
+  - **Deviation:** the plan put `lesson_completed` on `learning.progress.v1`. Its aggregate is
+    the enrollment, so it shares that enrollment's topic and ordering.
+  - `docs/events.md` now has conventions, versioning rules and a JSON Schema for every event.
+    `tests/test_event_schemas.py` produces every documented event through real flows and
+    validates the payloads and topics against the document.
 
 1. Data model, migrations and RLS (skills, courses and draft tree, versions, assignments,
    enrollments, progress, media tables).

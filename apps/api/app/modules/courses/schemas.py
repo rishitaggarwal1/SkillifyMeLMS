@@ -283,3 +283,20 @@ class AssignmentOut(BaseModel):
     assigned_by_org_id: UUID
     parent_assignment_id: UUID | None
     created_at: datetime
+
+
+# ============================================================================ public catalog
+
+
+class CatalogEntryOut(BaseModel):
+    """A public catalog card: public fields only (no ids, no organization)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    slug: str
+    title: str
+    description: str
+    skill_names: list[str]
+    lesson_count: int
+    published_at: datetime
+    updated_at: datetime

@@ -26,6 +26,7 @@ from app.modules.courses import service as courses
 from app.modules.courses.service import VersionLessonRef, VersionRef
 from app.modules.enrollments import events
 from app.modules.enrollments import jobs as enrollment_jobs
+from app.modules.enrollments.heartbeat_cache import HeartbeatCache, HeartbeatCheck
 from app.modules.enrollments.models import Enrollment, EnrollmentStatus, LessonProgress
 from app.modules.enrollments.progress import CompletionRule, completion_rule, course_percent
 from app.modules.enrollments.repository import (
@@ -60,13 +61,20 @@ CHUNK = 500
 async def _video_lesson(
     ctx: Ctx, enrollment_id: UUID, lesson_id: UUID
 ) -> tuple[Enrollment, VersionLessonRef]:
+    enrollment, _, lesson = await _video_lesson_in(ctx, enrollment_id, lesson_id)
+    return enrollment, lesson
+
+
+async def _video_lesson_in(
+    ctx: Ctx, enrollment_id: UUID, lesson_id: UUID
+) -> tuple[Enrollment, VersionRef, VersionLessonRef]:
     enrollment, version = await _my_enrollment(ctx, enrollment_id)
     lesson = await _lesson_in_version(ctx, version, lesson_id)
     if lesson.lesson_type != "video" or not lesson.video_asset_id:
         raise NotFoundError("Video lesson not found.")
     if not lesson.video_duration_seconds:
         raise ConflictError("The video isn't ready.", code="video_not_ready")
-    return enrollment, lesson
+    return enrollment, version, lesson
 
 
 async def video_playback(
@@ -106,35 +114,60 @@ async def video_resume(ctx: Ctx, redis: Redis, enrollment_id: UUID, lesson_id: U
 async def video_heartbeat(
     ctx: Ctx, redis: Redis, data: VideoHeartbeat, *, interval_seconds: float
 ) -> None:
-    enrollment, lesson = await _video_lesson(ctx, data.enrollment_id, data.lesson_id)
-    if data.video_asset_id != lesson.video_asset_id:
+    """Buffer one heartbeat. The authorization check is cached briefly (see heartbeat_cache), so a
+    steady heartbeat touches only Redis; Postgres is read on a cache miss and to seed a new buffer
+    entry's baseline."""
+    principal = ctx.principal
+    cache = HeartbeatCache(redis)
+    check = await cache.get(data.enrollment_id, data.lesson_id)
+    if (
+        check is None
+        or check.user_id != principal.user_id
+        or check.organization_id != principal.organization_id
+    ):
+        enrollment, version, lesson = await _video_lesson_in(
+            ctx, data.enrollment_id, data.lesson_id
+        )
+        assert lesson.video_asset_id is not None  # noqa: S101
+        assert lesson.video_duration_seconds is not None  # noqa: S101
+        check = HeartbeatCheck(
+            user_id=enrollment.user_id,
+            organization_id=enrollment.organization_id,
+            course_id=version.course_id,
+            major=version.major,
+            version_id=version.id,
+            video_asset_id=lesson.video_asset_id,
+            duration_seconds=lesson.video_duration_seconds,
+        )
+        await cache.put(data.enrollment_id, data.lesson_id, check)
+    if data.video_asset_id != check.video_asset_id:
         raise ConflictError("The video changed. Reload the lesson.", code="video_changed")
-    assert lesson.video_duration_seconds is not None  # noqa: S101
-    if data.position_seconds > lesson.video_duration_seconds + 1:
+    if data.position_seconds > check.duration_seconds + 1:
         raise UnprocessableError("Position exceeds the video duration.")
-    progress = await LessonProgressRepository(ctx.session).get(enrollment.id, data.lesson_id)
+    buffer = VideoBuffer(redis)
+    key = buffer_key(data.enrollment_id, data.lesson_id, data.video_asset_id)
+    fields = {
+        "enrollment_id": str(data.enrollment_id),
+        "lesson_id": str(data.lesson_id),
+        "asset_id": str(data.video_asset_id),
+        "organization_id": str(check.organization_id),
+        "user_id": str(check.user_id),
+        "duration": check.duration_seconds,
+        "position": min(data.position_seconds, check.duration_seconds),
+        "played": data.played_seconds,
+        "rate": data.playback_rate,
+        "at": datetime.now(UTC).isoformat(),
+    }
+    if await buffer.write(key, fields, None, interval_seconds=interval_seconds):
+        return
+    # First heartbeat for this entry: seed the watched bitmap from Postgres.
+    progress = await LessonProgressRepository(ctx.session).get(data.enrollment_id, data.lesson_id)
     baseline = (
         progress.watched_segments or b""
         if progress is not None and progress.video_asset_id == data.video_asset_id
         else b""
     )
-    await VideoBuffer(redis).write(
-        buffer_key(enrollment.id, data.lesson_id, data.video_asset_id),
-        {
-            "enrollment_id": str(enrollment.id),
-            "lesson_id": str(data.lesson_id),
-            "asset_id": str(data.video_asset_id),
-            "organization_id": str(enrollment.organization_id),
-            "user_id": str(enrollment.user_id),
-            "duration": lesson.video_duration_seconds,
-            "position": min(data.position_seconds, lesson.video_duration_seconds),
-            "played": data.played_seconds,
-            "rate": data.playback_rate,
-            "at": datetime.now(UTC).isoformat(),
-        },
-        baseline,
-        interval_seconds=interval_seconds,
-    )
+    await buffer.write(key, fields, baseline, interval_seconds=interval_seconds)
 
 
 # ============================================================================ fan-out
@@ -239,7 +272,7 @@ async def reconcile_student(
 async def _outs(ctx: Ctx, enrollments: Sequence[Enrollment]) -> list[EnrollmentOut]:
     titles = await courses.course_titles(ctx.session, [e.course_id for e in enrollments])
     versions = await courses.resolve_versions(
-        ctx.session, [(e.course_id, e.major_version) for e in enrollments]
+        ctx.session, [(e.course_id, e.major_version) for e in enrollments], redis=ctx.redis
     )
     return [
         EnrollmentOut(
@@ -292,7 +325,7 @@ async def _my_enrollment(ctx: Ctx, enrollment_id: UUID) -> tuple[Enrollment, Ver
     ):
         raise NotFoundError("Enrollment not found.")
     version = await courses.resolve_version(
-        ctx.session, enrollment.course_id, enrollment.major_version
+        ctx.session, enrollment.course_id, enrollment.major_version, redis=ctx.redis
     )
     if version is None:
         raise NotFoundError("Enrollment not found.")
@@ -301,7 +334,7 @@ async def _my_enrollment(ctx: Ctx, enrollment_id: UUID) -> tuple[Enrollment, Ver
 
 async def get_enrollment(ctx: Ctx, enrollment_id: UUID) -> EnrollmentDetail:
     enrollment, version = await _my_enrollment(ctx, enrollment_id)
-    lessons = await courses.version_lessons_many(ctx.session, [version.id])
+    lessons = await courses.version_lessons_many(ctx.session, [version.id], redis=ctx.redis)
     await LessonProgressRepository(ctx.session).reset_replaced_videos(
         enrollment_id,
         {
@@ -323,7 +356,7 @@ async def get_enrollment(ctx: Ctx, enrollment_id: UUID) -> EnrollmentDetail:
 
 
 async def _lesson_in_version(ctx: Ctx, version: VersionRef, lesson_id: UUID) -> VersionLessonRef:
-    lesson = await courses.version_lesson(ctx.session, version.id, lesson_id)
+    lesson = await courses.version_lesson(ctx.session, version.id, lesson_id, redis=ctx.redis)
     if lesson is None:
         raise NotFoundError("Lesson not found.")
     return lesson

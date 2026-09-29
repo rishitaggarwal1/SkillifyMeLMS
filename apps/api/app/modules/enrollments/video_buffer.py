@@ -23,6 +23,8 @@ SEGMENT_SECONDS = 5
 _WRITE = """
 local data = cjson.decode(ARGV[1])
 if redis.call('EXISTS', KEYS[1]) == 0 then
+  -- A new (or expired) entry must be seeded from Postgres: the caller retries with the baseline.
+  if ARGV[2] == '?' then return 0 end
   local bytes = string.gsub(ARGV[2], '..', function(cc) return string.char(tonumber(cc,16)) end)
   redis.call('SET', KEYS[2], bytes)
   redis.call('DEL', KEYS[4])
@@ -136,11 +138,16 @@ class VideoBuffer:
         self.redis = redis
 
     async def write(
-        self, key: str, data: dict[str, Any], baseline: bytes, *, interval_seconds: float
-    ) -> None:
+        self, key: str, data: dict[str, Any], baseline: bytes | None, *, interval_seconds: float
+    ) -> bool:
         """Record one heartbeat. `interval_seconds` is the client's heartbeat interval; one beat
-        is credited at most 1.5x that, and at most 1.5x the real time since the previous beat."""
-        await self.redis.eval(
+        is credited at most 1.5x that, and at most 1.5x the real time since the previous beat.
+
+        `baseline` seeds a new entry's watched bitmap (from Postgres). With None, nothing is
+        written when the entry doesn't exist yet and False is returned: load the baseline and call
+        again. Checking and writing in one script means an entry expiring in between can never be
+        re-created empty over the student's stored progress."""
+        written = await self.redis.eval(
             _WRITE,
             4,
             key,
@@ -148,10 +155,11 @@ class VideoBuffer:
             DIRTY,
             f"{key}:partials",
             json.dumps({**data, "revision": str(new_id())}),
-            baseline.hex(),
+            "?" if baseline is None else baseline.hex(),
             repr(_now()),
             repr(interval_seconds * 1.5),
         )
+        return bool(written)
 
     async def read(self, key: str) -> BufferedVideo | None:
         row = await self.redis.eval(_READ, 2, key, f"{key}:bits")

@@ -100,6 +100,43 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/catalog": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Catalog
+     * @description The public course catalog (no sign-in): courses published with `is_public_catalog`.
+     */
+    get: operations["list_catalog"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/catalog/{slug}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Catalog Entry */
+    get: operations["get_catalog_entry"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/course-assignments/{assignment_id}": {
     parameters: {
       query?: never;
@@ -1293,6 +1330,32 @@ export interface components {
        */
       file: string;
     };
+    /**
+     * CatalogEntryOut
+     * @description A public catalog card: public fields only (no ids, no organization).
+     */
+    CatalogEntryOut: {
+      /** Description */
+      description: string;
+      /** Lesson Count */
+      lesson_count: number;
+      /**
+       * Published At
+       * Format: date-time
+       */
+      published_at: string;
+      /** Skill Names */
+      skill_names: string[];
+      /** Slug */
+      slug: string;
+      /** Title */
+      title: string;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
+    };
     /** CheckResult */
     CheckResult: {
       /** Error */
@@ -1405,6 +1468,16 @@ export interface components {
     CursorPage_BatchOut_: {
       /** Items */
       items: components["schemas"]["BatchOut"][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for the next page; null when there are no more items.
+       */
+      next_cursor: string | null;
+    };
+    /** CursorPage[CatalogEntryOut] */
+    CursorPage_CatalogEntryOut_: {
+      /** Items */
+      items: components["schemas"]["CatalogEntryOut"][];
       /**
        * Next Cursor
        * @description Opaque cursor for the next page; null when there are no more items.
@@ -2875,6 +2948,87 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  list_catalog: {
+    parameters: {
+      query?: {
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_CatalogEntryOut_"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_catalog_entry: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        slug: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogEntryOut"];
+        };
       };
       /** @description Client error */
       "4XX": {

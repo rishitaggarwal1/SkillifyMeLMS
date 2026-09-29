@@ -15,6 +15,7 @@ from typing import Any
 from uuid import UUID
 
 from pydantic import ValidationError
+from redis.asyncio import Redis
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,8 +28,11 @@ from app.core.errors import (
 from app.core.pagination import CursorParams
 from app.core.storage import ObjectStorage
 from app.db.base import new_id
+from app.db.session import run_after_commit, run_after_commit_async
 from app.modules.audit import service as audit
 from app.modules.courses import events, notes
+from app.modules.courses.cache import VersionCache, lesson_fields
+from app.modules.courses.jobs import REVALIDATE_CATALOG
 from app.modules.courses.models import (
     PLACEHOLDER_LESSON_TYPES,
     Course,
@@ -52,6 +56,7 @@ from app.modules.courses.schemas import (
     MAX_NOTES_BYTES,
     AssignmentCreate,
     AssignmentOut,
+    CatalogEntryOut,
     CourseCreate,
     CourseOut,
     CourseUpdate,
@@ -139,16 +144,32 @@ async def latest_majors(session: AsyncSession, course_ids: Sequence[UUID]) -> di
 
 
 async def resolve_versions(
-    session: AsyncSession, pairs: Sequence[tuple[UUID, int]]
+    session: AsyncSession, pairs: Sequence[tuple[UUID, int]], *, redis: Redis | None = None
 ) -> dict[tuple[UUID, int], VersionRef]:
     """What an enrollment pinned to (course, major) shows: that major's latest minor. Minor
-    releases therefore reach every existing enrollment without updating them."""
+    releases therefore reach every existing enrollment without updating them. With `redis`, served
+    from the version cache (authorization is still checked on every call)."""
+    if redis is not None:
+        cached = await VersionCache(redis).resolve(session, pairs)
+        return {
+            key: VersionRef(v.id, v.course_id, v.major, v.minor, v.title, v.snapshot)
+            for key, v in cached.items()
+        }
     found = await VersionRepository(session).latest_for_majors(pairs)
     return {key: _ref(v) for key, v in found.items()}
 
 
-async def resolve_version(session: AsyncSession, course_id: UUID, major: int) -> VersionRef | None:
-    return (await resolve_versions(session, [(course_id, major)])).get((course_id, major))
+async def is_latest_version(redis: Redis, course_id: UUID, major: int, version_id: UUID) -> bool:
+    """Whether `version_id` is still the cached latest version of (course, major). False once a
+    publish deleted the pointer (or it expired): re-validate through `resolve_version`."""
+    return await VersionCache(redis).cached_latest(course_id, major) == version_id
+
+
+async def resolve_version(
+    session: AsyncSession, course_id: UUID, major: int, *, redis: Redis | None = None
+) -> VersionRef | None:
+    found = await resolve_versions(session, [(course_id, major)], redis=redis)
+    return found.get((course_id, major))
 
 
 async def required_lesson_ids(session: AsyncSession, version_id: UUID) -> list[UUID]:
@@ -156,8 +177,11 @@ async def required_lesson_ids(session: AsyncSession, version_id: UUID) -> list[U
 
 
 async def version_lesson(
-    session: AsyncSession, version_id: UUID, lesson_id: UUID
+    session: AsyncSession, version_id: UUID, lesson_id: UUID, *, redis: Redis | None = None
 ) -> VersionLessonRef | None:
+    if redis is not None:
+        lessons = (await version_lessons_many(session, [version_id], redis=redis))[version_id]
+        return next((lesson for lesson in lessons if lesson.lesson_id == lesson_id), None)
     row = await VersionRepository(session).lesson(version_id, lesson_id)
     if row is None:
         return None
@@ -172,10 +196,14 @@ def _lesson_ref(row: CourseVersionLesson) -> VersionLessonRef:
 
 
 async def version_lessons_many(
-    session: AsyncSession, version_ids: Sequence[UUID]
+    session: AsyncSession, version_ids: Sequence[UUID], *, redis: Redis | None = None
 ) -> dict[UUID, list[VersionLessonRef]]:
-    rows = await VersionRepository(session).lessons_many(version_ids)
     result: dict[UUID, list[VersionLessonRef]] = {vid: [] for vid in version_ids}
+    if redis is not None:
+        for vid, version in (await VersionCache(redis).versions(session, version_ids)).items():
+            result[vid] = [VersionLessonRef(**lesson_fields(raw)) for raw in version.lessons]
+        return result
+    rows = await VersionRepository(session).lessons_many(version_ids)
     for row in rows:
         result[row.version_id].append(_lesson_ref(row))
     return result
@@ -372,6 +400,8 @@ async def archive_course(ctx: Ctx, course_id: UUID) -> CourseOut:
     await _bump(ctx, course, None)
     await CourseRepository(ctx.session).update(course_id, {"status": CourseStatus.ARCHIVED})
     await CatalogRepository(ctx.session).delete(course_id)
+    jobs = ctx.jobs
+    run_after_commit(ctx.session, lambda: jobs.send(REVALIDATE_CATALOG))
     after = await get_course(ctx, course_id)
     await audit.record(
         ctx.session, ctx.actor, action="course.archived", target_type="course",
@@ -799,6 +829,11 @@ async def publish(ctx: Ctx, course_id: UUID, data: PublishRequest) -> VersionOut
     await CourseRepository(ctx.session).update(course.id, {"current_version_id": version.id})
     await _update_catalog(ctx, course, version, draft)
     events.course_published(ctx.session, version, is_public_catalog=course.is_public_catalog)
+    # After commit: readers resolving this major must see the new version, and the public catalog
+    # pages must be regenerated. Neither may happen for a publish that rolls back.
+    cache, jobs, major = VersionCache(ctx.redis), ctx.jobs, version.major
+    run_after_commit_async(ctx.session, lambda: cache.invalidate_pointer(course.id, major))
+    run_after_commit(ctx.session, lambda: jobs.send(REVALIDATE_CATALOG))
     out = _version_out(version)
     await audit.record(
         ctx.session, ctx.actor, action="course.published", target_type="course",
@@ -841,6 +876,25 @@ async def get_version(ctx: Ctx, course_id: UUID, version_id: UUID) -> VersionDet
     if version is None or version.course_id != course_id:
         raise NotFoundError("Version not found.")
     return VersionDetail(**_version_out(version).model_dump(), snapshot=version.snapshot)
+
+
+# ============================================================================ public catalog
+# No sign-in and no tenant context: catalog_entries holds public fields only and is readable by
+# everyone (RLS `USING (true)`). Entries are written on publish and removed on archive.
+
+
+async def list_catalog(
+    session: AsyncSession, params: CursorParams
+) -> tuple[list[CatalogEntryOut], str | None]:
+    rows, cursor = await CatalogRepository(session).list_page(params)
+    return [CatalogEntryOut.model_validate(r) for r in rows], cursor
+
+
+async def get_catalog_entry(session: AsyncSession, slug: str) -> CatalogEntryOut:
+    entry = await CatalogRepository(session).by_slug(slug)
+    if entry is None:
+        raise NotFoundError("Course not found.")
+    return CatalogEntryOut.model_validate(entry)
 
 
 # ============================================================================ reader content

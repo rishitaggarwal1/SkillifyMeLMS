@@ -460,3 +460,11 @@ class CatalogRepository:
 
     async def delete(self, course_id: UUID) -> None:
         await self.session.execute(delete(CatalogEntry).where(CatalogEntry.course_id == course_id))
+
+    async def list_page(self, params: CursorParams) -> tuple[list[CatalogEntry], str | None]:
+        return await paginate_by_id(
+            self.session, select(CatalogEntry), CatalogEntry.course_id, params
+        )
+
+    async def by_slug(self, slug: str) -> CatalogEntry | None:
+        return await self.session.scalar(select(CatalogEntry).where(CatalogEntry.slug == slug))
