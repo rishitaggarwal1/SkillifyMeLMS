@@ -80,6 +80,24 @@ class Settings(BaseSettings):
     s3_access_key_id: SecretStr | None = None
     s3_secret_access_key: SecretStr | None = None
     s3_bucket: str = "skillifyme-local"
+    # Browser-reachable S3 endpoint for presigned URLs (the in-network one is S3_ENDPOINT_URL).
+    s3_public_endpoint_url: str | None = None
+
+    # ---- Video: `local` (MinIO; dev and CI) or `bunny` (Bunny Stream).
+    video_provider: Literal["local", "bunny"] = "local"
+    video_upload_max_bytes: int = Field(default=2 * 1024**3, ge=1)
+    video_upload_ttl_seconds: int = Field(default=3600, ge=60)
+    video_playback_ttl_seconds: int = Field(default=300, ge=60, le=86400)
+    bunny_library_id: str | None = None
+    bunny_api_key: SecretStr | None = None
+    bunny_cdn_hostname: str | None = None  # e.g. vz-xxxxxxxx-xxx.b-cdn.net
+    bunny_token_key: SecretStr | None = None  # CDN token authentication key
+    bunny_webhook_secret: SecretStr | None = None
+    bunny_api_url: str = "https://video.bunnycdn.com"
+
+    # ---- Video watch progress (heartbeats buffered in Redis, flushed by Celery beat).
+    heartbeat_interval_seconds: int = Field(default=15, ge=5)
+    progress_flush_interval_seconds: float = Field(default=30.0, gt=0)
 
     # ---- Rate limits (Redis sliding windows).
     rl_auth_failures_per_minute: int = Field(default=30, ge=1)  # per client IP
@@ -125,6 +143,17 @@ class Settings(BaseSettings):
     @property
     def keycloak_admin_api_url(self) -> str:
         return f"{self.keycloak_backchannel_url}/admin/realms/{self.keycloak_realm}"
+
+    @property
+    def s3_browser_endpoint_url(self) -> str | None:
+        return self.s3_public_endpoint_url or self.s3_endpoint_url
+
+    @property
+    def bunny_configured(self) -> bool:
+        return all(
+            (self.bunny_library_id, self.bunny_api_key, self.bunny_cdn_hostname,
+             self.bunny_token_key, self.bunny_webhook_secret)
+        )  # fmt: skip
 
     @property
     def celery_broker(self) -> str:

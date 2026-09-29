@@ -9,11 +9,40 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import NullPool
 
 from app.core.config import get_settings
+from app.core.redis import create_redis
 from app.db.session import create_sessionmaker
 from app.db.tenancy import system_transaction
 from app.modules.enrollments import service
 from app.modules.enrollments.jobs import RECONCILE_COURSE_ORG, UPGRADE_ENROLLMENTS
+from app.modules.enrollments.video_flush import flush_video_progress
 from app.worker import celery_app
+
+FLUSH_BATCH = 500
+
+
+async def _flush() -> int:
+    redis = create_redis(get_settings())
+    try:
+        async with _sessionmaker() as sessionmaker:
+            total = 0
+            # Drain batches; do not limit throughput to one batch per beat tick.
+            for _ in range(100):
+                result = await flush_video_progress(sessionmaker, redis, limit=FLUSH_BATCH)
+                total += result.changed
+                # Stop on a short sample, not on few changes: entries skipped as unchanged
+                # still count, or a batch of them would end the drain with work left.
+                if result.sampled < FLUSH_BATCH:
+                    break
+            else:
+                celery_app.send_task("enrollments.flush_video_progress")
+            return total
+    finally:
+        await redis.aclose()
+
+
+@celery_app.task(name="enrollments.flush_video_progress")
+def flush_progress() -> int:
+    return asyncio.run(_flush())
 
 
 @asynccontextmanager

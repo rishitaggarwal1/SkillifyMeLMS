@@ -21,6 +21,7 @@ from app.core.validation import configure_email_validation
 from app.db.session import create_engine, create_sessionmaker
 from app.modules.identity.keycloak_admin import KeycloakAdmin
 from app.modules.identity.tasks import enqueue_import
+from app.modules.media.providers import create_providers
 
 logger = get_logger(__name__)
 
@@ -61,6 +62,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
         app.state.rate_limiter = RateLimiter(redis)
         app.state.storage = ObjectStorage(settings)
+        app.state.video_providers = create_providers(settings, app.state.storage, http)
         app.state.enqueue_import = enqueue_import
         app.state.jobs = CeleryJobQueue()
         logger.info("startup", environment=settings.environment, oidc_issuer=settings.oidc_issuer)

@@ -1,8 +1,10 @@
 """Courses HTTP API: builder, publishing, versions and assignments.
 
-Draft edits accept an optional `If-Match: <revision>` header (the course revision the client
-started from). A stale revision gets `409 revision_conflict`, so concurrent editors never silently
-overwrite each other.
+Every edit of the outline or lessons (modules, lessons, reorders, skill tags) requires an
+`If-Match: <revision>` header: the course revision the client started from. A missing header gets
+`428 precondition_required` and a stale one `409 revision_conflict`, so concurrent editors never
+silently overwrite each other. `PATCH /courses/{id}` (course details, not the outline) accepts it
+optionally.
 """
 
 from typing import Annotated
@@ -10,7 +12,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, Query, status
 
-from app.core.errors import UnprocessableError
+from app.core.errors import PreconditionRequiredError, UnprocessableError
 from app.core.pagination import CursorPage, PageParams
 from app.modules.courses import service
 from app.modules.courses.schemas import (
@@ -53,7 +55,18 @@ def _if_match(
     return int(value)
 
 
+def _required_if_match(if_match: Annotated[int | None, Depends(_if_match)]) -> int:
+    # Declared optional at the header level so a missing header is 428, not FastAPI's 422.
+    if if_match is None:
+        raise PreconditionRequiredError(
+            "Send If-Match with the course revision this edit is based on.",
+            code="precondition_required",
+        )
+    return if_match
+
+
 IfMatch = Annotated[int | None, Depends(_if_match)]
+RequiredIfMatch = Annotated[int, Depends(_required_if_match)]
 
 courses = APIRouter(prefix="/courses")
 
@@ -110,14 +123,14 @@ async def get_draft(ctx: RequestCtx, course_id: UUID) -> DraftOut:
     "/{course_id}/modules", status_code=status.HTTP_201_CREATED, operation_id="create_module"
 )
 async def create_module(
-    ctx: RequestCtx, course_id: UUID, body: ModuleCreate, if_match: IfMatch
+    ctx: RequestCtx, course_id: UUID, body: ModuleCreate, if_match: RequiredIfMatch
 ) -> ModuleOut:
     return await service.create_module(ctx, course_id, body.title, if_match)
 
 
 @courses.put("/{course_id}/modules/order", operation_id="reorder_modules")
 async def reorder_modules(
-    ctx: RequestCtx, course_id: UUID, body: OrderUpdate, if_match: IfMatch
+    ctx: RequestCtx, course_id: UUID, body: OrderUpdate, if_match: RequiredIfMatch
 ) -> DraftOut:
     """Set the module order (every module id, once)."""
     return await service.reorder_modules(ctx, course_id, body.ids, if_match)
@@ -125,14 +138,14 @@ async def reorder_modules(
 
 @courses.patch("/{course_id}/modules/{module_id}", operation_id="update_module")
 async def update_module(
-    ctx: RequestCtx, course_id: UUID, module_id: UUID, body: ModuleUpdate, if_match: IfMatch
+    ctx: RequestCtx, course_id: UUID, module_id: UUID, body: ModuleUpdate, if_match: RequiredIfMatch
 ) -> ModuleOut:
     return await service.update_module(ctx, course_id, module_id, body.title, if_match)
 
 
 @courses.delete("/{course_id}/modules/{module_id}", operation_id="delete_module")
 async def delete_module(
-    ctx: RequestCtx, course_id: UUID, module_id: UUID, if_match: IfMatch
+    ctx: RequestCtx, course_id: UUID, module_id: UUID, if_match: RequiredIfMatch
 ) -> RevisionOut:
     return await service.delete_module(ctx, course_id, module_id, if_match)
 
@@ -143,14 +156,14 @@ async def delete_module(
     operation_id="create_lesson",
 )
 async def create_lesson(
-    ctx: RequestCtx, course_id: UUID, module_id: UUID, body: LessonCreate, if_match: IfMatch
+    ctx: RequestCtx, course_id: UUID, module_id: UUID, body: LessonCreate, if_match: RequiredIfMatch
 ) -> LessonOut:
     return await service.create_lesson(ctx, course_id, module_id, body, if_match)
 
 
 @courses.put("/{course_id}/modules/{module_id}/lessons/order", operation_id="reorder_lessons")
 async def reorder_lessons(
-    ctx: RequestCtx, course_id: UUID, module_id: UUID, body: OrderUpdate, if_match: IfMatch
+    ctx: RequestCtx, course_id: UUID, module_id: UUID, body: OrderUpdate, if_match: RequiredIfMatch
 ) -> DraftOut:
     """Set the module's lessons in order; lessons listed from other modules move here."""
     return await service.reorder_lessons(ctx, course_id, module_id, body.ids, if_match)
@@ -163,14 +176,14 @@ async def get_lesson(ctx: RequestCtx, course_id: UUID, lesson_id: UUID) -> Lesso
 
 @courses.patch("/{course_id}/lessons/{lesson_id}", operation_id="update_lesson")
 async def update_lesson(
-    ctx: RequestCtx, course_id: UUID, lesson_id: UUID, body: LessonUpdate, if_match: IfMatch
+    ctx: RequestCtx, course_id: UUID, lesson_id: UUID, body: LessonUpdate, if_match: RequiredIfMatch
 ) -> LessonOut:
     return await service.update_lesson(ctx, course_id, lesson_id, body, if_match)
 
 
 @courses.delete("/{course_id}/lessons/{lesson_id}", operation_id="delete_lesson")
 async def delete_lesson(
-    ctx: RequestCtx, course_id: UUID, lesson_id: UUID, if_match: IfMatch
+    ctx: RequestCtx, course_id: UUID, lesson_id: UUID, if_match: RequiredIfMatch
 ) -> RevisionOut:
     return await service.delete_lesson(ctx, course_id, lesson_id, if_match)
 
@@ -181,7 +194,7 @@ async def set_lesson_skills(
     course_id: UUID,
     lesson_id: UUID,
     body: LessonSkillsUpdate,
-    if_match: IfMatch,
+    if_match: RequiredIfMatch,
 ) -> LessonOut:
     return await service.set_lesson_skills(ctx, course_id, lesson_id, body.skill_ids, if_match)
 

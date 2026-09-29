@@ -27,6 +27,18 @@ x-api-env: &api-env
   S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:?}
   S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?}
   S3_BUCKET: ${S3_BUCKET:?}
+  # Presigned URLs are opened by the browser, so they must name the host-published MinIO port.
+  S3_PUBLIC_ENDPOINT_URL: http://localhost:${MINIO_PORT:-9000}
+  VIDEO_PROVIDER: ${VIDEO_PROVIDER:-local}
+  VIDEO_UPLOAD_MAX_BYTES: ${VIDEO_UPLOAD_MAX_BYTES:-2147483648}
+  VIDEO_UPLOAD_TTL_SECONDS: ${VIDEO_UPLOAD_TTL_SECONDS:-3600}
+  VIDEO_PLAYBACK_TTL_SECONDS: ${VIDEO_PLAYBACK_TTL_SECONDS:-300}
+  BUNNY_LIBRARY_ID: ${BUNNY_LIBRARY_ID:-}
+  BUNNY_API_KEY: ${BUNNY_API_KEY:-}
+  BUNNY_CDN_HOSTNAME: ${BUNNY_CDN_HOSTNAME:-}
+  BUNNY_TOKEN_KEY: ${BUNNY_TOKEN_KEY:-}
+  BUNNY_WEBHOOK_SECRET: ${BUNNY_WEBHOOK_SECRET:-}
+  PROGRESS_FLUSH_INTERVAL_SECONDS: ${PROGRESS_FLUSH_INTERVAL_SECONDS:-30}
   OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
   # Windows/macOS bind mounts do not deliver inotify events into Linux containers.
   WATCHFILES_FORCE_POLLING: "true"
@@ -51,7 +63,17 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    # AOF + noeviction: buffered video heartbeats must survive restarts and never be evicted.
+    # With a memory cap, a full Redis rejects writes (heartbeats fail loudly) instead of dropping
+    # unflushed progress. Production Redis needs the same settings.
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - noeviction
     ports: ["${REDIS_PORT:-6379}:6379"]
     volumes: [redis-data:/data]
     healthcheck:
@@ -67,6 +89,8 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:?}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?}
+      # Browsers upload videos/PDFs straight to MinIO with presigned requests.
+      MINIO_API_CORS_ALLOW_ORIGIN: http://localhost:${WEB_PORT:-3000}
     ports:
       - "${MINIO_PORT:-9000}:9000"
       - "${MINIO_CONSOLE_PORT:-9001}:9001"

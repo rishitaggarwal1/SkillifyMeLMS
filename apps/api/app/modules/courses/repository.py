@@ -259,6 +259,13 @@ class DraftRepository:
 
 
 class VersionRepository:
+    async def lessons_many(self, version_ids: Sequence[UUID]) -> list[CourseVersionLesson]:
+        return list(
+            await self.session.scalars(
+                select(CourseVersionLesson).where(CourseVersionLesson.version_id.in_(version_ids))
+            )
+        )
+
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 

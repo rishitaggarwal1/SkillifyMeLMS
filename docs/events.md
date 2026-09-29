@@ -48,6 +48,7 @@ body.
 | Aggregate type | Topic |
 |---|---|
 | `batch_member` | `identity.batch-members.v1` |
+| `video_progress` | `learning.progress.v1` |
 | anything else | `platform.events.v1` |
 
 The mapping lives in `apps/api/app/events/envelope.py`. Add a row here whenever you add one there.
@@ -58,6 +59,7 @@ The mapping lives in `apps/api/app/events/envelope.py`. Add a row here whenever 
 |---|---|---|
 | `batch_member_added` | `identity.batch-members.v1` | A user joins a batch: added by an admin, through an invitation, or through a CSV import |
 | `batch_member_removed` | `identity.batch-members.v1` | A user leaves a batch: removed by an admin, removed from the organization, or their invitation was revoked or expired |
+| `video_progress` | `learning.progress.v1` | A buffered lesson's video progress is flushed to Postgres |
 
 Both events are keyed by `batch_id`, so all changes to one batch arrive in order. Phase 2
 (enrollments) consumes them to enroll and unenroll students in the courses assigned to the batch.
@@ -106,3 +108,29 @@ Both events are keyed by `batch_id`, so all changes to one batch arrive in order
 A user in several batches gets one event per batch. Consumers should treat `added` for an existing
 membership, or `removed` for an absent one, as a no-op; together with deduping on the envelope `id`,
 that makes replays safe.
+
+### `video_progress` (version 1)
+
+Keyed by enrollment ID. One event per changed lesson per flush, in the same transaction as its
+progress update. A persisted buffer revision prevents duplicate emission when Redis acknowledgement
+is retried after a committed flush. Relay delivery remains at-least-once; consumers dedupe by `id`.
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "video_progress.v1 data",
+  "type": "object",
+  "required": ["enrollment_id", "lesson_id", "video_asset_id", "position_seconds", "watched_ratio"],
+  "additionalProperties": false,
+  "properties": {
+    "enrollment_id": { "type": "string", "format": "uuid" },
+    "lesson_id": { "type": "string", "format": "uuid" },
+    "video_asset_id": { "type": "string", "format": "uuid" },
+    "position_seconds": { "type": "integer", "minimum": 0 },
+    "watched_ratio": { "type": "number", "minimum": 0, "maximum": 1 }
+  }
+}
+```
+
+The existing `lesson_completed` event is emitted once when the threshold is reached; existing
+completions survive video replacement. The remainder of the Phase 2 event catalogue is step 5.

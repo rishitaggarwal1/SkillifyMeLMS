@@ -470,6 +470,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/playback": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Video Playback */
+    get: operations["video_playback"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/resume": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Video Resume */
+    get: operations["video_resume"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/visit": {
     parameters: {
       query?: never;
@@ -730,6 +764,23 @@ export interface paths {
     patch: operations["update_organization"];
     trace?: never;
   };
+  "/api/v1/progress/heartbeat": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Video Heartbeat */
+    post: operations["video_heartbeat"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/skills": {
     parameters: {
       query?: never;
@@ -769,6 +820,85 @@ export interface paths {
     head?: never;
     /** Update Skill */
     patch: operations["update_skill"];
+    trace?: never;
+  };
+  "/api/v1/videos": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Videos */
+    get: operations["list_videos"];
+    put?: never;
+    /**
+     * Create Video
+     * @description Create a video and get an upload ticket; the browser uploads directly to storage, then
+     *     calls `POST /videos/{id}/uploaded`.
+     */
+    post: operations["create_video"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/videos/{video_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Video
+     * @description Poll this for processing status.
+     */
+    get: operations["get_video"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/videos/{video_id}/playback": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Preview
+     * @description A signed playback URL for the course editors' preview.
+     */
+    get: operations["get_video_preview"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/videos/{video_id}/uploaded": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Mark Uploaded */
+    post: operations["mark_video_uploaded"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   "/health/live": {
@@ -1152,6 +1282,16 @@ export interface components {
     CursorPage_VersionOut_: {
       /** Items */
       items: components["schemas"]["VersionOut"][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for the next page; null when there are no more items.
+       */
+      next_cursor: string | null;
+    };
+    /** CursorPage[VideoOut] */
+    CursorPage_VideoOut_: {
+      /** Items */
+      items: components["schemas"]["VideoOut"][];
       /**
        * Next Cursor
        * @description Opaque cursor for the next page; null when there are no more items.
@@ -1626,6 +1766,21 @@ export interface components {
       /** Status */
       status?: ("active" | "archived") | null;
     };
+    /** PlaybackOut */
+    PlaybackOut: {
+      /**
+       * Expires At
+       * Format: date-time
+       */
+      expires_at: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "mp4" | "hls";
+      /** Url */
+      url: string;
+    };
     /** PublishBlocker */
     PublishBlocker: {
       /**
@@ -1767,6 +1922,30 @@ export interface components {
       /** To Major */
       to_major: number;
     };
+    /** UploadTicketOut */
+    UploadTicketOut: {
+      /**
+       * Expires At
+       * Format: date-time
+       */
+      expires_at: string;
+      /** Fields */
+      fields: {
+        [key: string]: string;
+      };
+      /** Headers */
+      headers: {
+        [key: string]: string;
+      };
+      /**
+       * Protocol
+       * @description s3_put: PUT the file to `url` with `headers`. tus: TUS upload to `url` with `headers`.
+       * @enum {string}
+       */
+      protocol: "s3_put" | "tus";
+      /** Url */
+      url: string;
+    };
     /** UserOut */
     UserOut: {
       /** Email */
@@ -1875,6 +2054,86 @@ export interface components {
        * @description "major.minor", e.g. "1.2"
        */
       version: string;
+    };
+    /** VideoCreate */
+    VideoCreate: {
+      /** Title */
+      title: string;
+    };
+    /** VideoHeartbeat */
+    VideoHeartbeat: {
+      /**
+       * Enrollment Id
+       * Format: uuid
+       */
+      enrollment_id: string;
+      /**
+       * Lesson Id
+       * Format: uuid
+       */
+      lesson_id: string;
+      /**
+       * Playback Rate
+       * @default 1
+       */
+      playback_rate: number;
+      /** Played Seconds */
+      played_seconds: number;
+      /** Position Seconds */
+      position_seconds: number;
+      /**
+       * Video Asset Id
+       * Format: uuid
+       */
+      video_asset_id: string;
+    };
+    /** VideoOut */
+    VideoOut: {
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Duration Seconds */
+      duration_seconds: number | null;
+      /** Error */
+      error: string | null;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Provider */
+      provider: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "created" | "processing" | "ready" | "failed";
+      /** Title */
+      title: string;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
+    };
+    /** VideoResume */
+    VideoResume: {
+      /** Position Seconds */
+      position_seconds: number;
+      /**
+       * Video Asset Id
+       * Format: uuid
+       */
+      video_asset_id: string;
+      /** Watched Ratio */
+      watched_ratio: number;
+    };
+    /** VideoUploadOut */
+    VideoUploadOut: {
+      upload: components["schemas"]["UploadTicketOut"];
+      video: components["schemas"]["VideoOut"];
     };
   };
   responses: never;
@@ -3536,6 +3795,94 @@ export interface operations {
       };
     };
   };
+  video_playback: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        enrollment_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PlaybackOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  video_resume: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        enrollment_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["VideoResume"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
   visit_lesson: {
     parameters: {
       query?: never;
@@ -4414,6 +4761,49 @@ export interface operations {
       };
     };
   };
+  video_heartbeat: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["VideoHeartbeat"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
   list_skills: {
     parameters: {
       query?: {
@@ -4531,6 +4921,225 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["SkillOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  list_videos: {
+    parameters: {
+      query?: {
+        status?: ("created" | "processing" | "ready" | "failed") | null;
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_VideoOut_"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  create_video: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["VideoCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["VideoUploadOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_video: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        video_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["VideoOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_video_preview: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        video_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PlaybackOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  mark_video_uploaded: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        video_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["VideoOut"];
         };
       };
       /** @description Client error */

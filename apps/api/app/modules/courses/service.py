@@ -110,6 +110,7 @@ class VersionLessonRef:
     is_required: bool
     completion_threshold: Decimal | None
     video_asset_id: UUID | None
+    video_duration_seconds: int | None = None
 
     @property
     def counts_toward_progress(self) -> bool:
@@ -156,8 +157,27 @@ async def version_lesson(
         return None
     return VersionLessonRef(
         row.lesson_id, row.lesson_type, row.is_required, row.completion_threshold,
-        row.video_asset_id,
+        row.video_asset_id, row.video_duration_seconds,
     )  # fmt: skip
+
+
+async def version_lessons_many(
+    session: AsyncSession, version_ids: Sequence[UUID]
+) -> dict[UUID, list[VersionLessonRef]]:
+    rows = await VersionRepository(session).lessons_many(version_ids)
+    result: dict[UUID, list[VersionLessonRef]] = {vid: [] for vid in version_ids}
+    for row in rows:
+        result[row.version_id].append(
+            VersionLessonRef(
+                row.lesson_id,
+                row.lesson_type,
+                row.is_required,
+                row.completion_threshold,
+                row.video_asset_id,
+                row.video_duration_seconds,
+            )
+        )
+    return result
 
 
 async def batch_assignments(

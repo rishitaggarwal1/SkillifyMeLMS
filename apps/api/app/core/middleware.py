@@ -42,6 +42,9 @@ class RequestContextMiddleware:
         scope.setdefault("state", {})["request_id"] = request_id
 
         start = time.perf_counter()
+        log_path = scope["path"]
+        if log_path.startswith("/api/v1/webhooks/video/bunny/"):
+            log_path = "/api/v1/webhooks/video/bunny/[redacted]"
         status_code = 500
         response_started = False
 
@@ -58,13 +61,13 @@ class RequestContextMiddleware:
         try:
             await self.app(scope, receive, send_wrapper)
         except Exception:
-            logger.exception("unhandled_exception", method=scope["method"], path=scope["path"])
+            logger.exception("unhandled_exception", method=scope["method"], path=log_path)
             if response_started:
                 # Headers already sent; nothing sane to return. Let the server drop the connection.
                 raise
             await _send_internal_error(send_wrapper)
         finally:
-            path = scope["path"]
+            path = log_path
             if not (path in _QUIET_PATHS and status_code < _FIRST_ERROR_STATUS):
                 logger.info(
                     "request",

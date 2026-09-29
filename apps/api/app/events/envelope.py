@@ -22,6 +22,7 @@ from app.db.outbox import OutboxEvent
 # Topic per aggregate type. Unlisted aggregate types go to the catch-all topic.
 TOPICS: dict[str, str] = {
     "batch_member": "identity.batch-members.v1",
+    "video_progress": "learning.progress.v1",
 }
 DEFAULT_TOPIC = "platform.events.v1"
 

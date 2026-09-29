@@ -61,6 +61,14 @@ class ConflictError(AppError):
     message = "The request conflicts with the current state of the resource."
 
 
+class PreconditionRequiredError(AppError):
+    """A conditional request header (e.g. `If-Match`) is required but was not sent."""
+
+    status_code = HTTPStatus.PRECONDITION_REQUIRED
+    code = "precondition_required"
+    message = "This request must be conditional."
+
+
 class UnprocessableError(AppError):
     """Well-formed input that breaks a business rule (e.g. a batch from another organization)."""
 
@@ -103,6 +111,7 @@ _STATUS_CODES: dict[int, str] = {
     413: "payload_too_large",
     415: "unsupported_media_type",
     422: "validation_error",
+    428: "precondition_required",
     429: "rate_limited",
     500: "internal_error",
     503: "service_unavailable",

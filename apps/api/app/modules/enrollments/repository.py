@@ -8,6 +8,7 @@ from uuid import UUID
 
 from sqlalchemy import (
     Boolean,
+    DateTime,
     Integer,
     Uuid,
     bindparam,
@@ -55,6 +56,35 @@ class EnrollmentRepository:
 
     async def get(self, enrollment_id: UUID) -> Enrollment | None:
         return await self.session.get(Enrollment, enrollment_id, populate_existing=True)
+
+    async def lock_many(self, ids: Sequence[UUID]) -> list[Enrollment]:
+        return list(
+            await self.session.scalars(
+                select(Enrollment)
+                .where(Enrollment.id.in_(ids))
+                .order_by(Enrollment.id)
+                .with_for_update()
+            )
+        )
+
+    async def touch_many(self, rows: Sequence[tuple[UUID, UUID, datetime]]) -> None:
+        if not rows:
+            return
+        incoming = values(
+            column("id", Uuid),
+            column("lesson", Uuid),
+            column("at", DateTime(timezone=True)),
+            name="visits",
+        ).data(list(rows))
+        await self.session.execute(
+            update(Enrollment)
+            .where(
+                Enrollment.id == incoming.c.id,
+                (Enrollment.last_accessed_at.is_(None))
+                | (Enrollment.last_accessed_at <= incoming.c.at),
+            )
+            .values(last_lesson_id=incoming.c.lesson, last_accessed_at=incoming.c.at)
+        )
 
     async def list_for_user(
         self, user_id: UUID, organization_id: UUID, params: CursorParams
@@ -183,6 +213,58 @@ class EnrollmentRepository:
 class LessonProgressRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
+
+    async def reset_replaced_videos(self, enrollment_id: UUID, assets: Mapping[UUID, UUID]) -> None:
+        if not assets:
+            return
+        incoming = values(column("lesson", Uuid), column("asset", Uuid), name="assets").data(
+            list(assets.items())
+        )
+        await self.session.execute(
+            update(LessonProgress)
+            .where(
+                LessonProgress.enrollment_id == enrollment_id,
+                LessonProgress.lesson_id == incoming.c.lesson,
+                LessonProgress.video_asset_id.is_distinct_from(incoming.c.asset),
+            )
+            .values(
+                video_asset_id=incoming.c.asset,
+                video_position_seconds=0,
+                watched_segments=None,
+                watched_ratio=0,
+                buffer_revision=None,
+            )
+        )
+
+    async def for_enrollments(self, ids: Sequence[UUID]) -> list[LessonProgress]:
+        return list(
+            await self.session.scalars(
+                select(LessonProgress).where(LessonProgress.enrollment_id.in_(ids))
+            )
+        )
+
+    async def upsert_videos(self, rows: list[dict[str, Any]]) -> None:
+        if not rows:
+            return
+        stmt = pg_insert(LessonProgress).values(rows)
+        await self.session.execute(
+            stmt.on_conflict_do_update(
+                index_elements=[LessonProgress.enrollment_id, LessonProgress.lesson_id],
+                set_={
+                    name: getattr(stmt.excluded, name)
+                    for name in (
+                        "video_position_seconds",
+                        "watched_segments",
+                        "watched_ratio",
+                        "video_asset_id",
+                        "buffer_revision",
+                        "status",
+                        "completed_at",
+                        "updated_at",
+                    )
+                },
+            )
+        )
 
     async def for_enrollment(self, enrollment_id: UUID) -> list[LessonProgress]:
         return list(

@@ -167,6 +167,13 @@ class Factory:
         await self._save(course)
         return course
 
+    async def course_revision(self, course_id: UUID) -> int:
+        """The course's current draft revision, for the `If-Match` header on outline edits."""
+        async with self.sessionmaker() as session:
+            revision = await session.scalar(select(Course.revision).where(Course.id == course_id))
+        assert revision is not None, f"no course {course_id}"
+        return revision
+
     async def module(self, course: "Course", *, position: int = 1) -> "CourseModule":
         module = CourseModule(
             id=new_id(),
@@ -198,7 +205,12 @@ class Factory:
         return lesson
 
     async def version(
-        self, course: "Course", *lessons: "Lesson", major: int = 1, minor: int = 0
+        self,
+        course: "Course",
+        *lessons: "Lesson",
+        major: int = 1,
+        minor: int = 0,
+        video: "VideoAsset | None" = None,
     ) -> "CourseVersion":
         version = CourseVersion(
             id=new_id(),
@@ -223,6 +235,8 @@ class Factory:
                     position=lesson.position,
                     lesson_type=lesson.lesson_type,
                     is_required=True,
+                    video_asset_id=video.id if video else None,
+                    video_duration_seconds=video.duration_seconds if video else None,
                 )
                 for lesson in lessons
             )

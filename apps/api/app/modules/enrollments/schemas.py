@@ -73,3 +73,18 @@ class UpgradeAccepted(BaseModel):
     to_major: int
     batch_ids: list[UUID]
     status: Literal["queued"] = "queued"
+
+
+class VideoHeartbeat(BaseModel):
+    enrollment_id: UUID
+    lesson_id: UUID
+    video_asset_id: UUID
+    position_seconds: float = Field(ge=0, le=86400, allow_inf_nan=False)
+    played_seconds: float = Field(ge=0, le=45, allow_inf_nan=False)
+    playback_rate: float = Field(default=1, ge=0.25, le=2, allow_inf_nan=False)
+
+
+class VideoResume(BaseModel):
+    video_asset_id: UUID
+    position_seconds: float
+    watched_ratio: float

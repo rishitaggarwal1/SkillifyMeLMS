@@ -97,6 +97,7 @@ class LessonProgress(Base):
     watched_segments: Mapped[bytes | None] = mapped_column(LargeBinary)
     watched_ratio: Mapped[Decimal | None] = mapped_column(Numeric(5, 4))
     video_asset_id: Mapped[UUID | None] = mapped_column(Uuid)
+    buffer_revision: Mapped[UUID | None] = mapped_column(Uuid)
     pdf_opened_at: Mapped[datetime | None]
     completed_at: Mapped[datetime | None]
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now())

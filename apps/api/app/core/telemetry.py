@@ -13,6 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.core.config import Settings
 
+# Not traced. Webhook URLs carry a shared secret in the path, which spans would export as
+# http.target / url.full.
+EXCLUDED_URLS = "health/live,health/ready,api/v1/webhooks/"
+
 
 def configure_tracing(app: FastAPI, settings: Settings) -> None:
     if not settings.otel_exporter_otlp_endpoint:
@@ -31,7 +35,7 @@ def configure_tracing(app: FastAPI, settings: Settings) -> None:
         )
     )
     trace.set_tracer_provider(provider)
-    FastAPIInstrumentor.instrument_app(app, excluded_urls="health/live,health/ready")
+    FastAPIInstrumentor.instrument_app(app, excluded_urls=EXCLUDED_URLS)
     RedisInstrumentor().instrument()
 
 

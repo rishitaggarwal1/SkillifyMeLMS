@@ -107,6 +107,44 @@ async def test_stale_revision_is_rejected(api: CourseApi, campus: Campus) -> Non
     assert stale.json()["error"]["code"] == "revision_conflict"
 
 
+async def test_outline_edits_require_if_match(api: CourseApi, campus: Campus) -> None:
+    course = await api.build(campus.author, campus.p, [("notes",)])
+    base = f"/api/v1/courses/{course.id}"
+    module, lesson = course.module_ids[0], course.lesson_ids[0]
+    before = await api.factory.course_revision(course.id)
+    edits = [
+        ("POST", "/modules", {"title": "M"}),
+        ("PUT", "/modules/order", {"ids": [str(module)]}),
+        ("PATCH", f"/modules/{module}", {"title": "M2"}),
+        ("DELETE", f"/modules/{module}", None),
+        ("POST", f"/modules/{module}/lessons", {"title": "L", "lesson_type": "notes"}),
+        ("PUT", f"/modules/{module}/lessons/order", {"ids": [str(lesson)]}),
+        ("PATCH", f"/lessons/{lesson}", {"title": "L2"}),
+        ("DELETE", f"/lessons/{lesson}", None),
+        ("PUT", f"/lessons/{lesson}/skills", {"skill_ids": []}),
+    ]
+
+    for method, suffix, body in edits:
+        response = await api.client.request(
+            method, base + suffix, headers=api.h(campus.author, campus.p), json=body
+        )
+        assert response.status_code == 428, (method, suffix, response.text)
+        assert response.json()["error"]["code"] == "precondition_required"
+
+    assert await api.factory.course_revision(course.id) == before
+    # Course details (not the outline) keep If-Match optional.
+    details = await api.request(
+        "PATCH", f"/courses/{course.id}", campus.author, campus.p, json={"title": "Renamed"}
+    )
+    assert ok(details)["title"] == "Renamed"
+
+
+async def test_if_match_is_checked_after_authentication(api: CourseApi, campus: Campus) -> None:
+    course = await api.build(campus.author, campus.p, [("notes",)])
+    response = await api.client.post(f"/api/v1/courses/{course.id}/modules", json={"title": "M"})
+    assert response.status_code == 401
+
+
 async def test_lesson_content_is_validated_per_type(api: CourseApi, campus: Campus) -> None:
     course = await api.build(campus.author, campus.p, [()])
     path = f"/courses/{course.id}/modules/{course.module_ids[0]}/lessons"

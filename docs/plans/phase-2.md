@@ -1,8 +1,8 @@
 # Phase 2 — Courses and learning content (plan)
 
-**Status (2026-09-29):** steps 1–2 are complete and committed (`41dd7d5`, `878985b`). Step 3
-(video) exists in the working tree but is **not committed** and has not been re-verified with
-`make lint` / `make test`. Steps 4–8 are not started. See
+**Status (2026-09-29):** steps 1–3 are complete and committed. Step 3 (video) also made
+`If-Match` required on outline and lesson edits. Step 4 (notes and PDFs) is next. Steps 4–8 are
+not started. See
 [Implementation status](#implementation-status). Phase 1 (identity, organizations, roles, RLS) is
 complete; see [What Phase 1 provides](#what-phase-1-provides). Resume by re-reading `CLAUDE.md`
 and `docs/access-control.md`, then present this plan for approval before coding.
@@ -80,9 +80,9 @@ Also committed: the enrollment Celery jobs, the Kafka batch-member consumer
 `test_builder_api`, `test_versioning`, `test_assignments_api`, `test_progress` and
 `test_versions_and_upgrades`.
 
-### Step 3 — video (working tree, uncommitted)
+### Step 3 — video
 
-Present but uncommitted:
+Contents:
 
 - **Backend:** `media/providers.py` (the `VideoProvider` protocol, `LocalVideoProvider`,
   `BunnyStreamProvider`), `mp4.py`, `tasks.py`, `router.py` and `repository.py`; the
@@ -713,13 +713,35 @@ Step 3 implementation notes:
 - `/teach/videos` exposes the reusable uploader. The focused video route is
   `/learn/enrollments/[enrollmentId]/video/[lessonId]`; the full course UIs remain steps 6–7.
 - Heartbeats include `video_asset_id` and `playback_rate`. A stale asset gets `409 video_changed`.
+- **Watch credit is bounded by real time.** One heartbeat earns at most
+  `HEARTBEAT_INTERVAL_SECONDS × 1.5 × playback_rate` (22.5 s at 1×). It also earns at most 1.5×
+  the server wall-clock time since that entry's previous heartbeat (× rate), so replaying
+  heartbeats quickly earns nothing extra. The interval setting must match the web player
+  (`heartbeat.ts`).
+- **Rejected uploads are deleted.** A local upload that fails processing (oversize or not an MP4)
+  is marked `failed`, and its object is deleted after commit.
+- **Webhook URLs aren't traced.** `api/v1/webhooks/` is excluded from OpenTelemetry, so the
+  secret in the path never reaches spans. The request log already redacts it.
+- **The flush drain continues** while batches come back full (counting sampled entries, not
+  changed rows).
 - Redis stores 5-second watched-segment bitmaps and partial intervals; seeking grants no watch time.
   Flushes sample up to 500 dirty entries without removing them, acknowledge only after commit,
   and compare revisions so crashes and concurrent writes are safe. This replaces destructive
   `SPOP` claiming. A Postgres advisory lock serializes flushes, and database work is batched per org.
 - Clean buffer entries expire after seven days; dirty entries have no expiry. Redis must use
-  persistent storage and a no-eviction policy for acknowledged heartbeats to survive a Redis outage.
+  persistent storage (AOF) and `noeviction` with a `maxmemory` cap, so acknowledged heartbeats
+  survive a Redis outage and a full Redis rejects writes instead of evicting unflushed progress.
+  Compose sets this locally (256 MB). Production Redis needs the same.
 - The manual real-credential Bunny smoke script remains in step 8, as listed below.
+- **Deferred:**
+  - The Bunny playback-token digest is checked only for structure and expiry. Real verification
+    is the step 8 smoke script.
+  - Each heartbeat reads the Postgres baseline even when the Redis entry exists: a performance
+    follow-up.
+  - The enrollment and resume GETs reset replaced-video progress, so they write.
+  - The player shows a generic error on `409 video_changed` instead of reloading the lesson. It is
+    reworked in the step 7 course player.
+  - Event-payload validation against `docs/events.md` is a step 5 test.
 
 1. Data model, migrations and RLS (skills, courses and draft tree, versions, assignments,
    enrollments, progress, media tables).

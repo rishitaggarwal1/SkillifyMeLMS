@@ -165,7 +165,12 @@ def _course_sub(suffix: str, *, published: bool = False, **kwargs: Any) -> Build
         body = kwargs.get("json")
         if callable(body):
             body = body(course, module, lesson)
-        return f"/api/v1/courses/{course.id}{path}", {"json": body} if body is not None else {}
+        # Outline edits require If-Match; GETs ignore it.
+        revision = await w.factory.course_revision(course.id)
+        request: dict[str, Any] = {"headers": {"If-Match": str(revision)}}
+        if body is not None:
+            request["json"] = body
+        return f"/api/v1/courses/{course.id}{path}", request
 
     return build
 
@@ -249,6 +254,50 @@ class Route:
 
 
 MATRIX = [
+    Route("POST", "/api/v1/videos", STAFF_READ, at("/api/v1/videos", json={"title": "Video"})),
+    Route("GET", "/api/v1/videos", STAFF_READ, at("/api/v1/videos")),
+    Route(
+        "GET",
+        "/api/v1/videos/{video_id}",
+        STAFF_READ,
+        lambda w: _video_path(w),  # noqa: PLW0108 - builder defined after the matrix
+        names_resource=True,
+    ),
+    Route(
+        "POST",
+        "/api/v1/videos/{video_id}/uploaded",
+        STAFF_READ,
+        lambda w: _video_path(w, "/uploaded"),
+        names_resource=True,
+    ),
+    Route(
+        "GET",
+        "/api/v1/videos/{video_id}/playback",
+        STAFF_READ,
+        lambda w: _video_path(w, "/playback"),
+        names_resource=True,
+    ),
+    Route(
+        "GET",
+        "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/playback",
+        {"student"},
+        lambda w: _video_action(w, "playback"),
+        denied="404",
+    ),
+    Route(
+        "GET",
+        "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/resume",
+        {"student"},
+        lambda w: _video_action(w, "resume"),
+        denied="404",
+    ),
+    Route(
+        "POST",
+        "/api/v1/progress/heartbeat",
+        {"student"},
+        lambda w: _video_action(w, "heartbeat"),
+        denied="404",
+    ),
     Route("GET", "/api/v1/me", EVERYONE, at("/api/v1/me")),
     # --- Organizations: platform admins only.
     Route("POST", "/api/v1/organizations", PLATFORM, _org_body),
@@ -495,6 +544,34 @@ MATRIX = [
 ]
 
 
+async def _video_path(w: World, suffix: str = "") -> Request:
+    video = await w.factory.video(w.org, status="ready", duration=120)
+    return f"/api/v1/videos/{video.id}{suffix}", {}
+
+
+async def _video_action(w: World, action: str) -> Request:
+    course = await w.factory.course(w.org)
+    module = await w.factory.module(course)
+    lesson = await w.factory.lesson(module, lesson_type="video")
+    video = await w.factory.video(w.org, status="ready", duration=120)
+    await w.factory.version(course, lesson, video=video)
+    batch = await w.factory.batch(w.org)
+    await w.factory.add_to_batch(batch, w.users["student"])
+    await w.factory.assignment(course, w.org, batch=batch)
+    enrollment = await w.factory.enrollment(course, w.users["student"], w.org)
+    if action == "heartbeat":
+        return "/api/v1/progress/heartbeat", {
+            "json": {
+                "enrollment_id": str(enrollment.id),
+                "lesson_id": str(lesson.id),
+                "video_asset_id": str(video.id),
+                "position_seconds": 15,
+                "played_seconds": 15,
+            }
+        }
+    return f"/api/v1/enrollments/{enrollment.id}/lessons/{lesson.id}/{action}", {}
+
+
 async def _with_json(request: Awaitable[Request], body: dict[str, Any]) -> Request:
     path, kwargs = await request
     return path, {**kwargs, "json": body}
@@ -541,9 +618,8 @@ async def test_role_matrix(
     client: AsyncClient, world: World, auth_headers: AuthHeaders, route: Route, role: str
 ) -> None:
     path, kwargs = await route.build(world)
-    response = await client.request(
-        route.method, path, headers=_headers(world, role, auth_headers), **kwargs
-    )
+    headers = {**_headers(world, role, auth_headers), **kwargs.pop("headers", {})}
+    response = await client.request(route.method, path, headers=headers, **kwargs)
     expected = expected_status(route, role)
     actual = "2xx" if 200 <= response.status_code < 300 else str(response.status_code)
     assert actual == expected, (route.method, path, role, response.text[:300])

@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.errors import ConflictError, NotFoundError, UnprocessableError
@@ -39,14 +40,99 @@ from app.modules.enrollments.schemas import (
     LessonProgressOut,
     UpgradeAccepted,
     UpgradeRequest,
+    VideoHeartbeat,
+    VideoResume,
 )
+from app.modules.enrollments.video_buffer import VideoBuffer, buffer_key
 from app.modules.identity import service as identity
 from app.modules.identity.authz import Permission, require_org, require_org_permission
 from app.modules.identity.dependencies import RequestContext
+from app.modules.media import service as media
+from app.modules.media.service import PlaybackOut
 
 logger = get_logger(__name__)
 Ctx = RequestContext
 CHUNK = 500
+
+
+async def _video_lesson(
+    ctx: Ctx, enrollment_id: UUID, lesson_id: UUID
+) -> tuple[Enrollment, VersionLessonRef]:
+    enrollment, version = await _my_enrollment(ctx, enrollment_id)
+    lesson = await _lesson_in_version(ctx, version, lesson_id)
+    if lesson.lesson_type != "video" or not lesson.video_asset_id:
+        raise NotFoundError("Video lesson not found.")
+    if not lesson.video_duration_seconds:
+        raise ConflictError("The video isn't ready.", code="video_not_ready")
+    return enrollment, lesson
+
+
+async def video_playback(
+    ctx: Ctx, providers: media.Providers, enrollment_id: UUID, lesson_id: UUID, ttl: int
+) -> PlaybackOut:
+    _, lesson = await _video_lesson(ctx, enrollment_id, lesson_id)
+    assert lesson.video_asset_id is not None  # noqa: S101
+    playback = await media.playback_for(ctx.session, providers, lesson.video_asset_id, ttl)
+    if playback is None:
+        raise NotFoundError("Video not found.")
+    return PlaybackOut(url=playback.url, kind=playback.kind, expires_at=playback.expires_at)
+
+
+async def video_resume(ctx: Ctx, redis: Redis, enrollment_id: UUID, lesson_id: UUID) -> VideoResume:
+    _, lesson = await _video_lesson(ctx, enrollment_id, lesson_id)
+    asset_id = lesson.video_asset_id
+    assert asset_id is not None  # noqa: S101
+    await LessonProgressRepository(ctx.session).reset_replaced_videos(
+        enrollment_id, {lesson_id: asset_id}
+    )
+    buffered = await VideoBuffer(redis).read(buffer_key(enrollment_id, lesson_id, asset_id))
+    if buffered:
+        return VideoResume(
+            video_asset_id=asset_id,
+            position_seconds=buffered.data["position"],
+            watched_ratio=buffered.ratio,
+        )
+    progress = await LessonProgressRepository(ctx.session).get(enrollment_id, lesson_id)
+    matching = progress is not None and progress.video_asset_id == asset_id
+    return VideoResume(
+        video_asset_id=asset_id,
+        position_seconds=(progress.video_position_seconds or 0) if matching and progress else 0,
+        watched_ratio=float(progress.watched_ratio or 0) if matching and progress else 0,
+    )
+
+
+async def video_heartbeat(
+    ctx: Ctx, redis: Redis, data: VideoHeartbeat, *, interval_seconds: float
+) -> None:
+    enrollment, lesson = await _video_lesson(ctx, data.enrollment_id, data.lesson_id)
+    if data.video_asset_id != lesson.video_asset_id:
+        raise ConflictError("The video changed. Reload the lesson.", code="video_changed")
+    assert lesson.video_duration_seconds is not None  # noqa: S101
+    if data.position_seconds > lesson.video_duration_seconds + 1:
+        raise UnprocessableError("Position exceeds the video duration.")
+    progress = await LessonProgressRepository(ctx.session).get(enrollment.id, data.lesson_id)
+    baseline = (
+        progress.watched_segments or b""
+        if progress is not None and progress.video_asset_id == data.video_asset_id
+        else b""
+    )
+    await VideoBuffer(redis).write(
+        buffer_key(enrollment.id, data.lesson_id, data.video_asset_id),
+        {
+            "enrollment_id": str(enrollment.id),
+            "lesson_id": str(data.lesson_id),
+            "asset_id": str(data.video_asset_id),
+            "organization_id": str(enrollment.organization_id),
+            "user_id": str(enrollment.user_id),
+            "duration": lesson.video_duration_seconds,
+            "position": min(data.position_seconds, lesson.video_duration_seconds),
+            "played": data.played_seconds,
+            "rate": data.playback_rate,
+            "at": datetime.now(UTC).isoformat(),
+        },
+        baseline,
+        interval_seconds=interval_seconds,
+    )
 
 
 # ============================================================================ fan-out
@@ -212,6 +298,15 @@ async def _my_enrollment(ctx: Ctx, enrollment_id: UUID) -> tuple[Enrollment, Ver
 
 async def get_enrollment(ctx: Ctx, enrollment_id: UUID) -> EnrollmentDetail:
     enrollment, version = await _my_enrollment(ctx, enrollment_id)
+    lessons = await courses.version_lessons_many(ctx.session, [version.id])
+    await LessonProgressRepository(ctx.session).reset_replaced_videos(
+        enrollment_id,
+        {
+            lesson.lesson_id: lesson.video_asset_id
+            for lesson in lessons[version.id]
+            if lesson.video_asset_id is not None
+        },
+    )
     progress = await LessonProgressRepository(ctx.session).for_enrollment(enrollment_id)
     return EnrollmentDetail(
         enrollment=(await _outs(ctx, [enrollment]))[0],

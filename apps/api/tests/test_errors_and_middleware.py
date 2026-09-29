@@ -6,9 +6,11 @@ import pytest
 from asgi_lifespan import LifespanManager
 from fastapi import FastAPI, Query
 from httpx import ASGITransport, AsyncClient
+from opentelemetry.util.http import parse_excluded_urls
 
 from app.core.config import Settings
 from app.core.errors import NotFoundError
+from app.core.telemetry import EXCLUDED_URLS
 from app.main import create_app
 
 
@@ -108,3 +110,9 @@ async def test_malformed_inbound_request_id_is_replaced(probe_client: AsyncClien
 
     assert response.headers["x-request-id"] != 'bad id\twith"stuff'
     assert len(response.headers["x-request-id"]) == 36  # generated UUIDv7
+
+
+def test_webhook_secrets_are_not_traced() -> None:
+    excluded = parse_excluded_urls(EXCLUDED_URLS)
+    assert excluded.url_disabled("http://api:8000/api/v1/webhooks/video/bunny/s3cr3t")
+    assert not excluded.url_disabled("http://api:8000/api/v1/videos")

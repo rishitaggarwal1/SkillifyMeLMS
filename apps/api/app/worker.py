@@ -29,13 +29,17 @@ celery_app.conf.update(
     broker_connection_retry_on_startup=True,
 )
 celery_app.conf.beat_schedule = {
+    "video-progress-flush": {
+        "task": "enrollments.flush_video_progress",
+        "schedule": settings.progress_flush_interval_seconds,
+    },
     "identity-expire-invitations": {
         "task": "identity.expire_invitations",
         "schedule": 3600.0,  # hourly
     },
 }
 celery_app.autodiscover_tasks(
-    ["app.modules.identity", "app.modules.enrollments"], related_name="tasks"
+    ["app.modules.identity", "app.modules.enrollments", "app.modules.media"], related_name="tasks"
 )
 
 

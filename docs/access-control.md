@@ -76,6 +76,9 @@ Defined once, in `apps/api/app/modules/identity/authz.py` (`ROLE_PERMISSIONS`).
 | `POST /courses/{id}/enrollment-upgrades` | org_admin of the enrollments' org |
 | `GET /enrollments` | Any signed-in user (their own enrollments) |
 | `GET /enrollments/{id}`, `POST /enrollments/{id}/lessons/{lesson_id}/visit`, `.../complete` | The enrolled student only (everyone else gets 404) |
+| `POST /videos`, `GET /videos`, `GET /videos/{id}`, `POST /videos/{id}/uploaded`, `GET /videos/{id}/playback` | Owner-org course editors (`course.edit`); item routes return 404 across orgs |
+| `GET /enrollments/{id}/lessons/{lesson_id}/playback`, `.../resume`, `POST /progress/heartbeat` | The active enrollment's student, with a current batch assignment; video must be in their pinned major's latest minor |
+| `POST /webhooks/video/bunny/{secret}` | Provider webhook secret (constant-time check); status is fetched from Bunny, never trusted from the body |
 
 All paths are under `/api/v1`, and platform admins can call every endpoint.
 
@@ -138,7 +141,8 @@ org.
 | course_versions, course_version_lessons | Owner-org editors*; readers** | Owner-org editors* (publish). Immutable: no UPDATE or DELETE |
 | course_assignments | Owner-org editors*; the receiving org's org_admins and instructors | Publisher-made rows: owner-org editors* (to other orgs only if the owner is a content publisher). Narrowing rows: the receiving org's org_admin, batch rows under an existing org grant only. Removal: only the org that created the row. No UPDATE |
 | enrollments, lesson_progress (the student's org) | The student; org_admin and instructors of that org | The student (own progress); org_admin; system jobs |
-| video_assets, files | Owner-org editors* | Owner-org editors* |
+| video_assets | Owner-org editors*; enrolled students for assets in their pinned major's latest minor, with current batch access | Owner-org editors* |
+| files | Owner-org editors* | Owner-org editors* |
 | catalog_entries | Everyone | Owner-org editors* |
 
 \* **Editors**: `instructor` or `org_admin` of the course's owner org, acting in that org, or platform
@@ -152,6 +156,10 @@ admins.
 Helper functions for courses: `app.course_readable(course)` (the reader rule above) and
 `app.is_org_grant(grant, course, org)` (used by the narrowing policy). Both are `SECURITY DEFINER`,
 so policies on `courses` and `course_assignments` don't recurse into each other.
+
+`app.video_readable(asset)` additionally checks the current student's active enrollment, pinned
+major, latest minor and current assignment. Playback services first authorize the enrollment and
+lesson. Signed URLs remain usable until their short expiry; revocation prevents issuing new URLs.
 
 **Assignment rules (confirmed 2026-09-26):**
 1. Assignments the publisher made, including publisher-made batch assignments, can be removed only

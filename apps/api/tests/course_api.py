@@ -10,6 +10,7 @@
 the requests enqueued (enrollment fan-out, upgrades) the way the worker would.
 """
 
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any
@@ -81,6 +82,9 @@ class BuiltCourse:
     lessons_by_module: dict[UUID, list[UUID]] = field(default_factory=dict)
 
 
+_OUTLINE_EDIT = re.compile(r"^/courses/(?P<course>[0-9a-f-]{36})/(modules|lessons)(/|$)")
+
+
 def ok(response: Response, status: int = 200) -> Any:
     assert response.status_code == status, response.text[:500]
     return response.json() if response.content else None
@@ -99,7 +103,13 @@ class CourseApi:
     async def request(
         self, method: str, path: str, user: User, org: Organization, **kwargs: Any
     ) -> Response:
-        headers = self.h(user, org, **kwargs.pop("headers", {}))
+        extra: dict[str, str] = kwargs.pop("headers", {})
+        # Outline and lesson edits require If-Match. Send the current revision unless the test
+        # sets the header itself (tests of the 428/409 behaviour call the client directly).
+        outline = _OUTLINE_EDIT.match(path)
+        if outline and method != "GET" and "If-Match" not in extra:
+            extra["If-Match"] = str(await self.factory.course_revision(UUID(outline["course"])))
+        headers = self.h(user, org, **extra)
         return await self.client.request(method, f"/api/v1{path}", headers=headers, **kwargs)
 
     async def lesson_content(self, org: Organization, lesson_type: str) -> dict[str, Any]:
