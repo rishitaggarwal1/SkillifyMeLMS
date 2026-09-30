@@ -81,6 +81,7 @@ Defined once, in `apps/api/app/modules/identity/authz.py` (`ROLE_PERMISSIONS`).
 | `POST /webhooks/video/bunny/{secret}` | Provider webhook secret (constant-time check); status is fetched from Bunny, never trusted from the body |
 | `POST /files`, `GET /files`, `GET /files/{id}`, `POST /files/{id}/confirm`, `GET /files/{id}/download` | Owner-org course editors (`course.edit`); item routes return 404 across orgs |
 | `GET /courses/{id}/lessons/{lesson_id}/preview` | org_admin, instructor of the **owner** org (draft notes preview; others get 404) |
+| `GET /organizations/directory` | Platform admins, and org_admin or instructor of an active content-publisher org (id and name of active orgs only; enforced by `app.organization_directory`, migration 0009). Everyone else gets 403 |
 | `GET /catalog`, `GET /catalog/{slug}` | Everyone, signed in or not (public catalog fields only; no ids or organization) |
 | `GET /courses/{id}/versions/{version_id}/lessons/{lesson_id}/playback`, `.../pdf`, `.../images` | Course readers' staff: org_admin, instructor of the owner org or of an org the course is assigned to (any published version). Students get 403 (they use their enrollment routes) |
 | `POST /enrollments/{id}/lessons/{lesson_id}/pdf-access`, `GET .../images` | The active enrollment's student, with a current batch assignment; the file must be used by that lesson in their pinned major's latest minor |

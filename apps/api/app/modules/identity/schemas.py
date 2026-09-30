@@ -85,6 +85,13 @@ class OrganizationOut(BaseModel):
     updated_at: datetime
 
 
+class DirectoryOrganization(BaseModel):
+    """What content publishers see of another organization: its id and name only."""
+
+    id: UUID
+    name: str
+
+
 # ---------------------------------------------------------------------------- batches
 
 

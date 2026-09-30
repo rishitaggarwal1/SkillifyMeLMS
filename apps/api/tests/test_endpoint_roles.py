@@ -262,6 +262,11 @@ def _content(kind: str) -> Builder:
 
 
 MATRIX = [
+    # Org A is not a content publisher: only platform admins may browse (publisher staff are
+    # covered in identity/tests/test_organization_directory.py).
+    Route(
+        "GET", "/api/v1/organizations/directory", PLATFORM, at("/api/v1/organizations/directory")
+    ),
     Route("GET", "/api/v1/catalog", set(ROLES), at("/api/v1/catalog"), public=True),
     Route(
         "GET",

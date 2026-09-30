@@ -1,7 +1,7 @@
 # Phase 2 — Courses and learning content (plan)
 
-**Status (2026-09-30):** steps 1–5 are complete and committed. Step 3 (video) also made
-`If-Match` required on outline and lesson edits. Step 6 (instructor UI) is next. Steps 6–8 are
+**Status (2026-09-30):** steps 1–6 are complete and committed. Step 3 (video) also made
+`If-Match` required on outline and lesson edits. Step 7 (student UI) is next. Steps 7–8 are
 not started. See
 [Implementation status](#implementation-status). Phase 1 (identity, organizations, roles, RLS) is
 complete; see [What Phase 1 provides](#what-phase-1-provides). Resume by re-reading `CLAUDE.md`
@@ -122,6 +122,18 @@ See the step 3 notes under [Build order](#build-order).
 - **Web:** `/catalog`, `/catalog/[slug]`, `POST /api/revalidate`.
 - **Tests:** `test_caching`, `test_catalog` (respx for the revalidation call), `test_event_schemas`,
   the `revalidate` Vitest suite, and `e2e/catalog.spec.ts`.
+
+### Step 6 — instructor UI
+
+- **Web:** `features/teach/*` (course list, course page, outline editor, lesson page, notes
+  editor, publish dialog, assignment panel, skills picker, file uploads) and `/teach` routes.
+- **API:** `GET /organizations/directory` (migration 0009).
+- **Tests:**
+  - Vitest: reorder, `normalizeNotesDoc`, the Tiptap output, and `useOutlineEdit` (If-Match,
+    serialized edits, 409 rollback)
+  - Playwright: `e2e/teach.spec.ts` (build, reorder, notes, PDF, publish, grant; 360px width; an
+    assigned org's instructor can't edit)
+  - pytest: `test_organization_directory`
 
 ### Deviations between this plan and the committed code
 
@@ -902,6 +914,47 @@ Step 5 implementation notes:
   - `docs/events.md` now has conventions, versioning rules and a JSON Schema for every event.
     `tests/test_event_schemas.py` produces every documented event through real flows and
     validates the payloads and topics against the document.
+
+Step 6 implementation notes:
+- **Routes:** `/teach/courses` (the org's own courses and courses assigned to it; create),
+  `/teach/courses/[id]` (outline, publish, versions, assignments; read-only with distribution for
+  an assigned org) and `/teach/courses/[id]/lessons/[lessonId]` (settings, skills, content).
+  `/teach/*` sits behind `TeachShell` (`course.read`).
+- **Revision-safe edits** (`useOutlineEdit`):
+  - every outline and lesson edit sends `If-Match` from the cached draft
+  - edits of one course run one at a time (a TanStack mutation scope), each adopting the
+    revision the previous one returned
+  - reorders are optimistic; any error rolls back, and a `409 revision_conflict` refetches and
+    tells the author
+- **Outline editor:** `@dnd-kit` (pointer, touch and keyboard sensors) plus Move up/down
+  buttons. Both call the same pure `moveModule` / `moveLesson` (one `PUT .../lessons/order` moves
+  a lesson between modules and keeps its id).
+- **Lesson editors:**
+  - video: pick a ready video or upload one (the step 3 uploader)
+  - PDF: presigned POST with progress, then confirm (rejections show the API's reason)
+  - notes: Tiptap, loaded with `next/dynamic` on the lesson page only. `StarterKit` is
+    restricted to the API's allow-list (headings 2–4; no strike, underline or horizontal rule;
+    http(s)-only links), plus a custom `image` node holding `file_id`. `normalizeNotesDoc` reduces
+    the editor JSON to exactly the API's shape before saving; a Vitest test builds a real editor
+    and checks its output.
+  - placeholder cards for quiz, lab and assignment
+- **Skills picker:** search via `GET /skills?q=`. The small global taxonomy is loaded once
+  (cached) to name the tags a lesson already has.
+- **Publish dialog:** driven by `GET /courses/{id}/publish-preview`. It lists blockers with lesson
+  names and the structural changes, and disables minor when the server says it isn't allowed.
+- **Assignment panel:**
+  - Owners check or uncheck their own batches.
+  - Content publishers grant to other orgs found through the new directory.
+  - A receiving org's admin distributes a granted course to their batches. Rows the publisher
+    created are shown locked.
+- **New API: `GET /organizations/directory`** (migration 0009). Publishers need to find the orgs
+  they grant to, but `organizations` is readable only by members. A `SECURITY DEFINER` function
+  returns only `id` and `name` of active orgs, and only to platform admins and publisher staff.
+  It supports name search (a plain substring, not a LIKE pattern), lookup by `ids`, and cursor
+  pagination by name. The service also returns 403 to everyone else.
+- **Dev note:** the compose web container runs `next dev` (Turbopack) on a Windows bind mount and
+  didn't pick up file edits despite `WATCHPACK_POLLING`. Restart the `web` service after editing
+  web files.
 
 1. Data model, migrations and RLS (skills, courses and draft tree, versions, assignments,
    enrollments, progress, media tables).

@@ -73,7 +73,11 @@ class ImportJobStatus(StrEnum):
 
 class Organization(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "organizations"
-    __table_args__ = (Index("ix_organizations_status", "status"),)
+    __table_args__ = (
+        Index("ix_organizations_status", "status"),
+        # The publishers' organization directory orders and pages by name (migration 0009).
+        Index("ix_organizations_lower_name_id", func.lower(text("name")), "id"),
+    )
 
     name: Mapped[str] = mapped_column(String(200))
     slug: Mapped[str] = mapped_column(String(80), unique=True)

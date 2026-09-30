@@ -1,10 +1,15 @@
+import type { Metadata } from "next";
+
+import { PageTitle } from "@/features/admin/ui";
 import { VideoUpload } from "@/features/video/video-upload";
+
+export const metadata: Metadata = { title: "Videos" };
 
 export default function VideosPage() {
   return (
-    <main className="mx-auto max-w-2xl space-y-4 p-4">
-      <h1 className="text-xl font-semibold">Upload a lesson video</h1>
+    <div className="flex max-w-2xl flex-col gap-4">
+      <PageTitle title="Upload a lesson video" />
       <VideoUpload />
-    </main>
+    </div>
   );
 }

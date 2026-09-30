@@ -18,8 +18,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
-from app.core.errors import AppError, ConflictError, NotFoundError
-from app.core.pagination import CursorParams
+from app.core.errors import (
+    AppError,
+    ConflictError,
+    InvalidCursorError,
+    NotFoundError,
+    PermissionDeniedError,
+)
+from app.core.pagination import CursorParams, decode_cursor, encode_cursor
 from app.core.storage import ObjectStorage
 from app.db.base import new_id
 from app.db.session import run_after_commit, run_after_commit_async
@@ -30,6 +36,7 @@ from app.modules.identity import events
 from app.modules.identity.authz import (
     Permission,
     Principal,
+    require_org,
     require_org_permission,
     require_permission,
 )
@@ -60,6 +67,7 @@ from app.modules.identity.schemas import (
     BatchMembersAddResult,
     BatchOut,
     BatchUpdate,
+    DirectoryOrganization,
     ImportJobOut,
     InvitationCreate,
     InvitationOut,
@@ -197,6 +205,40 @@ async def list_organizations(
     require_permission(ctx.principal, Permission.ORG_MANAGE)
     orgs, cursor = await OrganizationRepository(ctx.session).list_page(params, status=status)
     return [_org_out(o) for o in orgs], cursor
+
+
+DIRECTORY_ROLES = frozenset({"org_admin", "instructor"})
+
+
+async def organization_directory(
+    ctx: Ctx, params: CursorParams, *, search: str | None, ids: Sequence[UUID] | None
+) -> tuple[list[DirectoryOrganization], str | None]:
+    """Active organizations a content publisher can assign courses to (id and name only), for
+    platform admins and org_admins/instructors of a content-publisher org. The SQL function
+    enforces the same rule; this check gives everyone else a clear 403 instead of an empty list."""
+    principal = ctx.principal
+    if not principal.is_platform_admin:
+        org_id = require_org(principal)
+        roles = principal.memberships.get(org_id, frozenset())
+        if not (DIRECTORY_ROLES & set(roles)) or not await org_is_content_publisher(
+            ctx.session, org_id
+        ):
+            raise PermissionDeniedError(
+                "Only staff of a content-publisher organization can browse organizations."
+            )
+    after: tuple[str, UUID] | None = None
+    if params.cursor:
+        data = decode_cursor(params.cursor)
+        try:
+            after = (str(data["name"]), UUID(str(data["id"])))
+        except (KeyError, ValueError) as exc:
+            raise InvalidCursorError from exc
+    rows = await OrganizationRepository(ctx.session).directory(
+        search=search, ids=ids, after=after, limit=params.limit + 1
+    )
+    page, more = rows[: params.limit], len(rows) > params.limit
+    cursor = encode_cursor({"name": page[-1][1], "id": str(page[-1][0])}) if more else None
+    return [DirectoryOrganization(id=i, name=n) for i, n in page], cursor
 
 
 async def get_organization(ctx: Ctx, organization_id: UUID) -> OrganizationOut:

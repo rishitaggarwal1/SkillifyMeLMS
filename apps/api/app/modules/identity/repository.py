@@ -13,7 +13,21 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import delete, exists, func, or_, select, text, update
+from sqlalchemy import (
+    String,
+    Uuid,
+    cast,
+    column,
+    delete,
+    exists,
+    func,
+    null,
+    or_,
+    select,
+    text,
+    update,
+)
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -75,6 +89,26 @@ class OrganizationRepository:
         if status is not None:
             stmt = stmt.where(Organization.status == status)
         return await paginate_by_id(self.session, stmt, Organization.id, params)
+
+    async def directory(
+        self,
+        *,
+        search: str | None,
+        ids: Sequence[UUID] | None,
+        after: tuple[str, UUID] | None,
+        limit: int,
+    ) -> list[tuple[UUID, str]]:
+        """Active organizations (id, name) by name, through `app.organization_directory`, which
+        returns rows only to platform admins and content-publisher staff."""
+        entries = func.app.organization_directory(
+            search,
+            cast(list(ids), ARRAY(Uuid)) if ids is not None else null(),
+            after[0] if after else None,
+            after[1] if after else None,
+            limit,
+        ).table_valued(column("id", Uuid), column("name", String))
+        rows = await self.session.execute(select(entries.c.id, entries.c.name))
+        return [(row.id, row.name) for row in rows]
 
     async def create(self, *, name: str, slug: str, is_content_publisher: bool) -> Organization:
         org = Organization(

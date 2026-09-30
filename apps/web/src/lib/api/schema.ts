@@ -982,6 +982,27 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/organizations/directory": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Organization Directory
+     * @description Active organizations by name (id and name only), for staff of content-publisher orgs to
+     *     pick who to assign courses to. `ids` looks up names for known ids.
+     */
+    get: operations["list_organization_directory"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/organizations/{organization_id}": {
     parameters: {
       query?: never;
@@ -1494,6 +1515,16 @@ export interface components {
        */
       next_cursor: string | null;
     };
+    /** CursorPage[DirectoryOrganization] */
+    CursorPage_DirectoryOrganization_: {
+      /** Items */
+      items: components["schemas"]["DirectoryOrganization"][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for the next page; null when there are no more items.
+       */
+      next_cursor: string | null;
+    };
     /** CursorPage[EnrollmentOut] */
     CursorPage_EnrollmentOut_: {
       /** Items */
@@ -1583,6 +1614,19 @@ export interface components {
        * @description Opaque cursor for the next page; null when there are no more items.
        */
       next_cursor: string | null;
+    };
+    /**
+     * DirectoryOrganization
+     * @description What content publishers see of another organization: its id and name only.
+     */
+    DirectoryOrganization: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
     };
     /** DraftModule */
     DraftModule: {
@@ -5592,6 +5636,52 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["OrganizationOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  list_organization_directory: {
+    parameters: {
+      query?: {
+        q?: string | null;
+        ids?: string[] | null;
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_DirectoryOrganization_"];
         };
       };
       /** @description Client error */

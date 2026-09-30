@@ -18,6 +18,7 @@ from app.modules.identity.schemas import (
     BatchMembersAddResult,
     BatchOut,
     BatchUpdate,
+    DirectoryOrganization,
     ImportJobOut,
     InvitationCreate,
     InvitationOut,
@@ -109,6 +110,19 @@ async def list_organizations(
     ctx: Ctx, page: PageParams, status_: StatusFilter = None
 ) -> CursorPage[OrganizationOut]:
     items, cursor = await service.list_organizations(ctx, page, status_)
+    return CursorPage(items=items, next_cursor=cursor)
+
+
+@orgs.get("/directory", operation_id="list_organization_directory")
+async def organization_directory(
+    ctx: Ctx,
+    page: PageParams,
+    q: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
+    ids: Annotated[list[UUID] | None, Query(max_length=100)] = None,
+) -> CursorPage[DirectoryOrganization]:
+    """Active organizations by name (id and name only), for staff of content-publisher orgs to
+    pick who to assign courses to. `ids` looks up names for known ids."""
+    items, cursor = await service.organization_directory(ctx, page, search=q, ids=ids)
     return CursorPage(items=items, next_cursor=cursor)
 
 
