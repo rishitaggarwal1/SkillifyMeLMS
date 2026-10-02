@@ -15,6 +15,7 @@ enforced), attempt history, plagiarism checks, AI feedback.
 
 import json
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
@@ -342,6 +343,31 @@ async def submit(
         submission = updated
     events.assignment_submitted(ctx.session, submission, resubmission=existing is not None)
     return await _submission_out(ctx, storage, settings, submission, None)
+
+
+# ============================================================================ reports interface
+
+
+@dataclass(frozen=True, slots=True)
+class SubmissionState:
+    status: str  # submitted | graded
+    score: Decimal | None
+    max_marks: int | None
+
+
+async def submission_states(
+    session: AsyncSession, enrollment_ids: Sequence[UUID], lesson_ids: Sequence[UUID]
+) -> dict[tuple[UUID, UUID], SubmissionState]:
+    """(enrollment, lesson) -> submission status and grade, in two queries (progress reports)."""
+    rows = await SubmissionRepository(session).for_enrollments(enrollment_ids, lesson_ids)
+    grades = await GradeRepository(session).for_submissions([r.id for r in rows])
+    result: dict[tuple[UUID, UUID], SubmissionState] = {}
+    for r in rows:
+        g = grades.get(r.id)
+        result[(r.enrollment_id, r.lesson_id)] = SubmissionState(
+            r.status, g.score if g else None, g.max_marks if g else None
+        )
+    return result
 
 
 # ============================================================================ graders

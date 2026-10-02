@@ -15,6 +15,7 @@ from app.modules.enrollments.router import router as enrollments_router
 from app.modules.identity.router import router as identity_router
 from app.modules.media.router import router as media_router
 from app.modules.platform.router import router as platform_router
+from app.modules.reports.router import router as reports_router
 from app.modules.skills.router import router as skills_router
 
 router = APIRouter(prefix="/api/v1", responses=ERROR_RESPONSES)
@@ -27,3 +28,4 @@ router.include_router(enrollments_router)
 router.include_router(media_router)
 router.include_router(assignments_router)
 router.include_router(platform_router)
+router.include_router(reports_router)

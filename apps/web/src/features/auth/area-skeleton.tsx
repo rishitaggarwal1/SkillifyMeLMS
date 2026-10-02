@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Area } from "./roles";
 
 /** How many tabs each area's navigation has (so the placeholder matches the page it becomes). */
-const NAV_TABS: Record<Area, number> = { platform: 5, admin: 3, teach: 2, learn: 0 };
+const NAV_TABS: Record<Area, number> = { platform: 5, admin: 4, teach: 2, learn: 0 };
 
 /**
  * A loading placeholder shaped like the area's landing page: its tab row, the page title, then

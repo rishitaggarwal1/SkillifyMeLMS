@@ -61,3 +61,9 @@ export type StudentAssignment = Schemas["StudentAssignmentOut"];
 export type Submission = Schemas["SubmissionOut"];
 export type GraderSubmissionRow = Schemas["GraderSubmissionRow"];
 export type GraderSubmission = Schemas["GraderSubmissionDetail"];
+
+// ---- progress reports
+export type CourseProgressPage = Schemas["CourseProgressPage"];
+export type StudentProgress = Schemas["StudentProgress"];
+export type ProgressLesson = Schemas["ProgressLesson"];
+export type BatchCourseSummary = Schemas["BatchCourseSummary"];

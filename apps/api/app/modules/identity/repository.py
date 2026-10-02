@@ -559,6 +559,26 @@ class BatchMemberRepository:
             stmt = stmt.where(BatchMember.user_id > after)
         return list(await self.session.scalars(stmt.order_by(BatchMember.user_id).limit(limit)))
 
+    async def students_by_name(
+        self, batch_id: UUID, *, after: tuple[str, UUID] | None, limit: int
+    ) -> list[User]:
+        """Keyset page of a batch's students ordered by name (then id), for reports."""
+        name = func.lower(User.full_name)
+        stmt = (
+            select(User)
+            .join(BatchMember, BatchMember.user_id == User.id)
+            .join(
+                Membership,
+                (Membership.user_id == BatchMember.user_id)
+                & (Membership.organization_id == BatchMember.organization_id)
+                & (Membership.role == "student"),
+            )
+            .where(BatchMember.batch_id == batch_id)
+        )
+        if after is not None:
+            stmt = stmt.where(or_(name > after[0], (name == after[0]) & (User.id > after[1])))
+        return list(await self.session.scalars(stmt.order_by(name, User.id).limit(limit)))
+
     async def batch_ids_for_users(
         self, organization_id: UUID, user_ids: Sequence[UUID]
     ) -> dict[UUID, list[UUID]]:

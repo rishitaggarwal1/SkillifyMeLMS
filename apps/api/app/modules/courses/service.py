@@ -252,6 +252,16 @@ async def version_ref(
     return _ref(version) if version else None
 
 
+def outline_lessons(version: VersionRef) -> list[tuple[str, dict[str, Any]]]:
+    """(module title, lesson) for every lesson of a published version, in outline order. Read
+    defensively: a snapshot is stored JSON."""
+    return [
+        (m.get("title", ""), lesson)
+        for m in version.snapshot.get("modules") or []
+        for lesson in m.get("lessons") or []
+    ]
+
+
 def snapshot_lesson(version: VersionRef, lesson_id: UUID) -> dict[str, Any] | None:
     """A lesson as the version published it (title, content, ...)."""
     wanted = str(lesson_id)

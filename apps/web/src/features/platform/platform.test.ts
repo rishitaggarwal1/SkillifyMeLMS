@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { istDayEnd, istDayStart } from "./api";
 import { organizationFormSchema, slugify } from "./organizations";
-import { uuidParam } from "./params";
+import { uuidParam } from "@/lib/params";
 
 describe("slugify", () => {
   it.each([

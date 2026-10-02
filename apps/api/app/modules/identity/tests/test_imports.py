@@ -11,8 +11,8 @@ from httpx import AsyncClient
 from uuid_utils.compat import uuid7
 
 from app.core.config import Settings
+from app.core.csv_safety import csv_cell
 from app.modules.identity.imports import ImportFileError, parse_csv, run_import
-from app.modules.identity.service import _csv_safe
 from app.modules.identity.tests.conftest import OrgSetup
 from tests.factories import Factory
 from tests.fakes import EnqueueRecorder, FakeKeycloakAdmin
@@ -278,7 +278,7 @@ async def test_upload_too_large(
 
 
 def test_error_report_escapes_formulas() -> None:
-    assert _csv_safe('=HYPERLINK("http://evil")') == '\'=HYPERLINK("http://evil")'
-    assert _csv_safe("+1") == "'+1"
-    assert _csv_safe("@SUM(A1)") == "'@SUM(A1)"
-    assert _csv_safe("normal@college.test") == "normal@college.test"
+    assert csv_cell('=HYPERLINK("http://evil")') == '\'=HYPERLINK("http://evil")'
+    assert csv_cell("+1") == "'+1"
+    assert csv_cell("@SUM(A1)") == "'@SUM(A1)"
+    assert csv_cell("normal@college.test") == "normal@college.test"

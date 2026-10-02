@@ -297,6 +297,19 @@ def _graded(action: str) -> Builder:
     return build
 
 
+def _report(suffix: str) -> Builder:
+    async def build(w: World) -> Request:
+        course, _, _ = await _course(w, published=True)
+        batch = await w.factory.batch(w.org)
+        await w.factory.add_to_batch(batch, w.users["student"])
+        await w.factory.assignment(course, w.org, batch=batch)
+        if suffix == "batch-courses":
+            return f"/api/v1/batches/{batch.id}/courses", {}
+        return f"/api/v1/courses/{course.id}/{suffix}", {"params": {"batch_id": str(batch.id)}}
+
+    return build
+
+
 @dataclass(frozen=True)
 class Route:
     method: str
@@ -503,6 +516,28 @@ MATRIX = [
     ),
     Route("GET", "/api/v1/platform/courses", PLATFORM, at("/api/v1/platform/courses")),
     Route("GET", "/api/v1/platform/audit-log", PLATFORM, at("/api/v1/platform/audit-log")),
+    # --- progress reports (Phase 2.5): the org's staff, for the org's own batches.
+    Route(
+        "GET",
+        "/api/v1/courses/{course_id}/progress",
+        STAFF_READ,
+        _report("progress"),
+        names_resource=True,
+    ),
+    Route(
+        "GET",
+        "/api/v1/courses/{course_id}/progress.csv",
+        STAFF_READ,
+        _report("progress.csv"),
+        names_resource=True,
+    ),
+    Route(
+        "GET",
+        "/api/v1/batches/{batch_id}/courses",
+        STAFF_READ,
+        _report("batch-courses"),
+        names_resource=True,
+    ),
     # --- assignments (Phase 2.5): owner-org editors define them; the enrolled student submits
     # (everyone else 404); graders are instructors and org admins of the student's org.
     Route(

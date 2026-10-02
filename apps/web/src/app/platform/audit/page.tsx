@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { PlatformAuditPage } from "@/features/platform/audit";
-import { uuidParam } from "@/features/platform/params";
+import { uuidParam } from "@/lib/params";
 
 export const metadata: Metadata = { title: "Audit log" };
 

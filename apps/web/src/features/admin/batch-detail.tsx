@@ -28,6 +28,8 @@ import {
   useArchiveBatch,
   useRemoveBatchMember,
 } from "./api";
+import { BatchCourses } from "@/features/reports/batch-courses";
+
 import { useDebounced } from "./hooks";
 import { ConfirmButton, EmptyState, ErrorAlert, LoadMore, PageTitle, errorMessage } from "./ui";
 
@@ -82,6 +84,7 @@ export function BatchDetailPage({ batchId }: { batchId: string }) {
         }
       />
       {b.description ? <p className="text-sm text-muted-foreground">{b.description}</p> : null}
+      <BatchCourses batchId={b.id} />
       <h2 className="text-base font-medium">
         Members <span className="text-muted-foreground tabular-nums">({b.member_count})</span>
       </h2>

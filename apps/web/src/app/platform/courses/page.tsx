@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { PlatformCoursesPage } from "@/features/platform/courses";
-import { uuidParam } from "@/features/platform/params";
+import { uuidParam } from "@/lib/params";
 
 export const metadata: Metadata = { title: "Courses" };
 

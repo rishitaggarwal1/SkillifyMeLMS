@@ -103,6 +103,26 @@ export interface paths {
     patch: operations["update_batch"];
     trace?: never;
   };
+  "/api/v1/batches/{batch_id}/courses": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Batch Courses
+     * @description Courses assigned to the batch, with how far its students are in each.
+     */
+    get: operations["batch_courses"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/batches/{batch_id}/members": {
     parameters: {
       query?: never;
@@ -485,6 +505,44 @@ export interface paths {
      * @description Set the module's lessons in order; lessons listed from other modules move here.
      */
     put: operations["reorder_lessons"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/courses/{course_id}/progress": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Course Progress
+     * @description One page of a batch's students (by name) with progress %, last activity, per-lesson
+     *     completion and assignment status. Columns are the lessons of the latest version.
+     */
+    get: operations["course_progress"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/courses/{course_id}/progress.csv": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Course Progress Csv */
+    get: operations["course_progress_csv"];
+    put?: never;
     post?: never;
     delete?: never;
     options?: never;
@@ -1504,6 +1562,18 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** AssignmentCell */
+    AssignmentCell: {
+      /** Max Marks */
+      max_marks: number | null;
+      /** Score */
+      score: string | null;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "submitted" | "graded";
+    };
     /** AssignmentCreate */
     AssignmentCreate: {
       /**
@@ -1651,6 +1721,27 @@ export interface components {
       target_id: string | null;
       /** Target Type */
       target_type: string;
+    };
+    /** BatchCourseSummary */
+    BatchCourseSummary: {
+      /** Average Percent */
+      average_percent: number;
+      /** Completed */
+      completed: number;
+      /**
+       * Course Id
+       * Format: uuid
+       */
+      course_id: string;
+      /**
+       * Enrolled
+       * @description The batch's students actively enrolled
+       */
+      enrolled: number;
+      /** Title */
+      title: string;
+      /** Version */
+      version: string | null;
     };
     /** BatchCreate */
     BatchCreate: {
@@ -1832,6 +1923,32 @@ export interface components {
       /** Name */
       name: string;
     };
+    /** CourseProgressPage */
+    CourseProgressPage: {
+      /**
+       * Batch Id
+       * Format: uuid
+       */
+      batch_id: string;
+      /**
+       * Course Id
+       * Format: uuid
+       */
+      course_id: string;
+      /** Course Title */
+      course_title: string;
+      /** Items */
+      items: components["schemas"]["StudentProgress"][];
+      /** Lessons */
+      lessons: components["schemas"]["ProgressLesson"][];
+      /** Next Cursor */
+      next_cursor: string | null;
+      /**
+       * Version
+       * @description The latest version the columns come from
+       */
+      version: string | null;
+    };
     /** CourseUpdate */
     CourseUpdate: {
       /** Description */
@@ -1857,6 +1974,16 @@ export interface components {
     CursorPage_AuditEntryOut_: {
       /** Items */
       items: components["schemas"]["AuditEntryOut"][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for the next page; null when there are no more items.
+       */
+      next_cursor: string | null;
+    };
+    /** CursorPage[BatchCourseSummary] */
+    CursorPage_BatchCourseSummary_: {
+      /** Items */
+      items: components["schemas"]["BatchCourseSummary"][];
       /**
        * Next Cursor
        * @description Opaque cursor for the next page; null when there are no more items.
@@ -2913,6 +3040,23 @@ export interface components {
       /** Url */
       url: string;
     };
+    /**
+     * ProgressLesson
+     * @description A column: a lesson of the course's latest version, in outline order.
+     */
+    ProgressLesson: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Lesson Type */
+      lesson_type: string;
+      /** Module Title */
+      module_title: string;
+      /** Title */
+      title: string;
+    };
     /** PublishBlocker */
     PublishBlocker: {
       /**
@@ -3056,6 +3200,54 @@ export interface components {
     StudentAssignmentOut: {
       assignment: components["schemas"]["PublishedAssignment"];
       submission: components["schemas"]["SubmissionOut"] | null;
+    };
+    /** StudentProgress */
+    StudentProgress: {
+      /**
+       * Assignments
+       * @description Per assignment lesson the student submitted
+       */
+      assignments: {
+        [key: string]: components["schemas"]["AssignmentCell"];
+      };
+      /** Completed At */
+      completed_at: string | null;
+      /** Enrollment Id */
+      enrollment_id: string | null;
+      /**
+       * Enrollment Status
+       * @enum {string}
+       */
+      enrollment_status: "active" | "revoked" | "not_enrolled";
+      /** Last Activity At */
+      last_activity_at: string | null;
+      /**
+       * Lessons
+       * @description Per lesson column
+       */
+      lessons: {
+        [key: string]: "completed" | "in_progress" | "not_started" | "not_in_version";
+      };
+      /** Progress Percent */
+      progress_percent: number;
+      student: components["schemas"]["StudentRef"];
+      /**
+       * Version
+       * @description The version the student sees, e.g. "1.2"
+       */
+      version: string | null;
+    };
+    /** StudentRef */
+    StudentRef: {
+      /** Email */
+      email: string;
+      /** Full Name */
+      full_name: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
     };
     /** StudentSummary */
     StudentSummary: {
@@ -3752,6 +3944,52 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["BatchOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  batch_courses: {
+    parameters: {
+      query?: {
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        batch_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_BatchCourseSummary_"];
         };
       };
       /** @description Client error */
@@ -5089,6 +5327,100 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["DraftOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  course_progress: {
+    parameters: {
+      query: {
+        /** @description One of the org's batches assigned the course */
+        batch_id: string;
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        course_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CourseProgressPage"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  course_progress_csv: {
+    parameters: {
+      query: {
+        /** @description One of the org's batches assigned the course */
+        batch_id: string;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        course_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The whole batch as CSV */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "text/csv": unknown;
         };
       };
       /** @description Client error */

@@ -518,6 +518,53 @@ async def recompute_progress(
     return percent
 
 
+# ============================================================================ reports interface
+# For the progress report (reports module). Staff read their org's rows through RLS.
+
+
+@dataclass(frozen=True, slots=True)
+class EnrollmentProgress:
+    enrollment_id: UUID
+    user_id: UUID
+    status: str
+    major_version: int
+    progress_percent: int
+    last_accessed_at: datetime | None
+    completed_at: datetime | None
+    lessons: dict[UUID, str]  # lesson id -> not_started | in_progress | completed
+
+
+async def course_progress_for_users(
+    session: AsyncSession, course_id: UUID, user_ids: Sequence[UUID]
+) -> dict[UUID, EnrollmentProgress]:
+    """Each user's enrollment in the course with per-lesson status, in two queries."""
+    enrollments = await EnrollmentRepository(session).for_course_users(course_id, user_ids)
+    rows = await LessonProgressRepository(session).for_enrollments([e.id for e in enrollments])
+    lessons: dict[UUID, dict[UUID, str]] = {e.id: {} for e in enrollments}
+    for row in rows:
+        lessons[row.enrollment_id][row.lesson_id] = row.status
+    return {
+        e.user_id: EnrollmentProgress(
+            e.id,
+            e.user_id,
+            e.status,
+            e.major_version,
+            e.progress_percent,
+            e.last_accessed_at,
+            e.completed_at,
+            lessons[e.id],
+        )
+        for e in enrollments
+    }
+
+
+async def course_summaries_for_users(
+    session: AsyncSession, course_ids: Sequence[UUID], user_ids: Sequence[UUID]
+) -> dict[UUID, tuple[int, int, float]]:
+    """Per course: (active enrollments, completed, average progress %) among these users."""
+    return await EnrollmentRepository(session).summaries(course_ids, user_ids)
+
+
 # ============================================================================ platform counts
 
 # Asia/Kolkata has been UTC+05:30 without DST since 1945, so a fixed offset is exact and needs no

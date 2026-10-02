@@ -1,6 +1,6 @@
 # Phase 2.5 — Demo-ready portal (plan)
 
-**Status (2026-10-02): approved; steps 1–4 (platform admin API, platform UI and role home, assignments backend and UI) committed, see
+**Status (2026-10-03): approved; steps 1–5 (platform admin, role home, assignments, progress reports and college-admin screens) committed, see
 [Implementation status](#3a-implementation-status).** Phase 2 is
 complete and tagged `v0.2.0` ([phase-2.md](phase-2.md)).
 
@@ -582,6 +582,62 @@ Every step ends with:
    form's current values too, because the API takes the full definition.
 3. **A student sees a new grade on reload or when the window regains focus.** Nothing pushes it
    live; realtime is Phase 4 (Centrifugo).
+
+### Step 5: progress reports and college-admin screens (2026-10-03)
+
+- **Module `reports`** (no tables; router, schemas, service; a STOPGAP comment says Phase 5
+  replaces it with ClickHouse while keeping the API shape):
+  - `GET /courses/{id}/progress?batch_id=`: a page of the batch's students by name. Each row has
+    progress %, last activity, version, a cell per lesson (completed, in progress, not started,
+    not in this student's version) and assignment status or score. The columns are the latest
+    version's lessons.
+  - `GET /courses/{id}/progress.csv?batch_id=`: the whole batch, fetched in pages of 500, with
+    cells neutralized against formula injection.
+  - `GET /batches/{id}/courses`: the batch's courses with enrolled, completed and average
+    progress.
+  - Access: `course.read` staff of the active org, for **their own** batches that have the
+    course; everyone else gets 404. MATRIX rows and `docs/access-control.md` are updated.
+- **Interfaces added:**
+  - identity: `batch_students_page`, keyset by (lowercased name, id)
+  - enrollments: `course_progress_for_users`, `course_summaries_for_users`
+  - assignments: `submission_states`
+  - courses: `outline_lessons`
+  - The shared CSV helper moved to `app/core/csv_safety.py`, and identity's import errors CSV
+    uses it.
+- **Queries per page are constant:** `test_queries_per_page_dont_grow_with_students` counts the
+  SQL for a 1-student and a 13-student batch, and they are equal.
+- **Web:**
+  - `/teach/courses/[id]/progress`: a batch picker (only batches that have the course) and a
+    table with a sticky name column that scrolls sideways at 360px while the page doesn't, Load
+    more and Download CSV
+  - a "Student progress" link on course pages
+  - `/admin/courses`: granted courses, each with "Choose batches" (the existing distribution
+    panel) and "Progress"; added as the first Admin tab
+  - `/admin/batches/[id]`: "Courses and progress"
+- **Tests:** API (6 report tests, MATRIX), Vitest (`ProgressGrid` cells, assignment scores,
+  column titles), Playwright `e2e/admin-courses.spec.ts`. In that spec the college admin assigns
+  a granted course to ECE 2026 from `/admin/courses` on a phone; the batch page shows it; the ECE
+  student gets it; the instructor's progress table and CSV work at 360px.
+
+**Deviations in step 5:**
+1. **`GET /batches/{id}/courses` is new** (not in the plan). The per-batch view needed the
+   batch's courses with a summary in one call, rather than a request per course.
+2. **Students are listed by name**, with keyset paging on (lowercased name, id), rather than by
+   id.
+3. **The CSV is built in memory from 500-row pages** rather than streamed. That is fine for
+   batches of a few thousand. The session ends with the request, so streaming would need its
+   own session; Phase 5 replaces the source anyway.
+4. **Columns follow the latest version.** A student on an older major sees "n/a" for lessons
+   their version doesn't have.
+5. **`outline_lessons` reads a snapshot defensively** (missing `modules` or `lessons` keys),
+   like the web player does.
+6. **`/admin` still opens Batches.** Courses is the first tab, but the existing landing (and its
+   tests) is unchanged.
+7. **Two web bugs found by the 360px checks, both fixed:**
+   - The table's screen-reader labels are absolutely positioned and escaped the scroll box,
+     widening the page to 440px. The scroll box is now `relative`.
+   - The batch picker only knew the first page of 25 batches. It now loads just the batches
+     that have the course.
 
 ## 4. Decisions (approved 2026-10-02)
 

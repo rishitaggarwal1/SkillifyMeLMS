@@ -10,6 +10,7 @@ import { hasPermission, useMe } from "@/features/auth/queries";
 import { cn } from "@/lib/utils";
 
 const NAV = [
+  { href: "/admin/courses", label: "Courses" },
   { href: "/admin/batches", label: "Batches" },
   { href: "/admin/members", label: "Members" },
   { href: "/admin/imports", label: "Import" },

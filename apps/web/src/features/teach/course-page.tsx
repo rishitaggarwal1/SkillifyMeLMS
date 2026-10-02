@@ -31,6 +31,19 @@ export function CoursePage({ courseId }: { courseId: string }) {
   );
 }
 
+/** For staff of the org: their batches' progress in this course. */
+function ProgressLink({ course }: { course: Course }) {
+  if (!course.current_version) return null;
+  return (
+    <Link
+      href={`/teach/courses/${course.id}/progress`}
+      className="self-start text-sm font-medium underline underline-offset-4"
+    >
+      Student progress →
+    </Link>
+  );
+}
+
 function Header({ course, actions }: { course: Course; actions?: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-2">
@@ -66,6 +79,7 @@ function CourseEditor({ course }: { course: Course }) {
         }
       />
       {course.current_version ? <StudentLink courseId={course.id} /> : null}
+      <ProgressLink course={course} />
       <GradingSection course={course} />
       <OutlineEditor courseId={course.id} />
       <Versions courseId={course.id} />
@@ -88,6 +102,7 @@ function AssignedCourse({ course }: { course: Course }) {
         which of your batches get it; only the publisher can edit it.
       </p>
       <StudentLink courseId={course.id} />
+      <ProgressLink course={course} />
       <GradingSection course={course} />
       <Versions courseId={course.id} />
       <AssignmentsPanel course={course} />

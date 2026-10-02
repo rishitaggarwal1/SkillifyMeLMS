@@ -57,6 +57,41 @@ class EnrollmentRepository:
     async def get(self, enrollment_id: UUID) -> Enrollment | None:
         return await self.session.get(Enrollment, enrollment_id, populate_existing=True)
 
+    async def for_course_users(self, course_id: UUID, user_ids: Sequence[UUID]) -> list[Enrollment]:
+        """Enrollments of many users in one course (uq_enrollments_user_course), one query."""
+        if not user_ids:
+            return []
+        return list(
+            await self.session.scalars(
+                select(Enrollment).where(
+                    Enrollment.course_id == course_id,
+                    Enrollment.user_id.in_(_uuid_values(user_ids, "users")),
+                )
+            )
+        )
+
+    async def summaries(
+        self, course_ids: Sequence[UUID], user_ids: Sequence[UUID]
+    ) -> dict[UUID, tuple[int, int, float]]:
+        """Per course: (active enrollments, completed, average progress) among `user_ids`."""
+        if not course_ids or not user_ids:
+            return {}
+        rows = await self.session.execute(
+            select(
+                Enrollment.course_id,
+                func.count(),
+                func.count(Enrollment.completed_at),
+                func.coalesce(func.avg(Enrollment.progress_percent), 0),
+            )
+            .where(
+                Enrollment.course_id.in_(_uuid_values(course_ids, "courses")),
+                Enrollment.user_id.in_(_uuid_values(user_ids, "users")),
+                Enrollment.status == EnrollmentStatus.ACTIVE,
+            )
+            .group_by(Enrollment.course_id)
+        )
+        return {cid: (int(n), int(done), float(avg)) for cid, n, done, avg in rows}
+
     async def count_by_status(self) -> dict[str, int]:
         rows = await self.session.execute(
             select(Enrollment.status, func.count()).group_by(Enrollment.status)

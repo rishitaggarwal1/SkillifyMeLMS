@@ -18,6 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
+from app.core.csv_safety import csv_cell
 from app.core.errors import (
     AppError,
     ConflictError,
@@ -176,6 +177,17 @@ async def user_summaries(session: AsyncSession, user_ids: Sequence[UUID]) -> dic
     members), in one query."""
     users = await UserRepository(session).get_many(list(dict.fromkeys(user_ids)))
     return {u.id: UserOut.model_validate(u, from_attributes=True) for u in users}
+
+
+async def batch_students_page(
+    session: AsyncSession, batch_id: UUID, *, after: tuple[str, UUID] | None, limit: int
+) -> list[UserOut]:
+    """One page of a batch's students, ordered by name. `after` is the previous page's last
+    (lowercased name, id)."""
+    users = await BatchMemberRepository(session).students_by_name(
+        batch_id, after=after, limit=limit
+    )
+    return [UserOut.model_validate(u, from_attributes=True) for u in users]
 
 
 async def batch_student_ids(session: AsyncSession, batch_id: UUID) -> list[UUID]:
@@ -960,15 +972,6 @@ async def get_import(ctx: Ctx, job_id: UUID) -> ImportJobOut:
     return ImportJobOut.model_validate(await _get_job(ctx, job_id), from_attributes=True)
 
 
-_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
-
-
-def _csv_safe(value: object) -> str:
-    """Neutralize spreadsheet formula injection (OWASP): prefix risky cells with a quote."""
-    text = "" if value is None else str(value)
-    return f"'{text}" if text.startswith(_FORMULA_PREFIXES) else text
-
-
 async def import_errors_csv(ctx: Ctx, job_id: UUID) -> str:
     require_permission(ctx.principal, Permission.MEMBER_IMPORT)
     await _get_job(ctx, job_id)
@@ -980,10 +983,10 @@ async def import_errors_csv(ctx: Ctx, job_id: UUID) -> str:
         writer.writerow(
             [
                 e.row_number,
-                _csv_safe(e.code),
-                _csv_safe(e.message),
-                _csv_safe(e.raw.get("email")),
-                _csv_safe(e.raw.get("full_name")),
+                csv_cell(e.code),
+                csv_cell(e.message),
+                csv_cell(e.raw.get("email")),
+                csv_cell(e.raw.get("full_name")),
             ]
         )
     return buffer.getvalue()
