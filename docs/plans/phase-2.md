@@ -1,11 +1,13 @@
 # Phase 2 — Courses and learning content (plan)
 
-**Status (2026-10-02):** all 8 steps are complete and committed. Step 3 (video) also made
-`If-Match` required on outline and lesson edits. The Bunny smoke script has not been run against
-a real library yet: there are no credentials. See
-[Implementation status](#implementation-status). Phase 1 (identity, organizations, roles, RLS) is
-complete; see [What Phase 1 provides](#what-phase-1-provides). Resume by re-reading `CLAUDE.md`
-and `docs/access-control.md`, then present this plan for approval before coding.
+**Status: complete (2026-10-02), tagged `v0.2.0`.** All 8 steps are committed and pushed. CI is
+green on the final commit `ccfa3cf`, including the first E2E run with the done-when flow:
+[run 37008144574](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37008144574).
+The Bunny smoke script has not been run against a real library: there are no credentials. See
+[Implementation status](#implementation-status), [Final endpoints](#final-endpoints),
+[Final tables](#final-tables), [Deviations](#deviations-between-this-plan-and-the-committed-code)
+and [Open follow-ups](#open-follow-ups). Phase 1 (identity, organizations, roles, RLS) is
+complete; see [What Phase 1 provides](#what-phase-1-provides).
 
 First written 2026-09-26 against the foundation commit. Updated at the end of Phase 1 to use
 Phase 1's real names and to follow the 8 build steps from the Phase 2 prompt.
@@ -48,7 +50,56 @@ control, and progress calculation.
 
 ## Implementation status
 
-Checked against `git log` and the module code on 2026-09-29.
+Checked against `git log`, the OpenAPI spec and the migrations on 2026-10-02.
+
+| Step | Commit |
+|---|---|
+| 1. Data model, migrations, RLS | `41dd7d5` |
+| 2. Services and APIs | `878985b` |
+| 3. Video (and `If-Match` required) | `b0797e1` |
+| 4. Notes and PDFs | `08ab52c`, follow-up `7593683` |
+| 5. Caching, catalog, events | `073b8f7` |
+| 6. Instructor UI | `5d50191`, follow-up `ede554e` |
+| 7. Student UI | `1c706bb` |
+| 8. End-to-end flow, Bunny smoke script, CI repaired | `ccfa3cf` |
+
+### Final endpoints
+
+All under `/api/v1`, each with a row in `MATRIX` (`tests/test_endpoint_roles.py`). Phase 1
+endpoints are not repeated, apart from the two Phase 2 changes to them noted below.
+
+| Area | Endpoints |
+|---|---|
+| Skills | `GET`, `POST /skills`; `PATCH /skills/{skill_id}` |
+| Courses | `GET`, `POST /courses`; `GET`, `PATCH`, `DELETE /courses/{course_id}` (`DELETE` archives) |
+| Draft builder | `GET /courses/{course_id}/draft`; `POST /courses/{course_id}/modules`; `PUT /courses/{course_id}/modules/order`; `PATCH`, `DELETE /courses/{course_id}/modules/{module_id}`; `POST /courses/{course_id}/modules/{module_id}/lessons`; `PUT /courses/{course_id}/modules/{module_id}/lessons/order`; `GET`, `PATCH`, `DELETE /courses/{course_id}/lessons/{lesson_id}`; `GET /courses/{course_id}/lessons/{lesson_id}/preview`; `PUT /courses/{course_id}/lessons/{lesson_id}/skills` |
+| Publishing | `GET /courses/{course_id}/publish-preview`; `GET`, `POST /courses/{course_id}/versions`; `GET /courses/{course_id}/versions/{version_id}` |
+| Reader-staff content | `GET /courses/{course_id}/versions/{version_id}/lessons/{lesson_id}/playback`, `/pdf`, `/images` |
+| Assignments | `GET`, `POST /courses/{course_id}/assignments`; `DELETE /course-assignments/{assignment_id}` |
+| Enrollments | `GET /enrollments` (filter `course_id`); `GET /enrollments/{enrollment_id}`; `POST /courses/{course_id}/enrollment-upgrades` |
+| Student lesson actions | under `/enrollments/{enrollment_id}/lessons/{lesson_id}`: `POST /visit`, `POST /complete`, `GET /playback`, `GET /resume`, `POST /pdf-access`, `GET /images` |
+| Progress | `POST /progress/heartbeat` |
+| Videos | `GET`, `POST /videos`; `GET /videos/{video_id}`; `POST /videos/{video_id}/uploaded`; `GET /videos/{video_id}/playback`; `POST /webhooks/video/bunny/{secret}` (hidden from the schema) |
+| Files | `GET`, `POST /files`; `GET /files/{file_id}`; `POST /files/{file_id}/confirm`; `GET /files/{file_id}/download` |
+| Public catalog | `GET /catalog`, `GET /catalog/{slug}` (no sign-in) |
+| Organizations | `GET /organizations/directory` (new); `GET /batches` gains an exact `name` filter |
+
+Web routes: `/teach/courses`, `/teach/courses/[id]`, `/teach/courses/[id]/lessons/[lessonId]`,
+`/teach/videos`; `/learn`, `/learn/enrollments/[id]`, `/learn/enrollments/[id]/lessons/[lessonId]`
+(the step 3 `/learn/enrollments/[id]/video/[lessonId]` redirects to it), and the resolvers
+`/learn/courses/[courseId]` and `/learn/courses/[courseId]/lessons/[lessonId]`; `/catalog`,
+`/catalog/[slug]`; and the route handler `POST /api/revalidate`.
+
+### Final tables
+
+| Migration | Changes |
+|---|---|
+| `0004_learning_content` | Tables `skills`, `lesson_skills`, `courses`, `course_modules`, `lessons`, `course_versions`, `course_version_lessons`, `course_assignments`, `catalog_entries`, `enrollments`, `lesson_progress`, `video_assets`, `files`; the `lesson_type` enum; `ltree`; `app.course_readable`, `app.is_org_grant`; per-operation policies |
+| `0005_seed_skills` | Starter skills taxonomy (19 skills) |
+| `0006_video_playback` | `lesson_progress.buffer_revision`; `app.video_readable` |
+| `0007_lesson_files` | `course_version_lessons.file_ids` (GIN, backfilled for pdf lessons); `files.kind` check (`pdf`, `image`) and index; `app.file_readable` |
+| `0008_reader_staff_media` | Staff branch for reader orgs in `app.video_readable` and `app.file_readable` |
+| `0009_organization_directory` | `app.organization_directory` (SECURITY DEFINER; `id` and `name` of active orgs) |
 
 ### Step 1 — data model, migrations and RLS (`41dd7d5`)
 
@@ -156,20 +207,54 @@ See the step 3 notes under [Build order](#build-order).
 
 ### Deviations between this plan and the committed code
 
-1. **Skills are global.** The code has no `skills.organization_id`, following `CLAUDE.md`
-   ("global in this phase"; writes only by `platform_admin` and publisher staff). The
-   [Skills](#skills) section above still describes org-scoped skills and is out of date.
-2. **More publish blockers.** Besides `empty_course` and `video_not_ready`, publishing also
+Final list at close-out (2026-10-02). Each was accepted when it was made; the dates say when.
+
+1. **Skills are global** (2026-09-29). No `skills.organization_id`, following `CLAUDE.md`.
+   Everyone reads; only `platform_admin` and publisher staff (`org_admin`, `instructor`,
+   `lab_author`) write, enforced by RLS and the service layer. The [Skills](#skills) section
+   was rewritten to match.
+2. **`If-Match` is required** (2026-09-29, landed with step 3). It was optional at `878985b`.
+   Every endpoint that changes the outline or lessons (modules, lessons, both reorders, skill
+   tags) returns `428 precondition_required` without it and `409` when it is stale.
+3. **Enrollment URLs plus resolver routes** (step 7; resolvers 2026-10-02). The canonical
+   player URL is `/learn/enrollments/[id]/lessons/[lessonId]`, not `/learn/courses/[id]`,
+   because everything a student sees hangs off the enrollment. The shareable
+   `/learn/courses/[courseId]` and `/learn/courses/[courseId]/lessons/[lessonId]` redirect to
+   the student's active enrollment, or return 404. They are backed by the new `course_id`
+   filter on `GET /enrollments` and build redirects from `WEB_ORIGIN`.
+4. **`CATALOG_DATA_CACHE`** (2026-10-02). An explicit web setting, never inferred: `off`
+   (compose web and `make dev-web-host`) reads the catalog fresh; unset (production, CI) uses
+   the tagged ISR data cache.
+5. **`GET /organizations/directory`** (step 6, migration 0009). Not in the plan. It lets
+   publishers find orgs to grant to: only `id` and `name` of active orgs, to platform admins and
+   publisher staff, with `q=` search and cursor pagination. Others get `403
+   content_publisher_staff_required`. **Caveat** (in `docs/access-control.md`): every publisher
+   org sees all active org names. That is fine while SkillifyMe is the only publisher; revisit
+   it before another org gets `is_content_publisher`.
+6. **Assigned-org staff can open the content** (step 4 follow-up, migration 0008). The
+   `org_admin` and `instructor` of an org that reads a course can play its videos and open its
+   PDFs and images in any published version, through
+   `GET /courses/{id}/versions/{version_id}/lessons/{lesson_id}/playback|pdf|images`. Editing
+   stays owner-org only.
+7. **A rejected confirm is `422 file_rejected`** (step 4 follow-up). The rejected status is
+   committed first in its own transaction with the caller's RLS context, then the object is
+   deleted and the error raised, so the file can never be attached. A missing object is `409`
+   and stays pending.
+8. **Watch-tracking fix** (step 8). The step 3 tracker discarded playback that happened
+   before a late `play` handler ran, so a busy phone lost the first 5 s segment (a video stuck at
+   58% watched). It now times playback from `event.timeStamp` and keeps the paused position.
+   The server-side rules (5 s segments, real-time-bounded credit) are unchanged.
+9. **More publish blockers.** Besides `empty_course` and `video_not_ready`, publishing also
    rejects `pdf_not_ready` and `course_archived`.
-3. **Catalog and `course_published` arrived early.** Step 2 already writes and deletes
-   `catalog_entries` (on publish and archive) and emits `course_published`. Step 5 still owns
-   the Redis outline cache, the Next.js static catalog and its revalidation, and the topic
-   routing.
-4. **Topics not registered yet.** At HEAD, `TOPICS` maps only `batch_member`, so Phase 2 events
-   go to the default `platform.events.v1`. The working tree adds `video_progress` →
-   `learning.progress.v1`. `learning.enrollments.v1` and `courses.v1` remain for step 5, as do
-   the Phase 2 event schemas in `docs/events.md`.
-5. **The consumer reconciles instead of deduping (accepted 2026-09-29).** The batch-member
+10. **Catalog and `course_published` arrived early.** Step 2 already wrote and deleted
+    `catalog_entries` and emitted `course_published`. Step 5 added the cache, the static
+    catalog and revalidation.
+11. **`lesson_completed` is on `learning.enrollments.v1`**, not `learning.progress.v1`. Its
+    aggregate is the enrollment, so it shares that enrollment's topic and ordering.
+12. **Version cache keys are per major** (`course:v:{version_id}`,
+    `course:{id}:major:{n}:latest`) instead of `course:v:{id}:outline` / `course:{id}:current`,
+    because enrollments pin a major. Authorization is not cached.
+13. **The consumer reconciles instead of deduping (accepted 2026-09-29).** The batch-member
    consumer keeps no event-`id` dedupe record. Each event runs `reconcile_student`, which
    recomputes that student's enrollments from the current batch memberships and batch
    assignments. Reasons:
@@ -181,24 +266,44 @@ See the step 3 notes under [Build order](#build-order).
      reconciliation for that student, and there is no dedupe table to grow or expire.
    - The cost is one read of the student's memberships and assignments per event. That is small,
      and batch-member events are low-volume.
-6. **`If-Match` was optional; it is now required (decided 2026-09-29).** At `878985b`, an omitted
-   header skipped the revision check. It is now required on every endpoint that changes the
-   course outline or lessons: modules, lessons, both reorders and skill tags. A missing header
-   returns `428 precondition_required`, and a stale one returns `409`. This landed with step 3.
-7. **`DELETE /courses/{id}` archives** the course and removes its catalog entry. It does not
-   hard-delete.
-8. **Endpoints not named in the plan:** `GET /courses/{id}/draft`,
-   `GET /courses/{id}/publish-preview` (backs the publish dialog's structural diff),
-   `GET /courses/{id}/lessons/{lesson_id}` and `POST /enrollments/{id}/lessons/{lesson_id}/visit`
-   (feeds `last_lesson_id` for "Continue learning").
-9. **All open points are settled.** All four
-   [open points](#open-points-to-confirm-when-resuming) are now recorded in `CLAUDE.md`. The
-   video-replaced-in-a-minor-release rule was added on 2026-09-29.
+14. **`DELETE /courses/{id}` archives** the course and removes its catalog entry. It does not
+    hard-delete.
+15. **Endpoints not named in the plan:**
+    - `GET /courses/{id}/draft`
+    - `GET /courses/{id}/publish-preview`, which backs the publish dialog's structural diff
+    - `GET /courses/{id}/lessons/{lesson_id}` and its `/preview`
+    - `POST /enrollments/{id}/lessons/{lesson_id}/visit`, which feeds "Continue learning"
+    - the step 3 video endpoints `/videos/*`
+    - the `name` filter on `GET /batches`, which the e2e tests use
+16. **The notes allow-list adds `hardBreak`** (Shift+Enter, rendered as `<br>`).
 
-All other deviations were accepted as documented on 2026-09-29. Deviation 1 is resolved by
-rewriting the [Skills](#skills) section.
-10. **Notes are not validated yet.** `NotesContent.doc` is still an unvalidated `dict`. The
-    allow-list validation, rendering and 200 KB cap are step 4, as planned.
+All four [open points](#open-points-to-confirm-when-resuming) are settled and recorded in
+`CLAUDE.md`.
+
+### Open follow-ups
+
+Requested at close-out:
+
+- **Bunny smoke script not run against real credentials.** `scripts/smoke_test_bunny.py` has
+  been checked only for refusing to start without the settings and for failing cleanly with
+  fake ones. Run it once a real library's `BUNNY_*` values are in `.env`. Until then, the Bunny
+  playback-token digest has been checked only for structure and expiry, against mocked HTTP.
+- **Skills cache threshold.** The web app loads the whole global taxonomy once to name a
+  lesson's tags (19 skills seeded). Past about 500 skills, switch to a server-side `ids=` lookup.
+- **Windows container routing.** On this Windows bind-mount checkout, the containerised
+  `next dev` returns 404 for routes with two dynamic segments, and it missed file edits.
+  Workaround: `make dev-web-host`. Expected fix: a checkout inside WSL2 (README "Windows
+  development"). The app itself was not changed for this.
+
+Carried forward from earlier steps:
+
+- **Directory visibility.** Revisit before a second org gets `is_content_publisher` (deviation 5).
+- **Writing GETs and read replicas.** The enrollment and resume GETs reset replaced-video
+  progress. When read routing is added, they must write on the primary explicitly or move the
+  write off the read path (see the step 3 notes).
+- **Heartbeat cache window.** After an assignment is removed, up to 60 s of watching can still
+  be credited until reconciliation revokes the enrollment. Playback is refused at once.
+- **Production Redis** needs AOF, `noeviction` and a `maxmemory` cap, as compose sets locally.
 
 ## Decisions (2026-09-26)
 
@@ -312,7 +417,7 @@ In `app.modules.identity.service`:
 
   Phase 2 adds a consumer (a Kafka consumer group in a new worker service) that enrolls or revokes.
   It must be idempotent. It gets there by **reconciling from current state**, not by deduping on
-  the event `id`: see deviation 5 under
+  the event `id`: see deviation 13 under
   [Implementation status](#deviations-between-this-plan-and-the-committed-code).
 
 ### Platform pieces already running
@@ -776,11 +881,27 @@ batch belongs to the receiving org. Uniqueness is `(course_id, organization_id, 
 
 ## Build order
 
-These are the Phase 2 prompt's 8 steps. After each step:
+These are the Phase 2 prompt's 8 steps:
+
+1. Data model, migrations and RLS (skills, courses and draft tree, versions, assignments,
+   enrollments, progress, media tables).
+2. Services and APIs (builder, publish minor/major, assignments and narrowing, enrollments and the
+   batch-event consumer, upgrades, progress rules).
+3. Video (`VideoProvider`, local and Bunny, heartbeat → Redis → Celery flush, resume).
+4. Notes and PDFs.
+5. Caching and events (including the heartbeat validation cache).
+6. Instructor UI.
+7. Student UI.
+8. End-to-end tests and `scripts/smoke_test_bunny.py`.
+
+After each step:
 
 1. Run lint, type-check and all tests (the `CLAUDE.md` workflow), and fix failures.
 2. Add every new endpoint to `MATRIX` and run `make gen-api`.
 3. Commit, **push**, summarize, and wait for "continue".
+4. Since 2026-10-02 (`CLAUDE.md` Workflow): the step is done only once the GitHub Actions run for
+   the pushed commit is green, and the summary includes its URL. This held for step 8 only;
+   CI had been red since Phase 1 step 1 (see the step 8 notes).
 
 Step 3 implementation notes:
 - Local uploads use signed MinIO PUTs; content type is signed, and size/MP4 duration are checked
@@ -1071,17 +1192,6 @@ Step 8 implementation notes:
 - **Where Playwright ran locally:** against `make dev-web-host` (the containerised `next dev`
   doesn't serve two-dynamic-segment routes on this Windows checkout), and once against a
   production build to simulate CI. CI on Linux is the pass condition.
-
-1. Data model, migrations and RLS (skills, courses and draft tree, versions, assignments,
-   enrollments, progress, media tables).
-2. Services and APIs (builder, publish minor/major, assignments and narrowing, enrollments and the
-   batch-event consumer, upgrades, progress rules).
-3. Video (`VideoProvider`, local and Bunny, heartbeat → Redis → Celery flush, resume).
-4. Notes and PDFs.
-5. Caching and events (including the heartbeat validation cache).
-6. Instructor UI.
-7. Student UI.
-8. End-to-end tests and `scripts/smoke_test_bunny.py`.
 
 ## Open points to confirm when resuming
 

@@ -82,6 +82,7 @@ Decided 2026-09-26.
 - **Workflow**
   1. Before coding any phase, present a plan and wait for approval.
   2. After coding, run lint, type-check, and all tests, and fix failures before saying the work is done.
+  3. A step is done only when (a) lint, type-check and all tests pass locally **and** (b) the GitHub Actions run for the pushed commit is green. Watch the run after each push (`gh run watch`, or poll the Actions API) rather than assuming; every step summary includes the CI run URL.
 
 ## Commands
 
