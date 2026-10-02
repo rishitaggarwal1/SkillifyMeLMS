@@ -1,5 +1,8 @@
 # Local development stack. Start with `make dev` (copies .env.example -> .env on first run).
-# Every value comes from .env; nothing secret is hard-coded here.
+# Every value comes from .env; nothing secret is hard-coded here, and every externally visible URL
+# is an .env value (WEB_ORIGIN, KEYCLOAK_PUBLIC_URL, S3_PUBLIC_ENDPOINT_URL). Addresses written
+# here are Docker service names (keycloak, minio, web...), which resolve the same on any host.
+# A server adds docker-compose.prod.yml on top (see infra/dev-vm/README.md).
 
 name: skillifyme
 
@@ -17,21 +20,21 @@ x-api-env: &api-env
   REVALIDATE_SECRET: ${REVALIDATE_SECRET:?}
   REDIS_URL: redis://redis:6379/0
   KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
-  # Issuer is derived from KEYCLOAK_PORT (http://localhost:<port>/realms/<realm>); containers fetch
-  # JWKS and call the admin API over the Docker network at KEYCLOAK_INTERNAL_URL.
-  KEYCLOAK_PORT: ${KEYCLOAK_PORT:?}
+  # The issuer is <KEYCLOAK_PUBLIC_URL>/realms/<realm>; containers fetch JWKS and call the admin
+  # API over the Docker network.
+  KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:?}
   KEYCLOAK_REALM: ${KEYCLOAK_REALM:?}
   KEYCLOAK_INTERNAL_URL: http://keycloak:${KEYCLOAK_PORT:?}
   KC_ADMIN_CLIENT_SECRET: ${KC_ADMIN_CLIENT_SECRET:?}
   OIDC_AUDIENCE: ${OIDC_AUDIENCE:?}
   OIDC_ALLOWED_CLIENTS: ${OIDC_ALLOWED_CLIENTS:?}
-  WEB_ORIGIN: http://localhost:${WEB_PORT:?}
+  WEB_ORIGIN: ${WEB_ORIGIN:?}
   S3_ENDPOINT_URL: http://minio:9000
   S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:?}
   S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?}
   S3_BUCKET: ${S3_BUCKET:?}
-  # Presigned URLs are opened by the browser, so they must name the host-published MinIO port.
-  S3_PUBLIC_ENDPOINT_URL: http://localhost:${MINIO_PORT:-9000}
+  # Presigned URLs are opened by the browser, so they name MinIO's browser-facing URL.
+  S3_PUBLIC_ENDPOINT_URL: ${S3_PUBLIC_ENDPOINT_URL:?}
   VIDEO_PROVIDER: ${VIDEO_PROVIDER:-local}
   VIDEO_UPLOAD_MAX_BYTES: ${VIDEO_UPLOAD_MAX_BYTES:-2147483648}
   VIDEO_UPLOAD_TTL_SECONDS: ${VIDEO_UPLOAD_TTL_SECONDS:-3600}
@@ -43,8 +46,33 @@ x-api-env: &api-env
   BUNNY_WEBHOOK_SECRET: ${BUNNY_WEBHOOK_SECRET:-}
   PROGRESS_FLUSH_INTERVAL_SECONDS: ${PROGRESS_FLUSH_INTERVAL_SECONDS:-30}
   OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+  # `make seed` (dev users) and `make migrate` (Keycloak's database, servers only).
+  SEED_DEV_USERS: ${SEED_DEV_USERS:-false}
+  DEV_USER_PASSWORD: ${DEV_USER_PASSWORD:-}
+  KEYCLOAK_DB_USER: ${KEYCLOAK_DB_USER:-keycloak}
+  KEYCLOAK_DB_NAME: ${KEYCLOAK_DB_NAME:-keycloak}
+  KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-}
   # Windows/macOS bind mounts do not deliver inotify events into Linux containers.
   WATCHFILES_FORCE_POLLING: "true"
+
+# Settings the realm template (infra/keycloak/realm.template.json) is rendered from.
+x-realm-env: &realm-env
+  KEYCLOAK_REALM: ${KEYCLOAK_REALM:?}
+  KEYCLOAK_DISPLAY_NAME: ${KEYCLOAK_DISPLAY_NAME:-SkillifyMe Portal}
+  WEB_ORIGIN: ${WEB_ORIGIN:?}
+  KC_WEB_CLIENT_SECRET: ${KC_WEB_CLIENT_SECRET:?}
+  KC_ADMIN_CLIENT_SECRET: ${KC_ADMIN_CLIENT_SECRET:?}
+  KC_TEST_CLIENT_SECRET: ${KC_TEST_CLIENT_SECRET:-}
+  KEYCLOAK_DEV_CLIENTS: ${KEYCLOAK_DEV_CLIENTS:-false}
+  KEYCLOAK_BRUTE_FORCE: ${KEYCLOAK_BRUTE_FORCE:-true}
+  SMTP_HOST: ${SMTP_HOST:?}
+  SMTP_PORT: ${SMTP_PORT:?}
+  SMTP_FROM: ${SMTP_FROM:?}
+  SMTP_FROM_NAME: ${SMTP_FROM_NAME:-SkillifyMe}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  SMTP_STARTTLS: ${SMTP_STARTTLS:-false}
+  SMTP_SSL: ${SMTP_SSL:-false}
 
 services:
   # ------------------------------------------------------------------------------ data stores
@@ -93,7 +121,7 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:?}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?}
       # Browsers upload videos/PDFs straight to MinIO with presigned requests.
-      MINIO_API_CORS_ALLOW_ORIGIN: http://localhost:${WEB_PORT:-3000}
+      MINIO_API_CORS_ALLOW_ORIGIN: ${WEB_ORIGIN:?}
     ports:
       - "${MINIO_PORT:-9000}:9000"
       - "${MINIO_CONSOLE_PORT:-9001}:9001"
@@ -130,7 +158,7 @@ services:
       - --smp=1
       - --memory=1G
       - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
-      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:${KAFKA_PORT:-19092}
+      - --advertise-kafka-addr=internal://redpanda:9092,external://${KAFKA_EXTERNAL_HOST:?}:${KAFKA_PORT:-19092}
       - --schema-registry-addr=internal://0.0.0.0:8081
       - --rpc-addr=redpanda:33145
       - --advertise-rpc-addr=redpanda:33145
@@ -154,6 +182,16 @@ services:
     ports: ["${REDPANDA_CONSOLE_PORT:?}:${REDPANDA_CONSOLE_PORT:?}"]
 
   # ------------------------------------------------------------------------------ auth & mail
+  keycloak-realm:
+    # Renders the realm Keycloak imports on first start from .env (fails on a missing setting).
+    image: python:3.13-alpine
+    command: ["python", "/keycloak/realm.py", "render", "--out", "/import/skillifyme-realm.json"]
+    environment: *realm-env
+    volumes:
+      - ./infra/keycloak:/keycloak:ro
+      - keycloak-import:/import
+    restart: "no"
+
   keycloak:
     image: quay.io/keycloak/keycloak:26.6
     command: ["start-dev", "--import-realm"]
@@ -164,19 +202,15 @@ services:
       # Same port inside and outside the container, so one KEYCLOAK_PORT drives every URL.
       KC_HTTP_PORT: ${KEYCLOAK_PORT:?}
       # Pin the issuer to the browser-facing URL. Tokens always carry
-      # iss=http://localhost:<port>/realms/<realm>, whichever host fetched them (browser, BFF over
-      # the Docker network, tests via 127.0.0.1). Backchannel calls may use the internal hostname.
-      KC_HOSTNAME: http://localhost:${KEYCLOAK_PORT:?}
+      # iss=<KEYCLOAK_PUBLIC_URL>/realms/<realm>, whichever host fetched them (browser, BFF over
+      # the Docker network, tests). Backchannel calls may use the internal hostname.
+      KC_HOSTNAME: ${KEYCLOAK_PUBLIC_URL:?}
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
-      # Placeholders used by the realm import (infra/local/keycloak/realm/*.json).
-      KEYCLOAK_REALM: ${KEYCLOAK_REALM:?}
-      WEB_ORIGIN: http://localhost:${WEB_PORT:?}
-      KC_WEB_CLIENT_SECRET: ${KC_WEB_CLIENT_SECRET:?}
-      KC_ADMIN_CLIENT_SECRET: ${KC_ADMIN_CLIENT_SECRET:?}
-      KC_TEST_CLIENT_SECRET: ${KC_TEST_CLIENT_SECRET:?}
     ports: ["${KEYCLOAK_PORT:?}:${KEYCLOAK_PORT:?}"]
     volumes:
-      - ./infra/local/keycloak/realm:/opt/keycloak/data/import:ro
+      - keycloak-import:/opt/keycloak/data/import:ro
+    depends_on:
+      keycloak-realm: { condition: service_completed_successfully }
     healthcheck:
       test:
         - CMD-SHELL
@@ -188,6 +222,22 @@ services:
       timeout: 5s
       retries: 30
       start_period: 30s
+
+  keycloak-sync:
+    # Re-applies the rendered settings to an existing realm (import skips it): redirect URIs, web
+    # origins, SMTP, brute-force settings, missing clients and roles. Never deletes anything,
+    # never rotates a client secret, never touches brute-force state (infra/keycloak/realm.py).
+    image: python:3.13-alpine
+    command: ["python", "/keycloak/realm.py", "sync", "--url", "http://keycloak:${KEYCLOAK_PORT:?}"]
+    environment:
+      <<: *realm-env
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:?}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?}
+    volumes:
+      - ./infra/keycloak:/keycloak:ro
+    depends_on:
+      keycloak: { condition: service_healthy }
+    restart: "no"
 
   keycloak-google:
     # Adds Google as an identity provider when GOOGLE_CLIENT_ID/SECRET are set; no-op otherwise.
@@ -201,9 +251,9 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
     volumes:
-      - ./infra/local/keycloak/scripts:/scripts:ro
+      - ./infra/keycloak/scripts:/scripts:ro
     depends_on:
-      keycloak: { condition: service_healthy }
+      keycloak-sync: { condition: service_completed_successfully }
     restart: "no"
 
   mailpit:
@@ -230,7 +280,7 @@ services:
     restart: "no"
 
   seed:
-    # Idempotent dev data: orgs, batches, and memberships for the dev-realm test users.
+    # Idempotent dev data (SEED_DEV_USERS=true): dev users in Keycloak, orgs, batches, memberships.
     image: skillifyme-api:dev
     pull_policy: never
     environment: *api-env
@@ -254,7 +304,7 @@ services:
     volumes: ["./apps/api:/app", "./.secrets:/secrets"]
     depends_on:
       migrate: { condition: service_completed_successfully }
-      keycloak: { condition: service_healthy }
+      keycloak-sync: { condition: service_completed_successfully }
       minio-init: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
     restart: "no"
@@ -329,13 +379,13 @@ services:
     command: ["sh", "-c", "corepack enable && pnpm install --frozen-lockfile && pnpm dev --hostname 0.0.0.0"]
     environment:
       API_INTERNAL_URL: http://api:8000
-      # Backend-for-frontend auth. Keycloak URLs derive from KEYCLOAK_PORT, like the API's.
-      KEYCLOAK_PORT: ${KEYCLOAK_PORT:?}
+      # Backend-for-frontend auth. Keycloak URLs derive from KEYCLOAK_PUBLIC_URL, like the API's.
+      KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:?}
       KEYCLOAK_REALM: ${KEYCLOAK_REALM:?}
       KEYCLOAK_INTERNAL_URL: http://keycloak:${KEYCLOAK_PORT:?}
       OIDC_WEB_CLIENT_ID: ${OIDC_WEB_CLIENT_ID:?}
       KC_WEB_CLIENT_SECRET: ${KC_WEB_CLIENT_SECRET:?}
-      WEB_ORIGIN: http://localhost:${WEB_PORT:?}
+      WEB_ORIGIN: ${WEB_ORIGIN:?}
       SESSION_SECRET: ${SESSION_SECRET:?}
       REVALIDATE_SECRET: ${REVALIDATE_SECRET:?}
       # Local dev reads the public catalog fresh (no data cache); production/CI leave it unset.
@@ -366,6 +416,7 @@ volumes:
   redis-data:
   minio-data:
   redpanda-data:
+  keycloak-import:
   web-node-modules:
   web-next:
   pnpm-store:

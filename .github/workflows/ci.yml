@@ -41,7 +41,16 @@ jobs:
           uv run ruff check --output-format=github .
           uv run ruff format --check .
       - name: Mypy (strict)
-        run: uv run mypy
+        run: |
+          uv run mypy
+          uv run mypy --strict ../../infra/keycloak/realm.py
+      - name: Dev users in Keycloak (make seed)
+        # The realm template has no users; the Keycloak integration tests sign in as the dev users
+        # `make seed` creates (SEED_DEV_USERS=true in .env.example).
+        run: |
+          uv run python -m app.cli.db_roles
+          uv run alembic upgrade head
+          uv run python -m app.cli.seed
       - name: Pytest
         # Fixtures create the DB roles and a migrated test database.
         run: uv run pytest
@@ -189,6 +198,53 @@ jobs:
           context: apps/${{ matrix.app }}
           target: runtime
           push: false
+          # The images docker-compose.prod.yml runs (API_IMAGE / WEB_IMAGE). Not pushed yet.
           tags: skillifyme-${{ matrix.app }}:${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+
+  # ------------------------------------------------------------------------------------------ Server config
+  server-config:
+    name: Server config · compose override, Caddyfile, realm
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - name: Server-style .env from .env.dev-server.example (fake values on example.test)
+        run: bash scripts/server_env_for_ci.sh > .env.server
+      - name: docker compose config (docker-compose.yml + docker-compose.prod.yml)
+        run: |
+          compose="docker compose --env-file .env.server -f docker-compose.yml -f docker-compose.prod.yml"
+          $compose config -q
+          $compose --profile tools --profile debug config -q
+          # Only Caddy publishes ports; no service bind-mounts application source.
+          $compose --profile tools --profile debug config --format json | python3 -c '
+          import json, sys
+          services = json.load(sys.stdin)["services"]
+          published = sorted(n for n, s in services.items() if s.get("ports"))
+          assert published == ["caddy"], published
+          for name, s in services.items():
+              for v in s.get("volumes", []):
+                  assert not (v["type"] == "bind" and v["source"].rstrip("/").endswith(("apps/api", "apps/web"))), name
+          print("ok:", published)
+          '
+      - name: Realm renders for a server (no dev client, brute force on)
+        run: |
+          docker compose --env-file .env.server -f docker-compose.yml -f docker-compose.prod.yml \
+            run --rm --no-deps -T keycloak-realm \
+            sh -c 'python /keycloak/realm.py render --out /tmp/realm.json >&2 && cat /tmp/realm.json' \
+            > realm.json
+          python3 - <<'EOF'
+          import json
+          realm = json.load(open("realm.json"))
+          assert realm["bruteForceProtected"] is True, "brute-force protection must be on"
+          assert "skillifyme-test" not in {c["clientId"] for c in realm["clients"]}
+          assert "localhost" not in json.dumps(realm)
+          print("ok")
+          EOF
+      - name: caddy validate
+        # A throwaway bcrypt hash (the env file carries a placeholder).
+        run: |
+          docker compose --env-file .env.server -f docker-compose.yml -f docker-compose.prod.yml \
+            run --rm --no-deps -T --entrypoint sh caddy -c \
+            'export MAILPIT_BASIC_AUTH_HASH="$(caddy hash-password --plaintext ci-only)" && caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile'

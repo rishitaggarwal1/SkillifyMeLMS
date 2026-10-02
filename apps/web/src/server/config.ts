@@ -4,14 +4,13 @@ import { z } from "zod";
 
 /**
  * BFF configuration from the environment (validated once, lazily, so `next build` doesn't need it).
- * Every Keycloak URL derives from KEYCLOAK_PORT + KEYCLOAK_REALM, exactly like the API:
- * - public URL (browser redirects, token issuer): http://localhost:<port>, pinned by KC_HOSTNAME
+ * Every Keycloak URL derives from KEYCLOAK_PUBLIC_URL + KEYCLOAK_REALM, exactly like the API:
+ * - public URL (browser redirects, token issuer): KEYCLOAK_PUBLIC_URL, pinned by KC_HOSTNAME
  * - internal URL (token exchange, JWKS from inside Docker): KEYCLOAK_INTERNAL_URL, else public
  */
 const schema = z.object({
-  KEYCLOAK_PORT: z.coerce.number().int().min(1).max(65535),
   KEYCLOAK_REALM: z.string().min(1).default("skillifyme"),
-  KEYCLOAK_PUBLIC_URL: z.url().optional(),
+  KEYCLOAK_PUBLIC_URL: z.url(),
   KEYCLOAK_INTERNAL_URL: z.url().optional(),
   OIDC_WEB_CLIENT_ID: z.string().min(1).default("skillifyme-web"),
   KC_WEB_CLIENT_SECRET: z.string().min(1),
@@ -42,9 +41,7 @@ export function serverConfig(): ServerConfig {
   if (cached) return cached;
   const env = schema.parse(process.env);
   const trim = (url: string) => url.replace(/\/+$/, "");
-  const keycloakPublicUrl = trim(
-    env.KEYCLOAK_PUBLIC_URL ?? `http://localhost:${env.KEYCLOAK_PORT}`,
-  );
+  const keycloakPublicUrl = trim(env.KEYCLOAK_PUBLIC_URL);
   cached = {
     realm: env.KEYCLOAK_REALM,
     issuer: `${keycloakPublicUrl}/realms/${env.KEYCLOAK_REALM}`,

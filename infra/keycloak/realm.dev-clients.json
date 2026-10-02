@@ -1,0 +1,27 @@
+[
+  {
+    "clientId": "skillifyme-test",
+    "name": "Automated tests (dev only)",
+    "enabled": true,
+    "protocol": "openid-connect",
+    "publicClient": false,
+    "clientAuthenticatorType": "client-secret",
+    "secret": "${KC_TEST_CLIENT_SECRET}",
+    "standardFlowEnabled": false,
+    "directAccessGrantsEnabled": true,
+    "serviceAccountsEnabled": false,
+    "protocolMappers": [
+      {
+        "name": "api-audience",
+        "protocol": "openid-connect",
+        "protocolMapper": "oidc-audience-mapper",
+        "config": {
+          "included.client.audience": "skillifyme-api",
+          "access.token.claim": "true",
+          "id.token.claim": "false",
+          "introspection.token.claim": "true"
+        }
+      }
+    ]
+  }
+]

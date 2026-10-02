@@ -17,13 +17,14 @@ def main() -> None:
     if len(sys.argv) != 2:  # noqa: PLR2004
         sys.exit("usage: python -m app.cli.export_openapi <output.json>")
     # Placeholder connection settings: the spec does not depend on them and nothing connects.
-    placeholder = SecretStr("postgresql+asyncpg://unused@localhost/unused")
+    placeholder = SecretStr("postgresql+asyncpg://unused@unused.invalid/unused")
     settings = Settings(
         environment="local",
         database_url=placeholder,
         migration_database_url=placeholder,
-        redis_url=SecretStr("redis://localhost:6379/0"),
-        keycloak_port=1,
+        redis_url=SecretStr("redis://unused.invalid/0"),
+        kafka_bootstrap_servers="unused.invalid:1",
+        keycloak_public_url="https://unused.invalid",
         _env_file=None,
     )
     spec = create_app(settings).openapi()

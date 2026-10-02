@@ -1,0 +1,194 @@
+# Server override for a single-VM dev/demo environment (NOT the production topology in
+# docs/architecture.md). Used on top of docker-compose.yml:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --wait
+#
+# Settings come from a server .env (start from .env.example, then .env.dev-server.example).
+# What changes here:
+# - API and web run the CI-built `runtime` images (${API_IMAGE}, ${WEB_IMAGE}): the API without
+#   reload, the web app as the Next.js standalone server. No source bind mounts.
+# - No service publishes a port. Caddy, the only service on 80/443, routes by hostname over the
+#   `edge` network to web, Keycloak, MinIO and (behind basic auth) Mailpit.
+# - Keycloak runs in production mode on its own Postgres database and role, behind the proxy,
+#   with brute-force protection forced on and the dev test client forced off.
+# - Redis keeps AOF persistence with noeviction; restart policies and log rotation everywhere.
+# See infra/dev-vm/README.md (runbook, not yet executed).
+
+x-server: &server
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "5" }
+
+x-one-shot: &one-shot
+  restart: "no"
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+
+# Realm settings a server never takes from .env: protection on, password-grant test client off.
+x-server-realm: &server-realm
+  KEYCLOAK_BRUTE_FORCE: "true"
+  KEYCLOAK_DEV_CLIENTS: "false"
+
+# Each API service also says `volumes: !reset []`: a !reset inside a merged anchor isn't applied.
+x-api-image: &api-image
+  image: ${API_IMAGE:?set API_IMAGE to the CI-built api runtime image}
+  pull_policy: missing
+
+networks:
+  # Caddy and the services it routes to. Everything else stays on the default network only.
+  edge: {}
+
+services:
+  # ------------------------------------------------------------------------------ data stores
+  postgres:
+    <<: *server
+    ports: !reset []
+
+  redis:
+    <<: *server
+    # Buffered video heartbeats must survive restarts and never be evicted (see docker-compose.yml).
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+      - --maxmemory
+      - ${REDIS_MAXMEMORY:?}
+      - --maxmemory-policy
+      - noeviction
+    ports: !reset []
+
+  minio:
+    <<: *server
+    ports: !reset []
+    networks: [default, edge]
+
+  minio-init:
+    <<: *one-shot
+
+  redpanda:
+    <<: *server
+    ports: !reset []
+
+  redpanda-console:
+    # Not started on a server (no route to it); run with --profile debug when needed.
+    profiles: ["debug"]
+    ports: !reset []
+
+  # ------------------------------------------------------------------------------ auth & mail
+  keycloak-realm:
+    <<: *one-shot
+    environment: *server-realm
+
+  keycloak:
+    <<: *server
+    command: ["start", "--import-realm"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/${KEYCLOAK_DB_NAME:-keycloak}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER:-keycloak}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?}
+      # TLS ends at Caddy, which sends X-Forwarded-* headers.
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+    ports: !reset []
+    networks: [default, edge]
+    depends_on:
+      # `migrate` runs db_roles, which creates Keycloak's role and database.
+      migrate: { condition: service_completed_successfully }
+
+  keycloak-sync:
+    <<: *one-shot
+    environment: *server-realm
+
+  keycloak-google:
+    <<: *one-shot
+
+  mailpit:
+    <<: *server
+    ports: !reset []
+    networks: [default, edge]
+
+  caddy:
+    <<: *server
+    image: caddy:2.10-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      WEB_HOST: ${WEB_HOST:?}
+      AUTH_HOST: ${AUTH_HOST:?}
+      FILES_HOST: ${FILES_HOST:?}
+      MAIL_HOST: ${MAIL_HOST:?}
+      ACME_EMAIL: ${ACME_EMAIL:?}
+      ADMIN_ALLOW_CIDR: ${ADMIN_ALLOW_CIDR:?}
+      KEYCLOAK_PORT: ${KEYCLOAK_PORT:?}
+      MAILPIT_BASIC_AUTH_USER: ${MAILPIT_BASIC_AUTH_USER:?}
+      MAILPIT_BASIC_AUTH_HASH: ${MAILPIT_BASIC_AUTH_HASH:?}
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [edge]
+    depends_on:
+      web: { condition: service_healthy }
+      keycloak: { condition: service_healthy }
+
+  # ------------------------------------------------------------------------------ application
+  migrate:
+    <<: [*one-shot, *api-image]
+    volumes: !reset []
+    build: !reset null
+
+  seed:
+    # Skips itself unless SEED_DEV_USERS=true, which a server never sets.
+    <<: [*one-shot, *api-image]
+    volumes: !reset []
+
+  seed-demo:
+    <<: [*one-shot, *api-image]
+    volumes: !override ["./.secrets:/secrets"]
+
+  api:
+    <<: [*server, *api-image]
+    volumes: !reset []
+    ports: !reset []
+
+  worker:
+    <<: [*server, *api-image]
+    volumes: !reset []
+
+  beat:
+    <<: [*server, *api-image]
+    volumes: !reset []
+
+  outbox-relay:
+    <<: [*server, *api-image]
+    volumes: !reset []
+
+  enrollment-consumer:
+    <<: [*server, *api-image]
+    volumes: !reset []
+
+  web:
+    <<: *server
+    image: ${WEB_IMAGE:?set WEB_IMAGE to the CI-built web runtime image}
+    pull_policy: missing
+    # The image's own command (node server.js) and working directory.
+    command: !reset null
+    working_dir: !reset null
+    volumes: !reset []
+    ports: !reset []
+    environment:
+      # Use the tagged data cache (refreshed on publish), not the local "off".
+      CATALOG_DATA_CACHE: "on"
+      AUTH_RATE_LIMIT_PER_MINUTE: ${AUTH_RATE_LIMIT_PER_MINUTE:-20}
+    networks: [default, edge]
+
+volumes:
+  caddy-data:
+  caddy-config:

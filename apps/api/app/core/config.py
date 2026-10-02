@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -34,11 +34,16 @@ class Settings(BaseSettings):
     # Passwords for the non-owner login roles, used only by `python -m app.cli.db_roles`.
     app_db_password: SecretStr | None = None
     relay_db_password: SecretStr | None = None
+    # Keycloak's own login role and database on the same server (servers only; local Keycloak
+    # uses its built-in dev store). db_roles creates them when the password is set.
+    keycloak_db_user: str = "keycloak"
+    keycloak_db_name: str = "keycloak"
+    keycloak_db_password: SecretStr | None = None
 
     redis_url: SecretStr
 
     # Kafka / outbox relay. The relay connects as the `skillify_relay` role.
-    kafka_bootstrap_servers: str = "localhost:19092"
+    kafka_bootstrap_servers: str
     relay_database_url: SecretStr | None = None
     outbox_relay_batch_size: int = Field(default=500, ge=1, le=5000)
     outbox_relay_poll_interval_seconds: float = Field(default=0.5, gt=0)
@@ -48,14 +53,14 @@ class Settings(BaseSettings):
 
     health_check_timeout_seconds: float = Field(default=2.0, gt=0)
 
-    # ---- Keycloak / OIDC: every URL derives from KEYCLOAK_PORT and KEYCLOAK_REALM unless set.
-    # Required: comes from KEYCLOAK_PORT (see .env.example).
-    keycloak_port: int = Field(ge=1, le=65535)
+    # ---- Keycloak / OIDC: every URL derives from KEYCLOAK_PUBLIC_URL, KEYCLOAK_INTERNAL_URL and
+    # KEYCLOAK_REALM.
     keycloak_realm: str = "skillifyme"
-    # Browser-facing base URL. Keycloak pins its issuer to this (KC_HOSTNAME), so every token
-    # carries iss=<public url>/realms/<realm>, no matter which host requested it.
-    keycloak_public_url: str | None = None
-    # Where this process reaches Keycloak (JWKS, admin API). In docker: http://keycloak:<port>.
+    # Browser-facing base URL (required). Keycloak pins its issuer to it (KC_HOSTNAME), so every
+    # token carries iss=<public url>/realms/<realm>, no matter which host requested it.
+    keycloak_public_url: str
+    # Where this process reaches Keycloak (JWKS, admin API); the public URL when unset. In
+    # docker: http://keycloak:<port>.
     keycloak_internal_url: str | None = None
     kc_admin_client_id: str = "skillifyme-admin"
     kc_admin_client_secret: SecretStr | None = None
@@ -70,9 +75,14 @@ class Settings(BaseSettings):
     jwks_refetch_cooldown_seconds: float = Field(default=30.0, ge=0)
     principal_cache_ttl_seconds: int = Field(default=60, ge=0)
 
-    # Web app origin (e.g. http://localhost:3000): where Keycloak's invitation emails send users
-    # after they set a password.
+    # Web app origin (WEB_ORIGIN): where Keycloak's invitation emails send users after they set a
+    # password.
     web_origin: str | None = None
+
+    # ---- `python -m app.cli.seed` (local dev data). Dev users are created in Keycloak only when
+    # SEED_DEV_USERS is true, all with DEV_USER_PASSWORD. Never enable either on a server.
+    seed_dev_users: bool = False
+    dev_user_password: SecretStr | None = None
 
     # ---- S3 (MinIO locally): CSV imports and, later, learning content.
     s3_endpoint_url: str | None = None
@@ -126,9 +136,15 @@ class Settings(BaseSettings):
     # OpenTelemetry is disabled unless an OTLP endpoint is configured.
     otel_exporter_otlp_endpoint: str | None = None
 
+    @field_validator("keycloak_db_password", "dev_user_password", mode="before")
+    @classmethod
+    def _empty_is_unset(cls, value: object) -> object:
+        # Compose passes unset optional secrets as "" (`${NAME:-}`); treat that as not configured.
+        return None if value == "" else value
+
     @property
     def keycloak_base_url(self) -> str:
-        return (self.keycloak_public_url or f"http://localhost:{self.keycloak_port}").rstrip("/")
+        return self.keycloak_public_url.rstrip("/")
 
     @property
     def keycloak_backchannel_url(self) -> str:

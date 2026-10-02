@@ -28,7 +28,12 @@ from app.modules.enrollments import events
 from app.modules.enrollments import jobs as enrollment_jobs
 from app.modules.enrollments.heartbeat_cache import HeartbeatCache, HeartbeatCheck
 from app.modules.enrollments.models import Enrollment, EnrollmentStatus, LessonProgress
-from app.modules.enrollments.progress import CompletionRule, completion_rule, course_percent
+from app.modules.enrollments.progress import (
+    CompletionRule,
+    completion_rule,
+    course_percent,
+    video_watched,
+)
 from app.modules.enrollments.repository import (
     EnrollmentRepository,
     LessonProgressRepository,
@@ -518,13 +523,15 @@ async def recompute_progress(
     return percent
 
 
-# ============================================================================ operator (seeds)
+# ============================================================================ watched videos
 
 
-async def mark_video_watched(session: AsyncSession, enrollment_id: UUID, lesson_id: UUID) -> int:
-    """Seeds only (no HTTP route): record a video lesson as fully watched and complete it, as the
-    heartbeat flush would after real playback. Real watching is bounded by wall-clock time, so a
-    seed can't produce it quickly. Returns the course progress percentage."""
+async def complete_watched_video(
+    session: AsyncSession, enrollment_id: UUID, lesson_id: UUID
+) -> int | None:
+    """Complete a video lesson whose stored watch progress meets its threshold, with the same
+    rule the heartbeat flush applies (`video_watched`). Nothing happens otherwise. Returns the
+    course progress percentage, or None when the lesson isn't watched enough."""
     enrollment = await EnrollmentRepository(session).get(enrollment_id)
     if enrollment is None:
         raise NotFoundError("Enrollment not found.")
@@ -532,7 +539,12 @@ async def mark_video_watched(session: AsyncSession, enrollment_id: UUID, lesson_
     lesson = await courses.version_lesson(session, version.id, lesson_id) if version else None
     if version is None or lesson is None or lesson.video_asset_id is None:
         raise NotFoundError("Video lesson not found.")
-    await LessonProgressRepository(session).mark_watched(enrollment, lesson)
+    progress = await LessonProgressRepository(session).get(enrollment_id, lesson_id)
+    ratio = progress.watched_ratio if progress else None
+    if progress is None or progress.video_asset_id != lesson.video_asset_id:
+        return None
+    if not video_watched(ratio, lesson.completion_threshold):
+        return None
     return await record_completion(session, enrollment, version, lesson)
 
 

@@ -36,7 +36,7 @@ make dev       # builds and starts the whole stack; returns once everything is h
 | Web               | http://localhost:3000                 |
 | API docs          | http://localhost:8000/docs            |
 | API readiness     | http://localhost:8000/health/ready    |
-| Keycloak          | http://localhost:$KEYCLOAK_PORT (realm `skillifyme`) |
+| Keycloak          | `KEYCLOAK_PUBLIC_URL` (http://localhost:8080, realm `skillifyme`) |
 | MinIO console     | http://localhost:9001                 |
 | Redpanda console  | http://localhost:8082                 |
 | Mailpit           | http://localhost:8025                 |
@@ -50,10 +50,13 @@ and back. Org admins get an **Admin** link: batches, members and invitations, an
 Tokens never reach browser JavaScript; they're kept in encrypted httpOnly cookies by the Next.js
 server.
 
-### Dev realm test users (local only)
+### Dev users (local only)
 
-`make dev` runs the `seed` job (`make seed` to run it again). It creates three orgs and the users
-below. All of them use the password `Local-Dev-Only-1`.
+`make dev` runs the `seed` job (`make seed` to run it again). With `SEED_DEV_USERS=true` (the
+`.env.example` default) it creates three orgs and the users below, in Keycloak through its admin
+API and in the database. All of them use `DEV_USER_PASSWORD` from `.env` (`Local-Dev-Only-1` in
+`.env.example`). A server never sets `SEED_DEV_USERS`, so these accounts exist only locally and in
+CI; the realm template itself contains no users.
 
 | User                              | Organization and role                        |
 | --------------------------------- | -------------------------------------------- |
@@ -121,9 +124,9 @@ When that happens the web app keeps serving old code until you restart it.
 
 - It starts everything in Docker except the web container, then runs the web app on your
   machine (`pnpm dev`), where file watching works.
-- It uses the same settings from `.env`, pointed at the host ports (API on `API_PORT`, Keycloak
-  on `KEYCLOAK_PORT`, Redis on `REDIS_PORT`), and serves on `WEB_PORT`, so sign-in redirects
-  are unchanged.
+- It uses the same settings from `.env` (`KEYCLOAK_PUBLIC_URL`, `KEYCLOAK_INTERNAL_URL`,
+  `WEB_ORIGIN`), with the API on `API_PORT` and Redis on `REDIS_PORT`, and serves on `WEB_PORT`,
+  so sign-in redirects are unchanged.
 - The API's catalog revalidation calls (`http://web:3000/api/revalidate`) can't reach a host
   process and are retried, then dropped. This makes no difference in development: the catalog
   pages read the API fresh on every request there (`CATALOG_DATA_CACHE=off`, set by
@@ -155,10 +158,19 @@ one test video (deleted at the end), and exits non-zero on failure. The webhook 
 - **Background services.** `worker` runs Celery tasks, and `beat` runs the Celery scheduler (keep
   only one instance). `outbox-relay` publishes outbox events to Kafka (Redpanda locally); see
   `docs/events.md`.
-- **Ports are configuration.** Every port is set in `.env` (see `.env.example`). If the default
-  Keycloak port is taken, change `KEYCLOAK_PORT` (e.g. to 8180). Everything else follows from it:
-  - the token issuer, `http://localhost:$KEYCLOAK_PORT/realms/skillifyme`, pinned via `KC_HOSTNAME`
-    so it's the same whichever host fetched the token
-  - the API's JWKS URL
-  - the dev realm's redirect URIs
-  `apps/api/tests/test_config_ports.py` fails if a port gets hardcoded.
+- **Hosts and ports are configuration.** Every port and every externally visible URL is set in
+  `.env` (see `.env.example`): `WEB_ORIGIN`, `KEYCLOAK_PUBLIC_URL`, `S3_PUBLIC_ENDPOINT_URL`. If the
+  default Keycloak port is taken, change `KEYCLOAK_PORT` (e.g. to 8180); `KEYCLOAK_PUBLIC_URL` and
+  `KEYCLOAK_INTERNAL_URL` follow it (`${KEYCLOAK_PORT}`). From these come:
+  - the token issuer, `<KEYCLOAK_PUBLIC_URL>/realms/skillifyme`, pinned via `KC_HOSTNAME` so it's
+    the same whichever host fetched the token
+  - the API's JWKS URL, the realm's redirect URIs and web origins, and MinIO's CORS origin
+  `apps/api/tests/test_config_hosts.py` fails if a host or port gets hardcoded.
+- **Keycloak realm.** `infra/keycloak/realm.template.json` is rendered from `.env` at startup by
+  the `keycloak-realm` job and imported on Keycloak's first start. Keycloak never re-imports an
+  existing realm, so `keycloak-sync` then re-applies the settings (redirect URIs, SMTP,
+  brute-force settings, missing clients and roles) without deleting anything or touching client
+  secrets. Both live in `infra/keycloak/realm.py`.
+- **A dev/demo server** runs the same compose file plus `docker-compose.prod.yml` behind Caddy,
+  configured only through `.env` (`.env.dev-server.example` lists the keys that change). See
+  `infra/dev-vm/README.md`; nothing has been deployed yet.

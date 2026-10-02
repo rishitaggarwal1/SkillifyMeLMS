@@ -11,8 +11,9 @@ export const CATALOG_REVALIDATE_SECONDS = 300;
 const PAGE_SIZE = 100;
 
 function apiUrl(path: string): string {
-  const base = (process.env.API_INTERNAL_URL ?? "http://localhost:8000").replace(/\/+$/, "");
-  return `${base}/api/v1${path}`;
+  const base = process.env.API_INTERNAL_URL;
+  if (!base) throw new Error("API_INTERNAL_URL is not set");
+  return `${base.replace(/\/+$/, "")}/api/v1${path}`;
 }
 
 /**

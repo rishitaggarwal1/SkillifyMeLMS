@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Adds (or updates) Google as an identity provider in the dev realm when GOOGLE_CLIENT_ID and
+# Adds (or updates) Google as an identity provider in the realm when GOOGLE_CLIENT_ID and
 # GOOGLE_CLIENT_SECRET are set. Without them it does nothing, so no broken Google button appears.
 # First login through Google uses the "first broker login - auto link" flow from the realm import:
 # a Google account whose (verified) email matches an invited/imported user is linked to it.

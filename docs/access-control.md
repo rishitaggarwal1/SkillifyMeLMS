@@ -253,8 +253,17 @@ All use Redis sliding windows and return `429` with `Retry-After`.
 The local dev default for the web BFF limit is higher: 300. There's no edge proxy locally to tell
 clients apart.
 
-Keycloak's brute-force detection is **off in the dev realm**, because parallel automated logins
-trip it. Production realms must enable it.
+Keycloak's brute-force detection comes from `KEYCLOAK_BRUTE_FORCE` in `.env`, rendered into the
+realm (`infra/keycloak/realm.template.json`) and re-applied to an existing realm by `keycloak-sync`:
+
+- **Local and CI:** off (`.env.example`), because parallel automated logins as the shared dev users
+  trip it.
+- **Servers:** `docker-compose.prod.yml` forces it on, whatever `.env` says: 10 failures lock an
+  account temporarily, waiting 60 s more per further failure up to 15 minutes; the failure count
+  resets after 12 hours. `keycloak-sync` changes these settings only; it never resets an
+  account's lockout state.
+- The password-grant client `skillifyme-test` exists only with `KEYCLOAK_DEV_CLIENTS=true`, which
+  the server override forces off.
 
 ## Adding an endpoint or a table (checklist)
 

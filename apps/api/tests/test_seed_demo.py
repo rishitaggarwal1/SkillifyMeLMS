@@ -171,3 +171,40 @@ async def test_full_run_is_idempotent_and_reset_restores(
     rotated = seed_demo.read_credentials(demo_domain)
     assert set(rotated) == set(passwords)
     assert not set(rotated.values()) & set(passwords.values())
+
+
+async def _can_sign_in(settings: Settings, email: str, password: str) -> bool:
+    assert settings.kc_test_client_secret is not None
+    async with httpx.AsyncClient() as http:
+        response = await http.post(
+            settings.oidc_token_url,
+            data={
+                "grant_type": "password",
+                "client_id": "skillifyme-test",
+                "client_secret": settings.kc_test_client_secret.get_secret_value(),
+                "username": email,
+                "password": password,
+            },
+        )
+    return response.status_code == httpx.codes.OK
+
+
+async def test_an_account_keycloak_lost_gets_its_password_back(
+    settings: Settings, demo_domain: Path
+) -> None:
+    lines: list[str] = []
+    await seed_demo.run(settings, _args(), lines.append)
+    passwords = seed_demo.read_credentials(demo_domain)
+    email = f"demo.admin@{seed_demo.DOMAIN}"
+    # Keycloak loses the account (e.g. its local dev store was recreated); the file still has it.
+    async with httpx.AsyncClient() as http:
+        admin = KeycloakAdmin(http, settings)
+        found = await admin.find_user_by_email(email)
+        assert found is not None
+        deleted = await http.delete(
+            f"{admin.base}/users/{found['id']}", headers=await admin._auth_header()
+        )
+        assert deleted.status_code == httpx.codes.NO_CONTENT
+    await seed_demo.run(settings, _args(), lines.append)
+    assert seed_demo.read_credentials(demo_domain) == passwords  # same logins
+    assert await _can_sign_in(settings, email, passwords[email])

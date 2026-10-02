@@ -64,7 +64,7 @@ export async function resolveCourseLink(
     ? `/learn/enrollments/${enrollmentId}/lessons/${lessonId}`
     : `/learn/enrollments/${enrollmentId}`;
   // The public origin, not request.url: behind the standalone server request.url carries the
-  // bind address (e.g. 0.0.0.0:3000), which would send the browser somewhere else.
+  // bind address (0.0.0.0 and the server's port), which would send the browser somewhere else.
   const response = NextResponse.redirect(new URL(target, cfg.webOrigin), 307);
   if (access.refreshed) await writeTokens(response, access.refreshed);
   return response;

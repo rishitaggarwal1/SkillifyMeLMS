@@ -10,6 +10,9 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
         exclude: ^apps/web/pnpm-lock\.yaml$ # multi-document YAML
+        # Syntax only: docker-compose.prod.yml uses Compose's custom tags (!reset, !override),
+        # which `docker compose config` validates in CI.
+        args: [--unsafe]
       - id: check-json
         exclude: ^apps/web/tsconfig\.json$ # JSONC
       - id: check-toml

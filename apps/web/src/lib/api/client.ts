@@ -14,7 +14,9 @@ export const BROWSER_API_BASE = "/backend";
 
 export function apiBaseUrl(): string {
   if (typeof window !== "undefined") return BROWSER_API_BASE;
-  return process.env.API_INTERNAL_URL ?? "http://localhost:8000";
+  const url = process.env.API_INTERNAL_URL;
+  if (!url) throw new Error("API_INTERNAL_URL is not set");
+  return url;
 }
 
 export function createApiClient(

@@ -40,9 +40,9 @@ install: .env ## Install host toolchains (API venv, web deps, Playwright browser
 dev: .env ## Start the full local stack in docker and wait until every service is healthy
 	$(COMPOSE) up -d --build --wait
 	@echo ""
-	@echo "  Web            http://localhost:$(WEB_PORT)"
+	@echo "  Web            $(WEB_ORIGIN)"
 	@echo "  API            http://localhost:$(API_PORT)/docs    (ready: /health/ready)"
-	@echo "  Keycloak       http://localhost:$(KEYCLOAK_PORT)    (realm: $(KEYCLOAK_REALM))"
+	@echo "  Keycloak       $(KEYCLOAK_PUBLIC_URL)    (realm: $(KEYCLOAK_REALM))"
 	@echo "  MinIO console  http://localhost:$(MINIO_CONSOLE_PORT)"
 	@echo "  Redpanda       http://localhost:$(REDPANDA_CONSOLE_PORT)"
 	@echo "  Mailpit        http://localhost:$(MAILPIT_UI_PORT)"
@@ -54,12 +54,12 @@ dev: .env ## Start the full local stack in docker and wait until every service i
 # settings mirror the compose `web` service, pointed at the host-published ports. They are exported
 # only to this target's recipe, so secrets never appear on a command line.
 dev-web-host: export API_INTERNAL_URL = http://localhost:$(API_PORT)
-dev-web-host: export KEYCLOAK_PORT := $(KEYCLOAK_PORT)
 dev-web-host: export KEYCLOAK_REALM := $(KEYCLOAK_REALM)
-dev-web-host: export KEYCLOAK_INTERNAL_URL = http://localhost:$(KEYCLOAK_PORT)
+dev-web-host: export KEYCLOAK_PUBLIC_URL := $(KEYCLOAK_PUBLIC_URL)
+dev-web-host: export KEYCLOAK_INTERNAL_URL := $(KEYCLOAK_INTERNAL_URL)
 dev-web-host: export OIDC_WEB_CLIENT_ID := $(OIDC_WEB_CLIENT_ID)
 dev-web-host: export KC_WEB_CLIENT_SECRET := $(KC_WEB_CLIENT_SECRET)
-dev-web-host: export WEB_ORIGIN = http://localhost:$(WEB_PORT)
+dev-web-host: export WEB_ORIGIN := $(WEB_ORIGIN)
 dev-web-host: export SESSION_SECRET := $(SESSION_SECRET)
 dev-web-host: export REVALIDATE_SECRET := $(REVALIDATE_SECRET)
 dev-web-host: export REDIS_URL = redis://localhost:$(REDIS_PORT)/1
@@ -99,7 +99,7 @@ migrate: .env ## Apply database migrations (alembic upgrade head)
 	$(COMPOSE) run --rm migrate
 
 .PHONY: seed
-seed: .env ## Load dev orgs, batches and memberships for the dev-realm users (idempotent)
+seed: .env ## Dev users in Keycloak plus their orgs, batches and memberships (SEED_DEV_USERS=true)
 	$(COMPOSE) run --rm seed
 
 .PHONY: seed-demo

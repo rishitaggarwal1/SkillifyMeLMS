@@ -1,13 +1,16 @@
-"""Against the real Keycloak from docker-compose (dev realm): tokens it issues validate in the API,
-and the issuer is stable no matter which hostname the token was requested through.
+"""Against the real Keycloak from docker-compose (realm from infra/keycloak, dev users from
+`make seed`): tokens it issues validate in the API, and the issuer is stable no matter which
+hostname the token was requested through.
 
-The browser reaches Keycloak at http://localhost:<KEYCLOAK_PORT>; containers reach it at
-http://keycloak:<KEYCLOAK_PORT>. Keycloak pins the issuer with KC_HOSTNAME, and these tests fail if
-the issuer in real tokens ever diverges from the one the API expects (Settings.oidc_issuer).
+The browser reaches Keycloak at KEYCLOAK_PUBLIC_URL; containers reach it at KEYCLOAK_INTERNAL_URL
+(http://keycloak:<port>). Keycloak pins the issuer with KC_HOSTNAME, and these tests fail if the
+issuer in real tokens ever diverges from the one the API expects (Settings.oidc_issuer). The dev
+users come from `make seed` (SEED_DEV_USERS=true, password DEV_USER_PASSWORD).
 """
 
 import asyncio
 import os
+import urllib.parse
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
@@ -25,28 +28,39 @@ from app.core.config import Settings
 from app.main import create_app, create_jwt_validator
 from app.modules.identity.keycloak_admin import KeycloakAdmin, NewUser
 
-PASSWORD = "Local-Dev-Only-1"  # dev-realm test users only
 TEST_CLIENT = "skillifyme-test"
 
 
-def _token_url(settings: Settings, host: str) -> str:
-    return (
-        f"http://{host}:{settings.keycloak_port}/realms/{settings.keycloak_realm}"
-        "/protocol/openid-connect/token"
+def _other_host(base_url: str) -> str:
+    """The same Keycloak through another hostname (localhost <-> 127.0.0.1)."""
+    parts = urllib.parse.urlsplit(base_url)
+    other = "127.0.0.1" if parts.hostname == "localhost" else "localhost"
+    return parts._replace(netloc=f"{other}:{parts.port}" if parts.port else other).geturl()
+
+
+def _token_url(settings: Settings, base_url: str | None = None) -> str:
+    base = (base_url or settings.keycloak_base_url).rstrip("/")
+    return f"{base}/realms/{settings.keycloak_realm}/protocol/openid-connect/token"
+
+
+def _dev_password(settings: Settings) -> str:
+    assert settings.dev_user_password is not None, (
+        "DEV_USER_PASSWORD must be set (see .env.example)"
     )
+    return settings.dev_user_password.get_secret_value()
 
 
-async def _password_token(settings: Settings, username: str, *, host: str = "localhost") -> str:
+async def _password_token(settings: Settings, username: str, *, base_url: str | None = None) -> str:
     assert settings.kc_test_client_secret is not None, "KC_TEST_CLIENT_SECRET must be set"
     async with httpx.AsyncClient() as http:
         response = await http.post(
-            _token_url(settings, host),
+            _token_url(settings, base_url),
             data={
                 "grant_type": "password",
                 "client_id": TEST_CLIENT,
                 "client_secret": settings.kc_test_client_secret.get_secret_value(),
                 "username": username,
-                "password": PASSWORD,
+                "password": _dev_password(settings),
                 "scope": "openid",
             },
         )
@@ -70,26 +84,29 @@ async def test_token_issuer_matches_configured_issuer(settings: Settings) -> Non
     claims = _unverified_claims(token)
     assert claims["iss"] == settings.oidc_issuer, (
         "Keycloak's token issuer differs from Settings.oidc_issuer; check KC_HOSTNAME and "
-        "KEYCLOAK_PORT so the browser-facing URL and the API's expected issuer agree."
+        "KEYCLOAK_PUBLIC_URL so the browser-facing URL and the API's expected issuer agree."
     )
 
 
 async def test_issuer_is_stable_across_hostnames(settings: Settings) -> None:
     # Same Keycloak, reached through a different hostname (as the BFF/API do over the Docker
     # network). Without KC_HOSTNAME the issuer would follow the request host and break validation.
-    via_localhost = _unverified_claims(await _password_token(settings, "admin@demo-college.local"))
-    via_ip = _unverified_claims(
-        await _password_token(settings, "admin@demo-college.local", host="127.0.0.1")
+    via_public = _unverified_claims(await _password_token(settings, "admin@demo-college.local"))
+    via_other = _unverified_claims(
+        await _password_token(
+            settings, "admin@demo-college.local", base_url=_other_host(settings.keycloak_base_url)
+        )
     )
-    assert via_localhost["iss"] == via_ip["iss"] == settings.oidc_issuer
+    assert via_public["iss"] == via_other["iss"] == settings.oidc_issuer
 
 
 async def test_real_token_validates_with_jwks_fetched_over_another_host(
     settings: Settings,
 ) -> None:
-    # JWKS fetched via 127.0.0.1 (standing in for http://keycloak:<port>), issuer from localhost.
+    # JWKS fetched via another hostname (standing in for http://keycloak:<port>), issuer from the
+    # public URL.
     internal = settings.model_copy(
-        update={"keycloak_internal_url": f"http://127.0.0.1:{settings.keycloak_port}"}
+        update={"keycloak_internal_url": _other_host(settings.keycloak_base_url)}
     )
     token = await _password_token(settings, "platform.admin@skillifyme.local")
     async with httpx.AsyncClient() as http:
@@ -173,7 +190,7 @@ async def test_disable_blocks_password_login_and_refresh(settings: Settings) -> 
     assert settings.kc_test_client_secret is not None
     email = f"kc-disable-{uuid7().hex[-10:]}@college.test"
     password = f"It-{uuid7().hex}"  # throwaway credential for this test user only
-    token_url = _token_url(settings, "localhost")
+    token_url = _token_url(settings)
     client = {
         "client_id": TEST_CLIENT,
         "client_secret": settings.kc_test_client_secret.get_secret_value(),
@@ -235,7 +252,7 @@ async def test_demo_seed_account_preparation(settings: Settings) -> None:
             await admin.grant_realm_role(kc_id, "platform_admin")
             await admin.grant_realm_role(kc_id, "platform_admin")  # idempotent
             response = await http.post(
-                _token_url(settings, "localhost"),
+                _token_url(settings),
                 data={
                     "grant_type": "password", "client_id": TEST_CLIENT,
                     "client_secret": settings.kc_test_client_secret.get_secret_value(),

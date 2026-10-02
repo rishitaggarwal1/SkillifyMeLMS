@@ -1,0 +1,60 @@
+# Edge proxy for the dev/demo server (docker-compose.prod.yml). Every hostname is an .env value;
+# Caddy obtains and renews their TLS certificates automatically (Let's Encrypt, ACME_EMAIL).
+# Upstreams are Docker service names on the `edge` network, never published ports.
+#
+#   WEB_HOST   -> web       (the portal; the API is reached only through the web app's /backend)
+#   AUTH_HOST  -> keycloak  (/admin only from ADMIN_ALLOW_CIDR)
+#   FILES_HOST -> minio     (presigned uploads and downloads; the Host header is kept, so
+#                            signatures made for S3_PUBLIC_ENDPOINT_URL stay valid)
+#   MAIL_HOST  -> mailpit   (behind basic auth)
+#
+# Validate: docker run --rm -v ./infra/caddy:/etc/caddy:ro <env...> caddy:2.10-alpine \
+#           caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile   (CI does this)
+
+{
+	email {$ACME_EMAIL}
+}
+
+(common) {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+	log
+}
+
+{$WEB_HOST} {
+	import common
+	reverse_proxy web:3000
+}
+
+{$AUTH_HOST} {
+	import common
+	# The admin console is for operators only. Services call the admin REST API over the Docker
+	# network (http://keycloak:<port>), never through this proxy.
+	@admin_elsewhere {
+		path /admin /admin/*
+		not remote_ip {$ADMIN_ALLOW_CIDR}
+	}
+	respond @admin_elsewhere 403
+	reverse_proxy keycloak:{$KEYCLOAK_PORT}
+}
+
+{$FILES_HOST} {
+	import common
+	# Video uploads go straight to MinIO (VIDEO_UPLOAD_MAX_BYTES, 2 GiB by default).
+	request_body {
+		max_size 2GiB
+	}
+	reverse_proxy minio:9000
+}
+
+{$MAIL_HOST} {
+	import common
+	basic_auth {
+		{$MAILPIT_BASIC_AUTH_USER} {$MAILPIT_BASIC_AUTH_HASH}
+	}
+	reverse_proxy mailpit:8025
+}

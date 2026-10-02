@@ -203,16 +203,23 @@ async def test_encryption_keys_are_ignored(settings: Settings, key: SigningKey) 
         await jwks.get_key("enc-1")
 
 
-def test_issuer_and_urls_derive_from_keycloak_port(settings: Settings) -> None:
+def test_issuer_and_urls_derive_from_keycloak_urls(settings: Settings) -> None:
     custom = settings.model_copy(
         update={
-            "keycloak_port": 9123,
-            "keycloak_public_url": None,
+            "keycloak_public_url": "https://auth.example.test/",
             "keycloak_internal_url": "http://keycloak:9123",
             "keycloak_realm": "demo",
         }
     )
-    assert custom.oidc_issuer == "http://localhost:9123/realms/demo"
+    assert custom.oidc_issuer == "https://auth.example.test/realms/demo"
     # Browser-facing issuer, but keys fetched over the Docker network.
     assert custom.oidc_jwks_url == "http://keycloak:9123/realms/demo/protocol/openid-connect/certs"
     assert custom.keycloak_admin_api_url == "http://keycloak:9123/admin/realms/demo"
+
+
+def test_backchannel_defaults_to_the_public_url(settings: Settings) -> None:
+    custom = settings.model_copy(
+        update={"keycloak_public_url": "https://auth.example.test", "keycloak_internal_url": None}
+    )
+    assert custom.keycloak_backchannel_url == "https://auth.example.test"
+    assert custom.oidc_token_url.startswith("https://auth.example.test/realms/")

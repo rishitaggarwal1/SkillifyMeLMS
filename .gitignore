@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+!.env.dev-server.example
 # Demo logins written by `make seed-demo` (passwords): never commit
 .secrets/
 

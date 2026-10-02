@@ -2,7 +2,7 @@
 
 - Only asymmetric algorithms are accepted, and the algorithm must match the key's type, so
   `alg=none` and HS256-with-the-public-key ("algorithm confusion") are both rejected.
-- `iss` must equal the configured issuer exactly (derived from KEYCLOAK_PORT; Keycloak pins it with
+- `iss` must equal the configured issuer exactly (from KEYCLOAK_PUBLIC_URL; Keycloak pins it with
   KC_HOSTNAME), `aud` must include the API audience, `azp` must be an allowed client, and `typ` must
   be "Bearer" so ID/refresh tokens can't be replayed as access tokens.
 - Keys are cached in-process with a TTL. An unknown `kid` triggers one refetch (key rotation), at

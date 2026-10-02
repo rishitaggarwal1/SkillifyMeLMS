@@ -39,6 +39,7 @@ from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from app.cli import demo_progress
 from app.cli.seed import SeedOrg, _upsert_batch, _upsert_org
 from app.core.config import Settings, get_settings
 from app.core.pagination import CursorParams
@@ -327,6 +328,9 @@ async def ensure_accounts(s: Seeder, *, rotate: bool, log: Callable[[str], None]
     """Keycloak accounts with passwords, and their users, memberships and batch places."""
     path = credentials_path(s.settings)
     known = {} if rotate else read_credentials(path)
+    # Accounts missing from Keycloak (first run, or Keycloak lost them, e.g. a recreated local dev
+    # store) get their password set even when the credentials file already has one.
+    existing = {u.email for u in USERS if await s.keycloak.find_user_by_email(u.email) is not None}
     ids = await s.keycloak.ensure_users([NewUser(u.email, u.full_name) for u in USERS])
     passwords: dict[str, str] = {}
     changed = 0
@@ -338,7 +342,9 @@ async def ensure_accounts(s: Seeder, *, rotate: bool, log: Callable[[str], None]
             changed += 1
         passwords[u.email] = password  # type: ignore[assignment]
         await s.keycloak.prepare_login(
-            ids[u.email], full_name=u.full_name, password=password if new else None
+            ids[u.email],
+            full_name=u.full_name,
+            password=password if new or u.email not in existing else None,
         )
         if u.platform_admin:
             await s.keycloak.grant_realm_role(ids[u.email], "platform_admin")
@@ -352,6 +358,12 @@ async def ensure_accounts(s: Seeder, *, rotate: bool, log: Callable[[str], None]
         cse = await _upsert_batch(session, await _org(session, COLLEGE.slug), "CSE 2026")
         for u in USERS:
             sub = ids[u.email]
+            # Keycloak recreated (e.g. its local dev store): the same person now has a new id.
+            await session.execute(
+                update(User)
+                .where(func.lower(User.email) == u.email.lower(), User.keycloak_sub != sub)
+                .values(keycloak_sub=sub)
+            )
             await session.execute(
                 pg_insert(User)
                 .values(
@@ -540,7 +552,7 @@ async def ensure_progress(
                     continue
                 await enrollments.visit_lesson(ctx, eid, lesson_id)
                 if lesson_type == LessonType.VIDEO:
-                    await enrollments.mark_video_watched(ctx.session, eid, lesson_id)
+                    await demo_progress.mark_video_watched(ctx.session, eid, lesson_id)
                 elif lesson_type == LessonType.PDF:
                     await enrollments.open_pdf(ctx, s.storage, eid, lesson_id, pdf_ttl)
                     await enrollments.complete_lesson(ctx, eid, lesson_id)
@@ -666,7 +678,8 @@ def main(argv: list[str] | None = None) -> None:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     if reason := refusal(settings, args):
         sys.exit(reason)
-    asyncio.run(run(settings, args, print))
+    with demo_progress.seed_context():
+        asyncio.run(run(settings, args, print))
 
 
 if __name__ == "__main__":

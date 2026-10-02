@@ -1,0 +1,136 @@
+{
+  "realm": "${KEYCLOAK_REALM}",
+  "displayName": "${KEYCLOAK_DISPLAY_NAME}",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "verifyEmail": false,
+  "bruteForceProtected": "${KEYCLOAK_BRUTE_FORCE}",
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "smtpServer": {
+    "host": "${SMTP_HOST}",
+    "port": "${SMTP_PORT}",
+    "from": "${SMTP_FROM}",
+    "fromDisplayName": "${SMTP_FROM_NAME}"
+  },
+  "roles": {
+    "realm": [
+      {
+        "name": "platform_admin",
+        "description": "SkillifyMe operator: manages all organizations. Org roles live in the app DB."
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "skillifyme-web",
+      "name": "SkillifyMe Web (BFF)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${KC_WEB_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "${WEB_ORIGIN}/auth/callback",
+        "${WEB_ORIGIN}/"
+      ],
+      "webOrigins": [
+        "${WEB_ORIGIN}"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "${WEB_ORIGIN}/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "skillifyme-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "skillifyme-api",
+      "name": "SkillifyMe API (resource server)",
+      "enabled": true,
+      "bearerOnly": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    },
+    {
+      "clientId": "skillifyme-admin",
+      "name": "SkillifyMe API admin service account (invites, imports)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${KC_ADMIN_CLIENT_SECRET}",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true
+    }
+  ],
+  "authenticationFlows": [
+    {
+      "alias": "first broker login - auto link",
+      "description": "Create the user if unique, otherwise link to the existing account by email",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "idp-create-user-if-unique",
+          "requirement": "ALTERNATIVE",
+          "priority": 10,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "idp-auto-link",
+          "requirement": "ALTERNATIVE",
+          "priority": 20,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false
+        }
+      ]
+    }
+  ],
+  "permanentLockout": false,
+  "failureFactor": 10,
+  "waitIncrementSeconds": 60,
+  "maxFailureWaitSeconds": 900,
+  "quickLoginCheckMilliSeconds": 1000,
+  "minimumQuickLoginWaitSeconds": 60,
+  "maxDeltaTimeSeconds": 43200,
+  "users": [
+    {
+      "username": "service-account-skillifyme-admin",
+      "enabled": true,
+      "serviceAccountClientId": "skillifyme-admin",
+      "clientRoles": {
+        "realm-management": [
+          "manage-users",
+          "view-users",
+          "query-users"
+        ]
+      }
+    }
+  ]
+}

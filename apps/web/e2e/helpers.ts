@@ -1,7 +1,29 @@
+import fs from "node:fs";
+import path from "node:path";
+
 import { expect, type Page } from "@playwright/test";
 
-/** Password for the dev-realm test users (infra/local/keycloak/realm). Local-only. */
-export const DEV_PASSWORD = "Local-Dev-Only-1";
+/** DEV_USER_PASSWORD from the environment, else from the repo-root .env (local runs). */
+function devUserPassword(): string {
+  const fromEnv = process.env.DEV_USER_PASSWORD;
+  if (fromEnv) return fromEnv;
+  const envFile = path.resolve("../../.env"); // Playwright runs from apps/web
+  const line = fs.existsSync(envFile)
+    ? fs
+        .readFileSync(envFile, "utf-8")
+        .split(/\r?\n/)
+        .find((l) => l.startsWith("DEV_USER_PASSWORD="))
+    : undefined;
+  const value = line
+    ?.slice("DEV_USER_PASSWORD=".length)
+    .trim()
+    .replace(/^"(.*)"$/, "$1");
+  if (!value) throw new Error("DEV_USER_PASSWORD is not set (see .env.example)");
+  return value;
+}
+
+/** Password of the dev users `make seed` creates (SEED_DEV_USERS=true). Local-only. */
+export const DEV_PASSWORD = devUserPassword();
 
 /** Fill in the real Keycloak login page (we arrive there via /auth/login). */
 export async function signInOnKeycloak(page: Page, email: string): Promise<void> {

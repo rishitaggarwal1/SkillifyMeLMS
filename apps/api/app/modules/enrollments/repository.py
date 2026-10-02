@@ -371,32 +371,6 @@ class LessonProgressRepository:
             )
         )
 
-    async def mark_watched(self, enrollment: Enrollment, lesson: Any) -> None:
-        """Every segment of the lesson's video watched (seeds; see mark_video_watched)."""
-        duration = lesson.video_duration_seconds or 0
-        segments = max(1, -(-duration // 5))
-        bitmap = bytes([0xFF] * (segments // 8)) + (
-            bytes([(0xFF << (8 - segments % 8)) & 0xFF]) if segments % 8 else b""
-        )
-        values = {
-            "watched_segments": bitmap, "watched_ratio": 1, "video_asset_id": lesson.video_asset_id,
-            "video_position_seconds": duration, "status": LessonProgressStatus.IN_PROGRESS,
-        }  # fmt: skip
-        await self.session.execute(
-            pg_insert(LessonProgress)
-            .values(
-                enrollment_id=enrollment.id,
-                lesson_id=lesson.lesson_id,
-                organization_id=enrollment.organization_id,
-                user_id=enrollment.user_id,
-                **values,
-            )
-            .on_conflict_do_update(
-                index_elements=[LessonProgress.enrollment_id, LessonProgress.lesson_id],
-                set_={k: v for k, v in values.items() if k != "status"},
-            )
-        )
-
     async def complete(self, enrollment: Enrollment, lesson_id: UUID, at: datetime) -> bool:
         """Mark a lesson completed; False if it already was (so events fire once)."""
         stmt = pg_insert(LessonProgress).values(

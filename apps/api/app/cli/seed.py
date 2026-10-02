@@ -2,10 +2,11 @@
 
     python -m app.cli.seed
 
-Creates the three dev organizations with their batches, and links the dev-realm Keycloak users
-(infra/local/keycloak/realm/skillifyme-realm.json) to memberships and batches. Keycloak user IDs are
-looked up through the admin API, so they match the `sub` in real tokens. Writes as the owner role
-(bypassing RLS) because seeding is an operator action, not a user action.
+Runs only when SEED_DEV_USERS=true (local and CI; never on a server). Creates the three dev
+organizations with their batches, and the dev users in Keycloak through the admin API (verified,
+enabled, password DEV_USER_PASSWORD, which is reset on every run), then links them to memberships
+and batches. Keycloak ids come back from the admin API, so they match the `sub` in real tokens.
+Writes as the owner role (bypassing RLS) because seeding is an operator action, not a user action.
 """
 
 import asyncio
@@ -19,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.core.config import Settings, get_settings
 from app.db.base import new_id
-from app.modules.identity.keycloak_admin import KeycloakAdmin
+from app.modules.identity.keycloak_admin import KeycloakAdmin, NewUser
 from app.modules.identity.models import Batch, BatchMember, Membership, Organization, User
 
 
@@ -33,9 +34,11 @@ class SeedOrg:
 
 @dataclass(frozen=True)
 class SeedUser:
-    username: str  # Keycloak username (= email in the dev realm)
+    username: str  # Keycloak username (= email)
+    full_name: str
     roles: tuple[tuple[str, str], ...] = ()  # (org slug, role)
     batches: tuple[tuple[str, str], ...] = ()  # (org slug, batch name)
+    realm_roles: tuple[str, ...] = ()
 
 
 ORGS = (
@@ -45,33 +48,39 @@ ORGS = (
 )
 
 USERS = (
-    # Platform admin comes from the Keycloak realm role; no org membership needed.
-    SeedUser("platform.admin@skillifyme.local"),
-    SeedUser("content.admin@skillifyme.local", roles=(("skillifyme", "org_admin"),)),
-    SeedUser("author@skillifyme.local", roles=(("skillifyme", "instructor"),)),
-    SeedUser("lab.author@skillifyme.local", roles=(("skillifyme", "lab_author"),)),
+    # The platform admin is a Keycloak realm role; no org membership needed.
+    SeedUser("platform.admin@skillifyme.local", "Priya Platform", realm_roles=("platform_admin",)),
+    SeedUser("content.admin@skillifyme.local", "Kabir Content", (("skillifyme", "org_admin"),)),
+    SeedUser("author@skillifyme.local", "Asha Author", (("skillifyme", "instructor"),)),
+    SeedUser("lab.author@skillifyme.local", "Lalit Labs", (("skillifyme", "lab_author"),)),
     # Different roles in different orgs (org switcher).
     SeedUser(
         "multi@skillifyme.local",
-        roles=(("skillifyme", "instructor"), ("demo-college", "instructor")),
+        "Meera Multi",
+        (("skillifyme", "instructor"), ("demo-college", "instructor")),
     ),
-    SeedUser("admin@demo-college.local", roles=(("demo-college", "org_admin"),)),
-    SeedUser("instructor@demo-college.local", roles=(("demo-college", "instructor"),)),
+    SeedUser("admin@demo-college.local", "Dev Admin", (("demo-college", "org_admin"),)),
+    SeedUser("instructor@demo-college.local", "Ira Instructor", (("demo-college", "instructor"),)),
     SeedUser(
         "cse.student@demo-college.local",
-        roles=(("demo-college", "student"),),
+        "Chetan CSE",
+        (("demo-college", "student"),),
         batches=(("demo-college", "CSE 2026"),),
     ),
     SeedUser(
         "ece.student@demo-college.local",
-        roles=(("demo-college", "student"),),
+        "Esha ECE",
+        (("demo-college", "student"),),
         batches=(("demo-college", "ECE 2026"),),
     ),
-    SeedUser("admin@other-college.local", roles=(("other-college", "org_admin"),)),
-    SeedUser("instructor@other-college.local", roles=(("other-college", "instructor"),)),
+    SeedUser("admin@other-college.local", "Omar Admin", (("other-college", "org_admin"),)),
+    SeedUser(
+        "instructor@other-college.local", "Oviya Instructor", (("other-college", "instructor"),)
+    ),
     SeedUser(
         "student@other-college.local",
-        roles=(("other-college", "student"),),
+        "Sam Student",
+        (("other-college", "student"),),
         batches=(("other-college", "MECH 2026"),),
     ),
 )
@@ -112,11 +121,25 @@ async def _upsert_batch(session: AsyncSession, org: Organization, name: str) -> 
     return batch
 
 
-async def _upsert_user(session: AsyncSession, kc_user: dict[str, object]) -> User:
-    sub, email = str(kc_user["id"]), str(kc_user["email"])
-    full_name = " ".join(str(kc_user.get(k) or "") for k in ("firstName", "lastName")).strip()
-    # Dev reconciliation: if this dev user exists under an older Keycloak id (e.g. seeded before
-    # ids were pinned in the realm file), point the row at the current id.
+async def _ensure_keycloak_users(settings: Settings, keycloak: KeycloakAdmin) -> dict[str, str]:
+    """Create the dev users that are missing and make every one ready to sign in with
+    DEV_USER_PASSWORD. Returns lowercased username -> Keycloak id."""
+    if settings.dev_user_password is None:
+        msg = "SEED_DEV_USERS is true but DEV_USER_PASSWORD is not set."
+        raise SystemExit(msg)
+    password = settings.dev_user_password.get_secret_value()
+    ids = await keycloak.ensure_users([NewUser(u.username, u.full_name) for u in USERS])
+    for spec in USERS:
+        keycloak_id = ids[spec.username.lower()]
+        await keycloak.prepare_login(keycloak_id, full_name=spec.full_name, password=password)
+        for role in spec.realm_roles:
+            await keycloak.grant_realm_role(keycloak_id, role)
+    return ids
+
+
+async def _upsert_user(session: AsyncSession, sub: str, email: str, full_name: str) -> User:
+    # Dev reconciliation: if this dev user exists under an older Keycloak id (e.g. Keycloak's dev
+    # store was recreated), point the row at the current id.
     await session.execute(
         update(User)
         .where(func.lower(User.email) == email.lower(), User.keycloak_sub != sub)
@@ -134,6 +157,9 @@ async def _upsert_user(session: AsyncSession, kc_user: dict[str, object]) -> Use
 
 async def seed(settings: Settings, keycloak: KeycloakAdmin) -> SeedResult:
     result = SeedResult()
+    if not settings.seed_dev_users:
+        return result
+    keycloak_ids = await _ensure_keycloak_users(settings, keycloak)
     engine = create_async_engine(settings.migration_database_url.get_secret_value())
     sessionmaker = async_sessionmaker(engine, expire_on_commit=False)
     try:
@@ -149,14 +175,12 @@ async def seed(settings: Settings, keycloak: KeycloakAdmin) -> SeedResult:
                     batches[(spec.slug, name)] = await _upsert_batch(session, org, name)
 
             for spec_user in USERS:
-                kc_user = await keycloak.find_user_by_username(spec_user.username)
-                if kc_user is None:
-                    msg = (
-                        f"Keycloak user {spec_user.username!r} not found; "
-                        "is the dev realm imported?"
-                    )
-                    raise SystemExit(msg)
-                user = await _upsert_user(session, kc_user)
+                user = await _upsert_user(
+                    session,
+                    keycloak_ids[spec_user.username.lower()],
+                    spec_user.username.lower(),
+                    spec_user.full_name,
+                )
                 result.users[spec_user.username] = str(user.id)
                 for slug, role in spec_user.roles:
                     await session.execute(
@@ -185,6 +209,9 @@ async def seed(settings: Settings, keycloak: KeycloakAdmin) -> SeedResult:
 
 async def _main() -> None:
     settings = get_settings()
+    if not settings.seed_dev_users:
+        print("Dev seed skipped (SEED_DEV_USERS is not true).")  # noqa: T201
+        return
     async with httpx.AsyncClient() as http:
         result = await seed(settings, KeycloakAdmin(http, settings))
     print(  # noqa: T201

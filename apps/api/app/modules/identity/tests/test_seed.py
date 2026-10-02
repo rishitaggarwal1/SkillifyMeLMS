@@ -1,4 +1,4 @@
-"""`make seed` against the test database and the real dev-realm Keycloak."""
+"""`make seed` against the test database and the real Keycloak (SEED_DEV_USERS=true)."""
 
 import httpx
 from sqlalchemy import text
@@ -72,3 +72,11 @@ async def test_seed_is_idempotent_and_matches_keycloak(
     assert publisher is True
     assert kc_student is not None
     assert sub == kc_student["id"]  # matches the `sub` of real tokens
+
+
+async def test_seed_does_nothing_unless_dev_users_are_enabled(settings: Settings) -> None:
+    off = settings.model_copy(update={"seed_dev_users": False})
+    async with httpx.AsyncClient() as http:
+        result = await seed(off, KeycloakAdmin(http, off))
+    assert result.organizations == {}
+    assert result.users == {}

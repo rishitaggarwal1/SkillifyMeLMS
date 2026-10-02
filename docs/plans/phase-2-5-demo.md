@@ -708,6 +708,120 @@ Every step ends with:
 4. **The seed ensures its own orgs and the CSE 2026 batch,** so it doesn't depend on
    `make seed`.
 
+### Step 7: deployment readiness, nothing deployed (2026-10-03)
+
+- **URLs from `.env`:**
+  - `WEB_ORIGIN`, `KEYCLOAK_PUBLIC_URL` and `S3_PUBLIC_ENDPOINT_URL` are required wherever they
+    are used (API settings, the web app's zod config, compose). The `localhost` fallbacks are
+    gone, including `API_INTERNAL_URL` in the web app and `KAFKA_BOOTSTRAP_SERVERS` in the API.
+  - Compose derives `KC_HOSTNAME`, MinIO's CORS origin and Redpanda's external address
+    (`KAFKA_EXTERNAL_HOST`) from them. The API derives the issuer, JWKS, token and admin URLs.
+  - `.env.example` writes `KEYCLOAK_PUBLIC_URL=http://localhost:${KEYCLOAK_PORT}`, so changing
+    the port still changes one line (compose, pydantic-settings and make all expand it).
+- **Realm template** (`infra/keycloak/`):
+  - `realm.template.json` has no users except the admin client's service account. The
+    `skillifyme-test` client lives in `realm.dev-clients.json`, merged only with
+    `KEYCLOAK_DEV_CLIENTS=true`.
+  - Display name, SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `SMTP_FROM_NAME`, optional
+    `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_STARTTLS`, `SMTP_SSL`) and brute force
+    (`KEYCLOAK_BRUTE_FORCE`, default on; 10 failures, 60 s steps, 15 min maximum, 12 h reset)
+    come from `.env`.
+  - `realm.py render` (the `keycloak-realm` one-shot) fails closed and names every missing
+    setting. Keycloak imports the result from a volume.
+  - `realm.py sync` (the `keycloak-sync` one-shot, after Keycloak is healthy) makes an existing
+    realm match: realm options, SMTP, brute-force settings, the `platform_admin` role, client
+    redirect URIs, web origins, flags and attributes, missing protocol mappers, missing clients,
+    and the service account's roles. It never deletes, never sends or regenerates a client secret
+    (an existing client's PUT omits `secret`), never calls attack detection, and preserves the
+    stored SMTP password unless `--update-smtp-password`.
+- **Dev users moved to `make seed`:** created through the admin API only with
+  `SEED_DEV_USERS=true`, all with `DEV_USER_PASSWORD` (both in `.env.example`). Otherwise the
+  seed does nothing. The tests and Playwright read the password from settings and `.env`.
+- **Keycloak's own database:** `db_roles` creates the `keycloak` login role (no superuser,
+  createdb, createrole or bypassrls) and a `keycloak` database it owns, with `PUBLIC` access
+  revoked, only when `KEYCLOAK_DB_PASSWORD` is set (servers).
+- **`docker-compose.prod.yml`:**
+  - API and web from `${API_IMAGE}` and `${WEB_IMAGE}` (the CI-built `runtime` targets), with no
+    source mounts.
+  - `ports: !reset []` everywhere; only `caddy` publishes 80 and 443, on the `edge` network with
+    web, Keycloak, MinIO and Mailpit.
+  - Keycloak runs `start` on Postgres with its own role, with `KC_PROXY_HEADERS=xforwarded`.
+    Brute force is forced on and dev clients forced off.
+  - Redis AOF (`everysec`), `noeviction`, `maxmemory` from `REDIS_MAXMEMORY`.
+  - `unless-stopped` restarts and `json-file` log rotation. Redpanda Console sits behind a
+    `debug` profile.
+- **`infra/caddy/Caddyfile`:** routes `WEB_HOST`, `AUTH_HOST` (`/admin` 403 outside
+  `ADMIN_ALLOW_CIDR`), `FILES_HOST` and `MAIL_HOST` (basic auth). Every hostname is `.env`.
+- **`.env.dev-server.example`:** every key that changes, with `<DOMAIN>`, `<SECRET>` and other
+  placeholders and no real values. `scripts/server_env_for_ci.sh` turns it into a fake
+  `example.test` env for CI and fails on an unknown placeholder.
+- **Runbook:** `infra/dev-vm/README.md`, marked **not yet executed**. It covers provisioning, DNS,
+  first deploy, upgrades, backups (both databases and the bucket), rotating each secret, restore
+  and tear down, and states that this is not the `docs/architecture.md` topology.
+- **CI:**
+  - The API job runs `db_roles`, migrations and `make seed` (dev users) before pytest, and
+    type-checks `realm.py`.
+  - The new `server-config` job checks `compose config` for base plus override (all profiles),
+    that only Caddy publishes ports and no source is bind-mounted, that the realm renders for a
+    server (brute force on, no test client, no `localhost`), and runs `caddy validate`.
+  - The `docker` job still builds both runtime images.
+- **Tests:**
+  - `test_config_hosts.py` replaces `test_config_ports.py`. One sweep over app code (not tests),
+    both compose files, both Dockerfiles, `next.config.ts`, the Caddyfile and
+    `infra/keycloak/**` for `localhost`, `127.0.0.1`, `:3000`, `:8000`, `:8080`, `:9000`,
+    `:9001`, `:8025`, `:1025` and the old realm path. Service-DNS addresses and container-side
+    port mappings are allowed; in-container health probes are listed, and a test fails if a
+    listed exception goes stale. A third test checks that the server example holds only
+    placeholders and has the dev switches off.
+  - `test_keycloak_realm.py`:
+    - render: server defaults, fail-closed, bad booleans, dev clients, SMTP auth
+    - sync against a recording fake: drift repaired, then a second run changes nothing and makes
+      only GETs; no DELETE; no secret or attack-detection path; no `secret` in a client PUT;
+      the SMTP password is kept
+    - sync run twice against the real Keycloak: no changes, realm representation unchanged
+  - `test_db_roles.py`: Keycloak's database is owned by its role and closed to `skillify_app`,
+    idempotent. `test_seed.py`: the seed does nothing without `SEED_DEV_USERS`.
+- **Folded in from the step 6 review:** the seed-only "mark videos watched" helper moved to
+  `app/cli/demo_progress.py`. It raises `SeedOnlyError` unless it runs inside the demo seed's
+  entry point (`seed_context()`) or with `ENVIRONMENT=local`. The enrollments service keeps only
+  `complete_watched_video`, the normal completion rule for stored watch progress.
+  `tests/test_cli_boundaries.py` fails if anything under `app/api` or `app/modules` (apart from
+  tests) imports `app.cli`.
+- **Found while testing locally:** when Keycloak loses demo accounts (its local dev store was
+  recreated), `make seed-demo` failed on the existing user rows, and its recreated accounts had
+  no password. The seed now re-links users by email to their new Keycloak id and sets the
+  file's password on any account it had to create. A test deletes an account and checks the
+  file's password signs in after a rerun.
+
+**Deviations in step 7:**
+1. **`keycloak-sync` is Python (standard library, `infra/keycloak/realm.py`), not `kcadm`.** One
+   script renders and syncs from the same template, and a recording fake can prove what it
+   never calls.
+2. **Keycloak `start`, not `start --optimized`.** Optimized mode needs a custom pre-built image;
+   `start` builds at boot, which is slower but needs no image of our own.
+3. **Containers keep service-DNS internal URLs** (`http://keycloak:<port>`, `http://minio:9000`,
+   `http://web:3000`) instead of reading `KEYCLOAK_INTERNAL_URL` and `S3_ENDPOINT_URL` from
+   `.env`. Those `.env` values are for processes on the host. Service names resolve the same on
+   any machine, and the hosts test allows only those.
+4. **No `API_PUBLIC_URL`.** Nothing needs it: the browser reaches the API only through the web
+   app's `/backend`, and the dev server uses the local video provider. Bunny's webhook would need
+   a public API route first.
+5. **Local brute force stays off** (`KEYCLOAK_BRUTE_FORCE=false` in `.env.example`): parallel test
+   logins as shared dev users would lock them. The renderer defaults to on, and the server
+   override forces it.
+6. **Local Keycloak keeps `start-dev` and its built-in store;** only servers use Postgres and the
+   `keycloak` role. Recreating the local Keycloak container therefore re-imports the realm, and
+   `make seed` recreates the dev users.
+7. **`KEYCLOAK_PORT` left the API and web settings.** Only compose uses it (the container port);
+   the apps read `KEYCLOAK_PUBLIC_URL`.
+8. **The hosts sweep skips local tooling:** the Makefile, `.env.example`, Playwright config and
+   e2e helpers. Local addresses belong there.
+9. **Read-only config mounts remain on a server** (the realm template, the Caddyfile, the Google
+   script, `.secrets`), because the server runs from a checkout of the release tag. Only
+   application-source mounts are removed, and CI checks that.
+10. **Images are built on the VM until CI pushes them** (decision 10: no pushes in this phase);
+    the runbook says so.
+
 ## 4. Decisions (approved 2026-10-02)
 
 All 13 recommendations were approved as written. Additions are marked **Added**.
