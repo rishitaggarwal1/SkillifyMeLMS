@@ -85,6 +85,22 @@ make down            # stop (keeps data)
 make clean           # stop and wipe local data volumes
 ```
 
+## Demo data (`make seed-demo`)
+
+`make seed-demo` sets up a demo of all four roles, separate from `make seed`'s dev users. It is
+idempotent: run it again any time.
+
+- **Logins** `demo.<role>@skillifyme.co.in`: `platform-admin`, `author` (SkillifyMe), `admin` and
+  `instructor` (Demo College), and students `student`, `student2` … `student8` (CSE 2026).
+- **Passwords** are random and written **only** to `.secrets/demo-credentials.txt` (gitignored,
+  owner-only). They're never printed. A rerun keeps them.
+- **Course:** "Python Foundations" (2 modules, 6 lessons, including an assignment), published,
+  granted to Demo College and assigned to CSE 2026, with students from 0% to 100%, three
+  submissions and one grade.
+- `make seed-demo args=--reset` puts the progress back. `make seed-demo args=--rotate-passwords`
+  issues new passwords. Both refuse outside `ENVIRONMENT=local` unless you add
+  `--i-know-this-is-not-local`.
+
 ## Windows development
 
 The stack runs in Docker, and the web container runs `next dev` on the source you mount into it.

@@ -17,6 +17,7 @@ import type {
   Skill,
   Video,
 } from "@/lib/api/types";
+import { allPages } from "@/lib/api/all-pages";
 import { unwrap } from "@/lib/api/unwrap";
 
 const PAGE_SIZE = 25;
@@ -109,6 +110,20 @@ export const assignmentsQuery = (courseId: string) =>
     getNextPageParam: nextCursor,
   });
 
+/** Every assignment row of a course: which batches and orgs have it must be complete. */
+export const allAssignmentsQuery = (courseId: string) =>
+  queryOptions({
+    queryKey: [...keys.course(courseId), "assignments", "all"] as const,
+    queryFn: () =>
+      allPages((cursor): Promise<Page<Assignment>> =>
+        unwrap(
+          api.GET("/api/v1/courses/{course_id}/assignments", {
+            params: { path: path(courseId), query: { limit: 100, cursor } },
+          }),
+        ),
+      ),
+  });
+
 export const skillsSearchQuery = (q: string) =>
   queryOptions({
     queryKey: ["skills", { q }] as const,
@@ -155,6 +170,20 @@ export const readyVideosQuery = () =>
       ),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: nextCursor,
+  });
+
+/** Every ready video, for the lesson's video picker. */
+export const allReadyVideosQuery = () =>
+  queryOptions({
+    queryKey: ["videos", { status: "ready" }, "all"] as const,
+    queryFn: () =>
+      allPages((cursor): Promise<Page<Video>> =>
+        unwrap(
+          api.GET("/api/v1/videos", {
+            params: { query: { status: "ready", limit: 100, cursor } },
+          }),
+        ),
+      ),
   });
 
 export const directoryQuery = (q: string) =>

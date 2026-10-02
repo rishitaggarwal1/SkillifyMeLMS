@@ -117,7 +117,7 @@ test("a college admin assigns a granted course and staff see progress", async ({
   ).toContainText("0%");
   await noSideScroll(t); // only the table scrolls sideways
   const download = t.waitForEvent("download");
-  await t.getByRole("link", { name: "Download CSV" }).click();
+  await t.getByRole("button", { name: "Download CSV" }).click();
   const csv = await download;
   expect(csv.suggestedFilename()).toMatch(/^progress-.*\.csv$/);
   await instructor.context.close();

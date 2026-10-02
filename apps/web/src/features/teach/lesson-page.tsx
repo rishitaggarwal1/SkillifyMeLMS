@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useState } from "react";
@@ -28,7 +28,7 @@ import {
 } from "@/lib/api/types";
 import { unwrap } from "@/lib/api/unwrap";
 
-import { allSkillsQuery, draftQuery, lessonQuery, readyVideosQuery } from "./api";
+import { allReadyVideosQuery, allSkillsQuery, draftQuery, lessonQuery } from "./api";
 import { AssignmentEditor } from "./assignment-editor";
 import { uploadFile } from "./files";
 import { normalizeNotesDoc } from "./notes-doc";
@@ -234,11 +234,11 @@ function LessonContent({ courseId, lesson }: { courseId: string; lesson: Lesson 
 
 function VideoContent({ courseId, lesson }: { courseId: string; lesson: Lesson }) {
   const update = useUpdateLesson(courseId, lesson.id);
-  const videos = useInfiniteQuery(readyVideosQuery());
+  const videos = useQuery(allReadyVideosQuery());
   const [uploading, setUploading] = useState(false);
   const current =
     typeof lesson.content.video_asset_id === "string" ? lesson.content.video_asset_id : "";
-  const list = videos.data?.pages.flatMap((p) => p.items) ?? [];
+  const list = videos.data?.items ?? [];
   const choose = (videoId: string) =>
     update.mutateAsync({ content: videoId ? { video_asset_id: videoId } : {} }).then(
       () => toast.success(videoId ? "Video attached" : "Video removed"),
@@ -267,6 +267,9 @@ function VideoContent({ courseId, lesson }: { courseId: string; lesson: Lesson }
             </option>
           ))}
         </NativeSelect>
+        {videos.data?.truncated ? (
+          <p className="text-xs text-muted-foreground">Showing the first 2,000 videos.</p>
+        ) : null}
       </div>
       {uploading ? (
         <div className="rounded-lg border p-3">

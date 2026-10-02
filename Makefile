@@ -102,6 +102,10 @@ migrate: .env ## Apply database migrations (alembic upgrade head)
 seed: .env ## Load dev orgs, batches and memberships for the dev-realm users (idempotent)
 	$(COMPOSE) run --rm seed
 
+.PHONY: seed-demo
+seed-demo: .env ## Demo logins, course and progress (idempotent; args="--reset" or "--rotate-passwords")
+	docker compose --profile tools run --rm seed-demo python -m app.cli.seed_demo $(args)
+
 .PHONY: migration
 migration: ## Create a migration: make migration m="add courses"
 	@test -n "$(m)" || (echo 'usage: make migration m="message"' && exit 1)

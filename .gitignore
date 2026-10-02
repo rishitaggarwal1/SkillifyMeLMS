@@ -2,6 +2,8 @@
 .env
 .env.*
 !.env.example
+# Demo logins written by `make seed-demo` (passwords): never commit
+.secrets/
 
 # Python
 __pycache__/

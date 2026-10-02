@@ -179,6 +179,10 @@ async def user_summaries(session: AsyncSession, user_ids: Sequence[UUID]) -> dic
     return {u.id: UserOut.model_validate(u, from_attributes=True) for u in users}
 
 
+async def batch_student_count(session: AsyncSession, batch_id: UUID) -> int:
+    return await BatchMemberRepository(session).student_count(batch_id)
+
+
 async def batch_students_page(
     session: AsyncSession, batch_id: UUID, *, after: tuple[str, UUID] | None, limit: int
 ) -> list[UserOut]:

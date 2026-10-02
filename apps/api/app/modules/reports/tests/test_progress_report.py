@@ -5,8 +5,11 @@ import csv
 import io
 from typing import Any
 
+import pytest
+
 from app.modules.enrollments.tests.test_caching import statements
 from app.modules.identity.models import User
+from app.modules.reports import service as reports_service
 from tests.course_api import BuiltCourse, Campus, CourseApi, ok, published_for_cse
 
 
@@ -208,3 +211,20 @@ async def test_older_versions_and_batch_summary(api: CourseApi, campus: Campus) 
         )
     )
     assert ece["items"] == []
+
+
+async def test_csv_export_is_capped(
+    api: CourseApi, campus: Campus, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Above the cap (10,000 rows; 2 here) the export is refused before anything is built."""
+    monkeypatch.setattr(reports_service, "CSV_MAX_ROWS", 2)
+    await _students(api, campus, "Aarav", "Bhavna")  # 3 students with the campus's own
+    course = await published_for_cse(api, campus, modules=(("notes",),))
+    path, kwargs = _progress(course, campus)
+    response = await api.request("GET", f"{path}.csv", campus.c_admin, campus.c, **kwargs)
+    assert response.status_code == 422
+    error = response.json()["error"]
+    assert error["code"] == "export_too_large"
+    assert error["details"] == {"rows": 3, "max_rows": 2}
+    # The paginated table still works for the same batch.
+    assert len((await _get(api, campus, course, limit=100))["items"]) == 3

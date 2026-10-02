@@ -154,6 +154,63 @@ class KeycloakAdmin:
             msg = f"execute-actions-email failed ({response.status_code}): {response.text[:200]}"
             raise KeycloakAdminError(msg)
 
+    # ------------------------------------------------------------------ operator (demo seed)
+
+    async def prepare_login(
+        self, keycloak_id: str, *, full_name: str, password: str | None
+    ) -> None:
+        """Make an account ready to sign in: verified email, no pending actions, enabled, and
+        (when given) a permanent password. The password is sent only in the request body."""
+        first, last = _split_name(full_name)
+        headers = await self._auth_header()
+        response = await self.http.put(
+            f"{self.base}/users/{keycloak_id}",
+            json={
+                "firstName": first, "lastName": last, "emailVerified": True,
+                "requiredActions": [], "enabled": True,
+            },
+            headers=headers,
+            timeout=10.0,
+        )  # fmt: skip
+        if response.status_code not in (httpx.codes.OK, httpx.codes.NO_CONTENT):
+            msg = f"Updating user {keycloak_id} failed ({response.status_code})"
+            raise KeycloakAdminError(msg)
+        if password is None:
+            return
+        response = await self.http.put(
+            f"{self.base}/users/{keycloak_id}/reset-password",
+            json={"type": "password", "value": password, "temporary": False},
+            headers=headers,
+            timeout=10.0,
+        )
+        if response.status_code not in (httpx.codes.OK, httpx.codes.NO_CONTENT):
+            # Never include the response body: it could echo the request.
+            msg = f"Setting the password of {keycloak_id} failed ({response.status_code})"
+            raise KeycloakAdminError(msg)
+
+    async def grant_realm_role(self, keycloak_id: str, role: str) -> None:
+        """Give a user a realm role (idempotent). The role is looked up among the user's
+        assignable roles, which needs only the service account's user-management roles."""
+        headers = await self._auth_header()
+        base = f"{self.base}/users/{keycloak_id}/role-mappings/realm"
+        current = await self.http.get(base, headers=headers, timeout=10.0)
+        if current.status_code == httpx.codes.OK and any(
+            r.get("name") == role for r in current.json()
+        ):
+            return
+        available = await self.http.get(f"{base}/available", headers=headers, timeout=10.0)
+        if available.status_code != httpx.codes.OK:
+            msg = f"Listing assignable roles failed ({available.status_code})"
+            raise KeycloakAdminError(msg)
+        match = [r for r in available.json() if r.get("name") == role]
+        if not match:
+            msg = f"Realm role {role!r} can't be assigned"
+            raise KeycloakAdminError(msg)
+        response = await self.http.post(base, json=match, headers=headers, timeout=10.0)
+        if response.status_code not in (httpx.codes.OK, httpx.codes.NO_CONTENT):
+            msg = f"Granting {role!r} failed ({response.status_code})"
+            raise KeycloakAdminError(msg)
+
     async def set_user_enabled(self, keycloak_id: str, *, enabled: bool) -> None:
         headers = await self._auth_header()
         # PUT /users/{id} merges the representation: only `enabled` changes.

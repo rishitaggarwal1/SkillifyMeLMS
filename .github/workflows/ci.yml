@@ -116,6 +116,15 @@ jobs:
           uv run --no-dev python -m app.cli.db_roles
           uv run --no-dev alembic upgrade head
           uv run --no-dev python -m app.cli.seed
+      - name: Demo seed, run twice (it must be idempotent)
+        working-directory: apps/api
+        # Throwaway passwords for this run's own Keycloak; the file never leaves the runner, and
+        # the demo smoke spec turns Playwright tracing off so reports never contain them.
+        env:
+          DEMO_CREDENTIALS_FILE: ${{ github.workspace }}/.secrets/demo-credentials.txt
+        run: |
+          uv run --no-dev python -m app.cli.seed_demo
+          uv run --no-dev python -m app.cli.seed_demo
       - name: Start API, worker and beat
         working-directory: apps/api
         # WEB_INTERNAL_URL: the web server runs on the runner, so publish-time catalog
@@ -150,6 +159,7 @@ jobs:
         run: |
           set -a; source ../../.env; set +a
           export API_INTERNAL_URL=http://127.0.0.1:8000 REDIS_URL=redis://localhost:6379/1
+          export DEMO_CREDENTIALS_FILE="$GITHUB_WORKSPACE/.secrets/demo-credentials.txt"
           pnpm test:e2e
       - name: Upload Playwright report
         if: failure()

@@ -518,6 +518,24 @@ async def recompute_progress(
     return percent
 
 
+# ============================================================================ operator (seeds)
+
+
+async def mark_video_watched(session: AsyncSession, enrollment_id: UUID, lesson_id: UUID) -> int:
+    """Seeds only (no HTTP route): record a video lesson as fully watched and complete it, as the
+    heartbeat flush would after real playback. Real watching is bounded by wall-clock time, so a
+    seed can't produce it quickly. Returns the course progress percentage."""
+    enrollment = await EnrollmentRepository(session).get(enrollment_id)
+    if enrollment is None:
+        raise NotFoundError("Enrollment not found.")
+    version = await courses.resolve_version(session, enrollment.course_id, enrollment.major_version)
+    lesson = await courses.version_lesson(session, version.id, lesson_id) if version else None
+    if version is None or lesson is None or lesson.video_asset_id is None:
+        raise NotFoundError("Video lesson not found.")
+    await LessonProgressRepository(session).mark_watched(enrollment, lesson)
+    return await record_completion(session, enrollment, version, lesson)
+
+
 # ============================================================================ reports interface
 # For the progress report (reports module). Staff read their org's rows through RLS.
 

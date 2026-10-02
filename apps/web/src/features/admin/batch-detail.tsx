@@ -191,6 +191,11 @@ function AddMembersDialog({ batchId, onClose }: { batchId: string; onClose: () =
             <li className="p-2 text-sm text-muted-foreground">No matching members.</li>
           ) : null}
         </ul>
+        <LoadMore
+          hasNextPage={candidates.hasNextPage}
+          isFetchingNextPage={candidates.isFetchingNextPage}
+          onClick={() => void candidates.fetchNextPage()}
+        />
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel

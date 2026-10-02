@@ -17,7 +17,7 @@ import { hasPermission, useMe } from "@/features/auth/queries";
 import type { Assignment, Course } from "@/lib/api/types";
 
 import {
-  assignmentsQuery,
+  allAssignmentsQuery,
   directoryNamesQuery,
   directoryQuery,
   useCreateAssignments,
@@ -34,8 +34,8 @@ export function AssignmentsPanel({ course }: { course: Course }) {
   const { data: me } = useMe();
   const orgId = me?.active_organization_id ?? null;
   const isPublisher = useIsPublisher();
-  const query = useInfiniteQuery(assignmentsQuery(course.id));
-  const assignments = query.data?.pages.flatMap((p) => p.items) ?? [];
+  const query = useQuery(allAssignmentsQuery(course.id));
+  const assignments = query.data?.items ?? [];
 
   const canManage = course.is_owner
     ? hasPermission(me, "course.assign")

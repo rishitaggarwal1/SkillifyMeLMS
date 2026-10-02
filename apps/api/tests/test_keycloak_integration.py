@@ -219,3 +219,32 @@ async def test_disable_blocks_password_login_and_refresh(settings: Settings) -> 
             assert (await login()).status_code == 200
         finally:
             await http.delete(f"{admin.base}/users/{kc_id}", headers=headers)
+
+
+async def test_demo_seed_account_preparation(settings: Settings) -> None:
+    """prepare_login and grant_realm_role (used by `make seed-demo`) against real Keycloak: the
+    account can sign in with the set password and carries the platform_admin role."""
+    assert settings.kc_test_client_secret is not None
+    email = f"kc-demo-{uuid7().hex[-10:]}@college.test"
+    password = f"Demo-{uuid7().hex}"  # throwaway credential for this test user only
+    async with httpx.AsyncClient() as http:
+        admin = KeycloakAdmin(http, settings)
+        kc_id = (await admin.ensure_users([NewUser(email, "Demo Test")]))[email]
+        try:
+            await admin.prepare_login(kc_id, full_name="Priya Sharma", password=password)
+            await admin.grant_realm_role(kc_id, "platform_admin")
+            await admin.grant_realm_role(kc_id, "platform_admin")  # idempotent
+            response = await http.post(
+                _token_url(settings, "localhost"),
+                data={
+                    "grant_type": "password", "client_id": TEST_CLIENT,
+                    "client_secret": settings.kc_test_client_secret.get_secret_value(),
+                    "username": email, "password": password, "scope": "openid",
+                },
+            )  # fmt: skip
+            assert response.status_code == 200, response.status_code
+            claims = _unverified_claims(response.json()["access_token"])
+            assert "platform_admin" in claims["realm_access"]["roles"]
+            assert claims["name"] == "Priya Sharma"
+        finally:
+            await http.delete(f"{admin.base}/users/{kc_id}", headers=await admin._auth_header())

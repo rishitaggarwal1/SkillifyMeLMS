@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -25,7 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ORG_ROLES, ROLE_LABELS, type Member, type OrgRole } from "@/lib/api/types";
 
 import {
-  batchesQuery,
+  allBatchesQuery,
   invitationsQuery,
   membersQuery,
   useInvite,
@@ -202,8 +202,8 @@ function EditRolesDialog({ member, onClose }: { member: Member; onClose: () => v
 
 function InviteDialog({ onClose }: { onClose: () => void }) {
   const invite = useInvite();
-  const batches = useInfiniteQuery(batchesQuery("active"));
-  const batchOptions = batches.data?.pages.flatMap((p) => p.items) ?? [];
+  const batches = useQuery(allBatchesQuery("active"));
+  const batchOptions = batches.data?.items ?? [];
   const form = useForm<InviteForm>({
     resolver: zodResolver(inviteSchema),
     defaultValues: { email: "", full_name: "", roles: ["student"], batch_ids: [] },
@@ -247,6 +247,9 @@ function InviteDialog({ onClose }: { onClose: () => void }) {
             render={({ field }) => <RoleCheckboxes value={field.value} onChange={field.onChange} />}
           />
           {errors.roles ? <p className="text-sm text-destructive">{errors.roles.message}</p> : null}
+          {batches.data?.truncated ? (
+            <p className="text-xs text-muted-foreground">Showing the first 2,000 batches.</p>
+          ) : null}
           {batchOptions.length > 0 ? (
             <Controller
               control={form.control}

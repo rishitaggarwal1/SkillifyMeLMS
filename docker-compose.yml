@@ -241,6 +241,24 @@ services:
       keycloak-google: { condition: service_completed_successfully }
     restart: "no"
 
+  seed-demo:
+    # `make seed-demo`: demo logins, the Python Foundations course and progress (idempotent).
+    # Passwords go only to ./.secrets/demo-credentials.txt (gitignored, mode 0600).
+    image: skillifyme-api:dev
+    pull_policy: never
+    profiles: ["tools"]
+    environment:
+      <<: *api-env
+      DEMO_CREDENTIALS_FILE: /secrets/demo-credentials.txt
+    command: ["python", "-m", "app.cli.seed_demo"]
+    volumes: ["./apps/api:/app", "./.secrets:/secrets"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      keycloak: { condition: service_healthy }
+      minio-init: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    restart: "no"
+
   api:
     # Built once by the migrate service; never pulled from a registry.
     image: skillifyme-api:dev

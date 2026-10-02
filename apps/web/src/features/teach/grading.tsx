@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { NativeSelect } from "@/components/native-select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { batchesQuery } from "@/features/admin/api";
+import { allBatchesQuery } from "@/features/admin/api";
 import { EmptyState, ErrorAlert, LoadMore, PageTitle } from "@/features/admin/ui";
 import { hasPermission, useMe } from "@/features/auth/queries";
 import { readOutline, type OutlineLesson } from "@/features/learn/outline";
@@ -86,7 +86,7 @@ export function SubmissionsPage({ courseId, lessonId }: { courseId: string; less
     : undefined;
   const [status, setStatus] = useState<StatusFilter>("submitted");
   const [batchId, setBatchId] = useState("");
-  const batches = useInfiniteQuery(batchesQuery("active"));
+  const batches = useQuery(allBatchesQuery("active"));
   const query = useInfiniteQuery(
     submissionsQuery(courseId, lessonId, {
       status: status || undefined,
@@ -125,12 +125,15 @@ export function SubmissionsPage({ courseId, lessonId }: { courseId: string; less
           onChange={(e) => setBatchId(e.target.value)}
         >
           <option value="">All batches</option>
-          {(batches.data?.pages.flatMap((p) => p.items) ?? []).map((b) => (
+          {(batches.data?.items ?? []).map((b) => (
             <option key={b.id} value={b.id}>
               {b.name}
             </option>
           ))}
         </NativeSelect>
+        {batches.data?.truncated ? (
+          <p className="text-xs text-muted-foreground">Showing the first 2,000 batches.</p>
+        ) : null}
       </div>
       {query.isPending ? <Skeleton className="h-24 w-full" /> : null}
       {query.error ? <ErrorAlert error={query.error} /> : null}

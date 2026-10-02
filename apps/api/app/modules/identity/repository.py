@@ -559,6 +559,23 @@ class BatchMemberRepository:
             stmt = stmt.where(BatchMember.user_id > after)
         return list(await self.session.scalars(stmt.order_by(BatchMember.user_id).limit(limit)))
 
+    async def student_count(self, batch_id: UUID) -> int:
+        """How many of the batch's members are students of its org."""
+        return int(
+            await self.session.scalar(
+                select(func.count())
+                .select_from(BatchMember)
+                .join(
+                    Membership,
+                    (Membership.user_id == BatchMember.user_id)
+                    & (Membership.organization_id == BatchMember.organization_id)
+                    & (Membership.role == "student"),
+                )
+                .where(BatchMember.batch_id == batch_id)
+            )
+            or 0
+        )
+
     async def students_by_name(
         self, batch_id: UUID, *, after: tuple[str, UUID] | None, limit: int
     ) -> list[User]:

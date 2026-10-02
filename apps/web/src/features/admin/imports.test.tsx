@@ -6,7 +6,7 @@ import { ApiError } from "@/lib/api/errors";
 import type { ImportJob } from "@/lib/api/types";
 import { renderWithQuery, testQueryClient } from "@/test/utils";
 
-import { batchesQuery } from "./api";
+import { allBatchesQuery } from "./api";
 import { JobSummary, UploadCard } from "./imports";
 import { batchFormSchema } from "./batches";
 import { inviteSchema } from "./members";
@@ -31,24 +31,19 @@ const job = (overrides: Partial<ImportJob> = {}): ImportJob => ({
 
 function clientWithBatches() {
   const client = testQueryClient();
-  client.setQueryData(batchesQuery("active").queryKey, {
-    pages: [
+  client.setQueryData(allBatchesQuery("active").queryKey, {
+    items: [
       {
-        items: [
-          {
-            id: "b1",
-            name: "CSE 2026",
-            description: "",
-            status: "active",
-            member_count: 3,
-            created_at: "",
-            updated_at: "",
-          },
-        ],
-        next_cursor: null,
+        id: "b1",
+        name: "CSE 2026",
+        description: "",
+        status: "active",
+        member_count: 3,
+        created_at: "",
+        updated_at: "",
       },
     ],
-    pageParams: [undefined],
+    truncated: false,
   });
   return client;
 }

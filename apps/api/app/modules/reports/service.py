@@ -14,7 +14,7 @@ import io
 from uuid import UUID
 
 from app.core.csv_safety import csv_cell
-from app.core.errors import InvalidCursorError, NotFoundError
+from app.core.errors import InvalidCursorError, NotFoundError, UnprocessableError
 from app.core.pagination import CursorParams, decode_cursor, encode_cursor
 from app.modules.assignments import service as assignments
 from app.modules.courses import service as courses
@@ -35,6 +35,22 @@ from app.modules.reports.schemas import (
 
 Ctx = RequestContext
 CSV_PAGE = 500
+# The CSV is built in memory: a hard cap keeps one export from exhausting API memory. Larger
+# batches page through GET /courses/{id}/progress (or wait for Phase 5's analytics exports).
+CSV_MAX_ROWS = 10_000
+
+
+class ExportTooLargeError(UnprocessableError):
+    code = "export_too_large"
+    message = "This batch is too large to export as one CSV."
+
+
+def _too_large(rows: int) -> ExportTooLargeError:
+    return ExportTooLargeError(
+        f"This batch has {rows:,} students; a CSV export holds at most {CSV_MAX_ROWS:,}. "
+        "Split the batch, or page through the progress table.",
+        details={"rows": rows, "max_rows": CSV_MAX_ROWS},
+    )
 
 
 async def _assigned_batch(ctx: Ctx, org_id: UUID, course_id: UUID, batch_id: UUID) -> None:
@@ -212,8 +228,12 @@ async def course_progress_csv(ctx: Ctx, course_id: UUID, batch_id: UUID) -> tupl
     org_id = require_org_permission(ctx.principal, Permission.COURSE_READ)
     course = await courses.readable_course(ctx, course_id)
     await _assigned_batch(ctx, org_id, course_id, batch_id)
+    # Refuse before building anything; the loop below re-checks (students added meanwhile).
+    if (total := await identity.batch_student_count(ctx.session, batch_id)) > CSV_MAX_ROWS:
+        raise _too_large(total)
     columns = _columns(await _latest(ctx, course_id))
     buffer = io.StringIO()
+    written = 0
     writer = csv.writer(buffer, lineterminator="\n")
     writer.writerow(
         [
@@ -230,6 +250,9 @@ async def course_progress_csv(ctx: Ctx, course_id: UUID, batch_id: UUID) -> tupl
     after: tuple[str, UUID] | None = None
     while True:
         rows, after = await _page(ctx, course_id, batch_id, columns, after=after, limit=CSV_PAGE)
+        written += len(rows)
+        if written > CSV_MAX_ROWS:
+            raise _too_large(written)
         for r in rows:
             cells = [
                 _assignment_text(r.assignments.get(c.id))

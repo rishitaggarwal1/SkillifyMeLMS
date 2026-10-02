@@ -2,9 +2,13 @@
 
 import { useInfiniteQuery } from "@tanstack/react-query";
 
-import { buttonVariants } from "@/components/ui/button";
+import { useState } from "react";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState, ErrorAlert, LoadMore } from "@/features/admin/ui";
+import { EmptyState, ErrorAlert, LoadMore, errorMessage } from "@/features/admin/ui";
+import { toApiError } from "@/lib/api/errors";
 import type { ProgressLesson, StudentProgress } from "@/lib/api/types";
 import { formatIst } from "@/lib/ist";
 import { cn } from "@/lib/utils";
@@ -118,6 +122,39 @@ export function ProgressGrid({
   );
 }
 
+/** Download the CSV, or say why not (e.g. 422 export_too_large) instead of saving the error
+ * as a file. */
+function CsvButton({ courseId, batchId }: { courseId: string; batchId: string }) {
+  const [busy, setBusy] = useState(false);
+  async function download() {
+    setBusy(true);
+    try {
+      const response = await fetch(progressCsvUrl(courseId, batchId));
+      if (!response.ok) {
+        throw toApiError(response, await response.json().catch(() => null));
+      }
+      const name = /filename="([^"]+)"/.exec(
+        response.headers.get("content-disposition") ?? "",
+      )?.[1];
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = name ?? "progress.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error(errorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Button variant="outline" size="sm" disabled={busy} onClick={() => void download()}>
+      {busy ? "Preparing…" : "Download CSV"}
+    </Button>
+  );
+}
+
 /** A batch's progress in a course, with paging and the CSV download. */
 export function CourseProgress({ courseId, batchId }: { courseId: string; batchId: string }) {
   const query = useInfiniteQuery(courseProgressQuery(courseId, batchId));
@@ -133,13 +170,7 @@ export function CourseProgress({ courseId, batchId }: { courseId: string; batchI
           {first?.version ? `Columns: lessons of v${first.version}.` : "Not published yet."} ✓
           completed · ◐ started · · not started
         </p>
-        <a
-          href={progressCsvUrl(courseId, batchId)}
-          className={buttonVariants({ variant: "outline", size: "sm" })}
-          download
-        >
-          Download CSV
-        </a>
+        <CsvButton courseId={courseId} batchId={batchId} />
       </div>
       {rows.length === 0 ? (
         <EmptyState>No students in this batch yet.</EmptyState>

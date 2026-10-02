@@ -36,6 +36,7 @@ from app.modules.identity.authz import Permission, require_org, require_org_perm
 from app.modules.identity.dependencies import RequestContext
 from app.modules.media.models import FileKind, FileStatus, StoredFile, VideoAsset, VideoStatus
 from app.modules.media.providers import (
+    LocalVideoProvider,
     Playback,
     ProviderStatus,
     VideoProvider,
@@ -228,6 +229,60 @@ async def editor_playback(
         asset.provider_video_id, settings.video_playback_ttl_seconds
     )
     return _playback_out(playback)
+
+
+# ============================================================================ operator imports
+# For seeds and scripts (no HTTP route): store bytes the browser would otherwise upload, then run
+# the same checks a confirm or processing step runs. Requires `course.edit` like editor uploads.
+
+
+async def import_local_video(
+    ctx: RequestContext, storage: ObjectStorage, settings: Settings, *, title: str, data: bytes
+) -> VideoOut:
+    """An MP4 stored for the local provider and processed at once (size and MP4 checks)."""
+    org_id = require_org_permission(ctx.principal, Permission.COURSE_EDIT)
+    provider = LocalVideoProvider(settings, storage)
+    asset_id = new_id()
+    key = f"videos/{asset_id}/source.mp4"
+    await storage.aput_bytes(key, data, provider.content_type)
+    asset = await VideoRepository(ctx.session).create(
+        VideoAsset(
+            id=asset_id, organization_id=org_id, provider=provider.name, provider_video_id=key,
+            title=title, status=VideoStatus.CREATED, created_by=ctx.principal.user_id,
+        )
+    )  # fmt: skip
+    status = await refresh_video(ctx.session, {provider.name: provider}, asset)
+    if status != VideoStatus.READY:
+        msg = f"Imported video {title!r} isn't playable ({status})"
+        raise UnprocessableError(msg, code="video_not_ready")
+    refreshed = await VideoRepository(ctx.session).get(asset_id)
+    assert refreshed is not None  # noqa: S101
+    return _out(refreshed)
+
+
+async def import_file(
+    ctx: RequestContext,
+    storage: ObjectStorage,
+    settings: Settings,
+    *,
+    kind: str,
+    file_name: str,
+    content_type: str,
+    data: bytes,
+) -> FileOut:
+    """A PDF or image stored and confirmed (size and leading-bytes checks)."""
+    org_id = require_org_permission(ctx.principal, Permission.COURSE_EDIT)
+    file_id = new_id()
+    key = f"files/{org_id}/{file_id}/{kind}"
+    await storage.aput_bytes(key, data, content_type)
+    file = await FileRepository(ctx.session).create(
+        StoredFile(
+            id=file_id, organization_id=org_id, kind=kind, storage_key=key, file_name=file_name,
+            content_type=content_type, status=FileStatus.PENDING,
+            created_by=ctx.principal.user_id,
+        )
+    )  # fmt: skip
+    return await _confirm(ctx, storage, settings, file)
 
 
 # ============================================================================ processing

@@ -7,6 +7,7 @@ import {
 
 import { api } from "@/lib/api/client";
 import type { Batch, ImportJob, Invitation, Member, OrgRole } from "@/lib/api/types";
+import { allPages } from "@/lib/api/all-pages";
 import { unwrap } from "@/lib/api/unwrap";
 
 const PAGE_SIZE = 25;
@@ -27,6 +28,16 @@ export const batchesQuery = (status?: "active" | "archived") =>
       ),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: nextCursor,
+  });
+
+/** Every batch, for pickers (a dropdown can't load more): all pages, up to 2,000. */
+export const allBatchesQuery = (status?: "active" | "archived") =>
+  queryOptions({
+    queryKey: ["batches", "all", { status }] as const,
+    queryFn: () =>
+      allPages((cursor): Promise<Page<Batch>> =>
+        unwrap(api.GET("/api/v1/batches", { params: { query: { limit: 100, cursor, status } } })),
+      ),
   });
 
 export const batchQuery = (batchId: string) =>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useInfiniteQuery, useQueries, useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { batchQuery } from "@/features/admin/api";
 import { EmptyState, ErrorAlert, PageTitle } from "@/features/admin/ui";
 import { useMe } from "@/features/auth/queries";
-import { assignmentsQuery, courseQuery } from "@/features/teach/api";
+import { allAssignmentsQuery, courseQuery } from "@/features/teach/api";
 
 import { CourseProgress } from "./progress-table";
 
@@ -19,11 +19,11 @@ export function CourseProgressPage({ courseId, batchId }: { courseId: string; ba
   const router = useRouter();
   const { data: me } = useMe();
   const course = useQuery(courseQuery(courseId));
-  const assignments = useInfiniteQuery(assignmentsQuery(courseId));
+  const assignments = useQuery(allAssignmentsQuery(courseId));
   const orgId = me?.active_organization_id;
   const assignedIds = [
     ...new Set(
-      (assignments.data?.pages.flatMap((p) => p.items) ?? [])
+      (assignments.data?.items ?? [])
         .filter((a) => a.organization_id === orgId && a.batch_id)
         .map((a) => a.batch_id!),
     ),

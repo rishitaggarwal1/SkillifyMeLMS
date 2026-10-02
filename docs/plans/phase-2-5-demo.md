@@ -1,6 +1,6 @@
 # Phase 2.5 — Demo-ready portal (plan)
 
-**Status (2026-10-03): approved; steps 1–5 (platform admin, role home, assignments, progress reports and college-admin screens) committed, see
+**Status (2026-10-03): approved; steps 1–6 (platform admin, role home, assignments, progress reports, college-admin screens, demo seed) committed, see
 [Implementation status](#3a-implementation-status).** Phase 2 is
 complete and tagged `v0.2.0` ([phase-2.md](phase-2.md)).
 
@@ -638,6 +638,75 @@ Every step ends with:
      widening the page to 440px. The scroll box is now `relative`.
    - The batch picker only knew the first page of 25 batches. It now loads just the batches
      that have the course.
+
+### Step 6: demo seed (2026-10-03)
+
+- **`make seed-demo`** (`app/cli/seed_demo.py`; compose service `seed-demo`, profile `tools`):
+  - Logins `demo.<role>@skillifyme.co.in`: platform-admin, author, admin, instructor, student,
+    student2 … student8.
+  - "Python Foundations": 2 modules and 6 lessons (two videos from the bundled 12 s MP4, notes
+    with Python code, a PDF, the FizzBuzz assignment). Published 1.0, granted to Demo College,
+    assigned to CSE 2026.
+  - Progress 100, 83, 66, 50, 33, 16, 0 and 0%, with 3 submissions and 1 graded (9/10).
+  - Built **through the services as each demo user** (RLS, assignment, grade and completion
+    rules all apply). Enrollment fan-out runs inline after commit; the publish hook loads
+    through `app.wiring`.
+- **Passwords:**
+  - 20 random characters from `secrets`, with all four character classes.
+  - Written only to `DEMO_CREDENTIALS_FILE` (compose: `./.secrets/demo-credentials.txt`; mode
+    0600 in Linux containers; `.secrets/` is gitignored). Never printed or logged.
+  - A rerun reuses them. `--rotate-passwords` replaces them.
+  - `--reset` and `--rotate-passwords` refuse unless `ENVIRONMENT=local` or
+    `--i-know-this-is-not-local`. Nothing runs in production.
+- **Operator interfaces** (no HTTP routes): `media.import_local_video` and `media.import_file`
+  (the same size and signature checks as uploads), `enrollments.mark_video_watched` (real
+  watching is bounded by wall-clock time), and Keycloak `prepare_login` and `grant_realm_role`
+  (looked up through the user's assignable roles, so the service account needs nothing new).
+- **Tests:**
+  - `tests/test_seed_demo.py`: the guard table, password strength, the credentials file, and a
+    full run against the test database and real Keycloak on a throwaway domain. It runs twice
+    (file and data unchanged), then `--reset` restores the plan and `--rotate-passwords`
+    replaces every password.
+  - Keycloak integration for the new admin calls.
+  - `e2e/demo-smoke.spec.ts`: read-only, tracing off. Each demo role signs in at 360px and lands
+    where it works, with the demo data present.
+  - CI's E2E job runs the seed twice, then the smoke spec.
+- **Folded in from the step 5 review:**
+  - **CSV cap.** `GET .../progress.csv` refuses batches over 10,000 students (counted first,
+    and re-checked while paging) with `422 export_too_large` and the counts in `details`.
+    "Download CSV" is now a button that fetches the file and shows that error rather than
+    saving it as a file.
+  - **First-page-only audit.** Everything checked, with what was found:
+
+    | Place | Finding | Fix |
+    |---|---|---|
+    | Grading: batch filter | first page (25) | all pages (`allBatchesQuery`) |
+    | Imports: target batch | first page | all pages |
+    | Members: invite dialog batches | first page | all pages |
+    | Lesson page: "Ready videos" select | first page | all pages (`allReadyVideosQuery`) |
+    | Course assignment rows (distribution panel; progress page picker) | first page of 100 | all pages (`allAssignmentsQuery`) |
+    | Batch page: "Add members" candidates | first 25, no Load more | Load more added |
+    | Progress page batch picker | fixed in step 5 | (per-batch lookups) |
+    | Assignments panel "Your batches" | Load more | fine |
+    | Org grant search, skills picker | search-driven | fine |
+    | Skills name lookup, learner dashboard | read all pages (20-page cap, documented) | fine |
+    | Platform users, orgs, courses, audit; admin lists; submissions queue | lists with Load more | fine |
+    | Platform org page "Org admins" | first 25 | fine for a handful of admins; noted |
+    | Course "Published versions" | the latest 10 by design | fine |
+
+    `lib/api/all-pages.ts` stops at 20 pages (2,000 items) and the pickers then say "Showing
+    the first 2,000".
+
+**Deviations in step 6:**
+1. **The seed calls services directly** with a request context per demo user, rather than going
+   through HTTP. Keycloak password grants exist only in the dev realm, so HTTP sign-in wouldn't
+   work on a server, and the services apply the same rules.
+2. **Videos are marked fully watched by an operator function.** Real heartbeats earn at most
+   real time, so a seed can't produce watching quickly.
+3. **The credentials file is 0600 inside Linux** (the container, a server). On a Windows bind
+   mount the host shows NTFS defaults.
+4. **The seed ensures its own orgs and the CSE 2026 batch,** so it doesn't depend on
+   `make seed`.
 
 ## 4. Decisions (approved 2026-10-02)
 

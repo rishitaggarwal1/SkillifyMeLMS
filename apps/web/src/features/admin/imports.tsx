@@ -14,7 +14,7 @@ import type { ImportJob } from "@/lib/api/types";
 
 import {
   FINISHED_IMPORT_STATUSES,
-  batchesQuery,
+  allBatchesQuery,
   importErrorsUrl,
   importQuery,
   importsQuery,
@@ -60,8 +60,8 @@ export function UploadCard({
   onStarted: (jobId: string) => void;
 }) {
   const queryClient = useQueryClient();
-  const batches = useInfiniteQuery(batchesQuery("active"));
-  const batchOptions = batches.data?.pages.flatMap((p) => p.items) ?? [];
+  const batches = useQuery(allBatchesQuery("active"));
+  const batchOptions = batches.data?.items ?? [];
   const [file, setFile] = useState<File | null>(null);
   const [batchId, setBatchId] = useState(initialBatchId ?? "");
   const [progress, setProgress] = useState<number | null>(null);
@@ -126,6 +126,9 @@ export function UploadCard({
                 </option>
               ))}
             </NativeSelect>
+            {batches.data?.truncated ? (
+              <p className="text-xs text-muted-foreground">Showing the first 2,000 batches.</p>
+            ) : null}
           </div>
           {uploading ? (
             <div className="flex flex-col gap-1" data-testid="upload-progress">
