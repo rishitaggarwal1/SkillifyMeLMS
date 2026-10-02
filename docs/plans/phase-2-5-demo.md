@@ -1,6 +1,6 @@
 # Phase 2.5 — Demo-ready portal (plan)
 
-**Status (2026-10-02): approved; steps 1–3 (platform admin API, platform UI and role home, assignments backend) committed, see
+**Status (2026-10-02): approved; steps 1–4 (platform admin API, platform UI and role home, assignments backend and UI) committed, see
 [Implementation status](#3a-implementation-status).** Phase 2 is
 complete and tagged `v0.2.0` ([phase-2.md](phase-2.md)).
 
@@ -530,6 +530,58 @@ Every step ends with:
 8. **The web UI is unchanged in this step.** The builder and player still label assignment
    lessons "Coming soon" until step 4, and a course with an assignment lesson can't be published
    from the UI until its definition is saved (step 4 adds the editor).
+
+### Step 4: assignments UI (2026-10-02)
+
+- **Authors:** the lesson page of an assignment lesson has an "Assignment details" form (title
+  students see, maximum marks, due date in IST, allowed kinds) and an "Instructions" editor (the
+  notes editor without the image tool). Saving is an outline edit: the course revision is sent
+  as `If-Match`, edits are serialized, and a 409 refetches. The publish dialog names lessons
+  that are `assignment_not_ready`.
+- **Graders:** the course page (owned or assigned) lists "Assignments to grade" from the current
+  version for anyone with `assignment.grade`.
+  - `/teach/courses/[id]/assignments/[lessonId]` is the queue: "To grade" first, then graded,
+    all; filtered by batch.
+  - `/teach/submissions/[id]` shows the work (text, or a signed file link) and the `GradeForm`.
+    The score is 0 to max marks with two decimals, checked before the API; the submission
+    revision is sent as `If-Match`, and a 409 explains and reloads. Saving returns to the queue.
+- **Students:** the player renders assignment lessons with the instructions (server-sanitized
+  HTML), marks and due date. The student types an answer or uploads a PDF/PNG/JPEG (presigned
+  POST, then submit), and can replace the submission until it's graded. Once graded they see the
+  score, the feedback and the completion tick.
+- **Shared code:** `lib/upload.ts` (presigned POST and safe file names; teach and learn both use
+  it, so student pages don't import teach code) and `lib/ist.ts` (IST input and display).
+  `assignment` is no longer in the web placeholder sets.
+- **Tests:** Vitest for `GradeForm` and `gradeSchema` (bounds, If-Match revision, 409, other
+  errors, correcting a grade) and for IST dates. Playwright `e2e/assignments.spec.ts`: define,
+  publish, grant, assign to CSE 2026, the student submits at 360px, the instructor grades at
+  360px (an over-max score is refused in the form), then the student sees "8.5 / 10", the
+  feedback, completion and 100%.
+- **Folded in from the step 3 review:**
+  - **The publish hook is wired in one place**, `app/wiring.py`.
+    `courses.content_sources.required_source` loads it on first use, so every entry point (API,
+    workers, seeds, tests) gets it; `create_app` also calls `wire()` at boot.
+  - **Publishing fails closed.** With assignment lessons and no registered source, preview and
+    publish return `500 content_source_not_registered` (logged as an error), and nothing is
+    published. Tested in `test_publish_hook.py`, together with lazy loading for entry points
+    that never call `wire()`.
+  - **`scripts/ci_status.py` checks the CI run.**
+    - It resolves the full sha through git; the API matches it exactly, so short shas found
+      nothing.
+    - It retries network errors, 5xx responses, rate limits, and empty or non-JSON bodies with
+      backoff, and honours `Retry-After` and `X-RateLimit-Reset`.
+    - It polls every 60 s, within the anonymous 60 requests/hour, and exits 0 only when every
+      job passed.
+    - `tests/test_ci_status_script.py` covers the retries.
+
+**Deviations in step 4:**
+1. **Grading has its own pages** (`/teach/courses/[id]/assignments/[lessonId]` and
+   `/teach/submissions/[id]`) rather than a panel inside the course page. The review page works
+   on its own link and on phones.
+2. **The instructions editor saves the whole definition.** "Save instructions" sends the details
+   form's current values too, because the API takes the full definition.
+3. **A student sees a new grade on reload or when the window regains focus.** Nothing pushes it
+   live; realtime is Phase 4 (Centrifugo).
 
 ## 4. Decisions (approved 2026-10-02)
 

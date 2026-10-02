@@ -16,6 +16,7 @@ import type { Course } from "@/lib/api/types";
 
 import { courseQuery, versionsQuery } from "./api";
 import { AssignmentsPanel } from "./assignments-panel";
+import { GradingSection } from "./grading";
 import { OutlineEditor } from "./outline-editor";
 import { PublishDialog } from "./publish-dialog";
 
@@ -65,6 +66,7 @@ function CourseEditor({ course }: { course: Course }) {
         }
       />
       {course.current_version ? <StudentLink courseId={course.id} /> : null}
+      <GradingSection course={course} />
       <OutlineEditor courseId={course.id} />
       <Versions courseId={course.id} />
       {course.current_version ? (
@@ -86,6 +88,7 @@ function AssignedCourse({ course }: { course: Course }) {
         which of your batches get it; only the publisher can edit it.
       </p>
       <StudentLink courseId={course.id} />
+      <GradingSection course={course} />
       <Versions courseId={course.id} />
       <AssignmentsPanel course={course} />
     </div>

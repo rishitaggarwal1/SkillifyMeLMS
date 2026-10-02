@@ -18,6 +18,7 @@ import {
   useCompleteLesson,
   usePdfAccess,
 } from "./api";
+import { AssignmentLesson } from "./assignment-lesson";
 import { PLACEHOLDER_TYPES, type LessonProgress, type OutlineLesson } from "./outline";
 
 type Props = { enrollmentId: string; lesson: OutlineLesson; progress?: LessonProgress };
@@ -31,6 +32,8 @@ export function LessonView(props: Props) {
       return <NotesLesson {...props} />;
     case "pdf":
       return <PdfLesson {...props} />;
+    case "assignment":
+      return <AssignmentLesson {...props} />;
     default:
       return <PlaceholderLesson />;
   }

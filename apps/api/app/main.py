@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 import httpx
 from fastapi import FastAPI
 
+from app import wiring
 from app.api import health, v1
 from app.core.auth.jwt import HttpJwksSource, JwksCache, JwtValidator
 from app.core.config import Settings, get_settings
@@ -19,7 +20,6 @@ from app.core.storage import ObjectStorage
 from app.core.telemetry import configure_tracing, instrument_engine
 from app.core.validation import configure_email_validation
 from app.db.session import create_engine, create_sessionmaker
-from app.modules.assignments.service import register_content_source as register_assignment_content
 from app.modules.identity.keycloak_admin import KeycloakAdmin
 from app.modules.identity.tasks import enqueue_import
 from app.modules.media.providers import create_providers
@@ -46,8 +46,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     configure_logging(settings.log_level, json_logs=settings.log_json)
     configure_email_validation(settings)
-    # Lesson types whose content another module owns (publishing asks it; see content_sources).
-    register_assignment_content()
+    # Cross-module hooks (see app/wiring.py); importing them here also fails fast at boot.
+    wiring.wire()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:

@@ -2,6 +2,7 @@ import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query
 
 import { api } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
+import { postForm, safeFileName } from "@/lib/upload";
 
 import type { Enrollment, EnrollmentDetail } from "./outline";
 
@@ -98,5 +99,71 @@ export function usePdfAccess(enrollmentId: string) {
         }),
       ),
     onSuccess: () => qc.invalidateQueries({ queryKey: learnKeys.enrollment(enrollmentId) }),
+  });
+}
+
+// ---------------------------------------------------------------------------- assignments
+
+export const myAssignmentQuery = (enrollmentId: string, lessonId: string) =>
+  queryOptions({
+    queryKey: ["learn", "assignment", enrollmentId, lessonId] as const,
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/assignment", {
+          params: { path: lessonPath(enrollmentId, lessonId) },
+        }),
+      ),
+    // Shows the grade once an instructor records it; the file link is short-lived.
+    staleTime: 60_000,
+    refetchOnWindowFocus: true,
+  });
+
+export const SUBMISSION_TYPES = ["application/pdf", "image/png", "image/jpeg"] as const;
+type SubmissionType = (typeof SUBMISSION_TYPES)[number];
+
+export type SubmitInput =
+  | { kind: "text"; text: string; revision: number }
+  | { kind: "file"; file: File; revision: number; onProgress: (fraction: number) => void };
+
+/** Submit (or replace) the student's work; files go straight to storage first. */
+export function useSubmitAssignment(enrollmentId: string, lessonId: string) {
+  const qc = useQueryClient();
+  const path = lessonPath(enrollmentId, lessonId);
+  return useMutation({
+    mutationFn: async (input: SubmitInput) => {
+      const header = { "If-Match": String(input.revision) };
+      if (input.kind === "text") {
+        return unwrap(
+          api.PUT("/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/submission", {
+            params: { path, header },
+            body: { submission: { kind: "text", text: input.text } },
+          }),
+        );
+      }
+      const type = input.file.type as SubmissionType;
+      if (!(SUBMISSION_TYPES as readonly string[]).includes(type)) {
+        throw new Error("Choose a PDF, PNG or JPEG file.");
+      }
+      const created = await unwrap(
+        api.POST("/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/submission-upload", {
+          params: { path },
+          body: { file_name: safeFileName(input.file.name, "submission"), content_type: type },
+        }),
+      );
+      if (input.file.size > created.upload.max_bytes) {
+        throw new Error(
+          `That file is larger than ${Math.floor(created.upload.max_bytes / 1024 ** 2)} MB.`,
+        );
+      }
+      await postForm(created.upload.url, created.upload.fields, input.file, input.onProgress);
+      return unwrap(
+        api.PUT("/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/submission", {
+          params: { path, header },
+          body: { submission: { kind: "file", file_id: created.file.id } },
+        }),
+      );
+    },
+    onSettled: () =>
+      qc.invalidateQueries({ queryKey: myAssignmentQuery(enrollmentId, lessonId).queryKey }),
   });
 }

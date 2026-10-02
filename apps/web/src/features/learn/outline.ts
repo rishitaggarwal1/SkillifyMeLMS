@@ -16,7 +16,8 @@ export type OutlineLesson = {
   completion_threshold: string | null;
   estimated_minutes: number | null;
   video_duration_seconds: number | null;
-  /** notes: {html, image_file_ids}; video: {video_asset_id}; pdf: {file_id}; others: {} */
+  /** notes: {html, image_file_ids}; video: {video_asset_id}; pdf: {file_id};
+   * assignment: {assignment_id, title, instructions_html, due_at, max_marks, submission_kinds} */
   content: Record<string, unknown>;
 };
 export type OutlineModule = {
@@ -30,7 +31,7 @@ export type Outline = {
   modules: OutlineModule[];
 };
 
-export const PLACEHOLDER_TYPES: ReadonlySet<LessonType> = new Set(["quiz", "lab", "assignment"]);
+export const PLACEHOLDER_TYPES: ReadonlySet<LessonType> = new Set(["quiz", "lab"]);
 
 /** Read the snapshot defensively: it is typed as an open object in the API schema. */
 export function readOutline(raw: unknown): Outline {

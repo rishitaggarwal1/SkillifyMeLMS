@@ -24,9 +24,22 @@ type Props = {
   initialImageUrls: Record<string, string>;
   saving: boolean;
   onSave: (doc: NotesDoc) => Promise<unknown>;
+  /** The editable area's accessible name (default "Notes"). */
+  label?: string;
+  saveLabel?: string;
+  /** Assignment instructions can't hold images yet: hide the Image tool. */
+  allowImages?: boolean;
 };
 
-export default function NotesEditor({ initialDoc, initialImageUrls, saving, onSave }: Props) {
+export default function NotesEditor({
+  initialDoc,
+  initialImageUrls,
+  saving,
+  onSave,
+  label = "Notes",
+  saveLabel = "Save notes",
+  allowImages = true,
+}: Props) {
   // A stable map mutated as images are uploaded (read by the image node view, not by render).
   const [urls] = useState(() => new Map(Object.entries(initialImageUrls)));
   const [dirty, setDirty] = useState(false);
@@ -40,7 +53,7 @@ export default function NotesEditor({ initialDoc, initialImageUrls, saving, onSa
           "notes-content min-h-48 rounded-b-md border px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         role: "textbox",
         "aria-multiline": "true",
-        "aria-label": "Notes",
+        "aria-label": label,
       },
     },
     onUpdate: () => setDirty(true),
@@ -58,6 +71,7 @@ export default function NotesEditor({ initialDoc, initialImageUrls, saving, onSa
     <div className="flex flex-col gap-2">
       <Toolbar
         editor={editor}
+        allowImages={allowImages}
         onImageUploaded={(fileId, url) => {
           urls.set(fileId, url);
           editor
@@ -70,7 +84,7 @@ export default function NotesEditor({ initialDoc, initialImageUrls, saving, onSa
       <EditorContent editor={editor} />
       <div className="flex items-center gap-3">
         <Button onClick={() => void save()} disabled={saving || !dirty}>
-          {saving ? "Saving…" : "Save notes"}
+          {saving ? "Saving…" : saveLabel}
         </Button>
         <span role="status" className="text-sm text-muted-foreground">
           {dirty ? "Unsaved changes" : "All changes saved"}
@@ -82,9 +96,11 @@ export default function NotesEditor({ initialDoc, initialImageUrls, saving, onSa
 
 function Toolbar({
   editor,
+  allowImages,
   onImageUploaded,
 }: {
   editor: Editor;
+  allowImages: boolean;
   onImageUploaded: (fileId: string, url: string) => void;
 }) {
   const state = useEditorState({
@@ -188,26 +204,30 @@ function Toolbar({
       >
         {state.link ? "Remove link" : "Link"}
       </Button>
-      <Button
-        type="button"
-        size="sm"
-        variant="ghost"
-        disabled={uploading !== null}
-        onClick={() => fileInput.current?.click()}
-      >
-        {uploading === null ? "Image" : `Uploading ${Math.round(uploading * 100)}%`}
-      </Button>
-      <input
-        ref={fileInput}
-        type="file"
-        accept="image/png,image/jpeg,image/webp,image/gif"
-        className="hidden"
-        aria-label="Upload image"
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          if (file) void uploadImage(file);
-        }}
-      />
+      {allowImages ? (
+        <>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={uploading !== null}
+            onClick={() => fileInput.current?.click()}
+          >
+            {uploading === null ? "Image" : `Uploading ${Math.round(uploading * 100)}%`}
+          </Button>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            className="hidden"
+            aria-label="Upload image"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void uploadImage(file);
+            }}
+          />
+        </>
+      ) : null}
       {linking ? (
         <form
           className="flex w-full gap-1"

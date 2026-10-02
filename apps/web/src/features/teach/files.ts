@@ -2,18 +2,10 @@ import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { StoredFile } from "@/lib/api/types";
 import { unwrap } from "@/lib/api/unwrap";
+import { postForm, safeFileName } from "@/lib/upload";
 
 export const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"] as const;
 type ImageType = (typeof IMAGE_TYPES)[number];
-
-/** A display name the API accepts (no control characters, quotes, slashes or backslashes). */
-export function safeFileName(name: string, fallback: string): string {
-  const cleaned = name
-    .replace(/[\u0000-\u001f\u007f"\\/]/g, "_")
-    .trim()
-    .slice(0, 255);
-  return cleaned || fallback;
-}
 
 export function fileProblem(file: File, kind: "pdf" | "image"): string | null {
   if (kind === "pdf" && file.type !== "application/pdf") return "Choose a PDF file.";
@@ -65,37 +57,4 @@ export async function uploadFile(
     }
     throw error;
   }
-}
-
-function postForm(
-  url: string,
-  fields: Record<string, string>,
-  file: File,
-  onProgress: (fraction: number) => void,
-  signal?: AbortSignal,
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal?.aborted) {
-      reject(new DOMException("Upload cancelled", "AbortError"));
-      return;
-    }
-    const form = new FormData();
-    for (const [name, value] of Object.entries(fields)) form.append(name, value);
-    form.append("file", file); // must be the last field
-    const xhr = new XMLHttpRequest();
-    const abort = () => xhr.abort();
-    xhr.open("POST", url);
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable) onProgress(event.loaded / event.total);
-    };
-    xhr.onloadend = () => signal?.removeEventListener("abort", abort);
-    xhr.onload = () =>
-      xhr.status >= 200 && xhr.status < 300
-        ? resolve()
-        : reject(new Error("Storage refused the upload (wrong type or too large)."));
-    xhr.onerror = () => reject(new Error("Check your connection and retry the upload."));
-    xhr.onabort = () => reject(new DOMException("Upload cancelled", "AbortError"));
-    signal?.addEventListener("abort", abort, { once: true });
-    xhr.send(form);
-  });
 }

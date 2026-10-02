@@ -2,7 +2,7 @@
 
 - **Authoring** (owner-org editors): one definition per assignment lesson, edited with the course
   revision as `If-Match`. Publishing copies it into the version snapshot through the courses
-  module's content-source hook (`register_content_source`, called at app startup).
+  module's content-source hook (`AssignmentContentSource`, connected in `app.wiring`).
 - **Students**: one active submission per assignment (text or a file upload); resubmitting
   replaces it until it is graded. `If-Match` is the submission revision (`0` for the first).
 - **Graders** (`instructor`, `org_admin` of the student's org): a queue per lesson, ungraded
@@ -64,7 +64,6 @@ from app.modules.assignments.schemas import (
     SubmitText,
 )
 from app.modules.audit import service as audit
-from app.modules.courses import content_sources
 from app.modules.courses import service as courses
 from app.modules.courses.models import LessonType
 from app.modules.enrollments import service as enrollments
@@ -100,10 +99,6 @@ class AssignmentContentSource:
     ) -> dict[UUID, dict[str, Any]]:
         rows = await AssignmentRepository(session).by_lessons(lesson_ids)
         return {row.lesson_id: published_content(row) for row in rows}
-
-
-def register_content_source() -> None:
-    content_sources.register(LessonType.ASSIGNMENT, AssignmentContentSource())
 
 
 def _published(content: dict[str, Any] | None) -> PublishedAssignment:

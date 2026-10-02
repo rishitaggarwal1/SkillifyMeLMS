@@ -41,12 +41,9 @@ export const LESSON_TYPE_LABELS: Record<LessonType, string> = {
   lab: "Lab",
   assignment: "Assignment",
 };
-/** Lesson types whose content arrives in later phases (they never count toward progress yet). */
-export const PLACEHOLDER_LESSON_TYPES: ReadonlySet<LessonType> = new Set([
-  "quiz",
-  "lab",
-  "assignment",
-]);
+/** Lesson types whose content arrives in later phases (they never count toward progress yet).
+ * Assignments have content since Phase 2.5. */
+export const PLACEHOLDER_LESSON_TYPES: ReadonlySet<LessonType> = new Set(["quiz", "lab"]);
 
 export const ROLE_LABELS: Record<OrgRole, string> = {
   org_admin: "Org admin",
@@ -56,3 +53,11 @@ export const ROLE_LABELS: Record<OrgRole, string> = {
 };
 
 export const ORG_ROLES: OrgRole[] = ["student", "instructor", "lab_author", "org_admin"];
+
+// ---- assignments
+export type AssignmentDraft = Schemas["AssignmentDraftOut"];
+export type PublishedAssignment = Schemas["PublishedAssignment"];
+export type StudentAssignment = Schemas["StudentAssignmentOut"];
+export type Submission = Schemas["SubmissionOut"];
+export type GraderSubmissionRow = Schemas["GraderSubmissionRow"];
+export type GraderSubmission = Schemas["GraderSubmissionDetail"];

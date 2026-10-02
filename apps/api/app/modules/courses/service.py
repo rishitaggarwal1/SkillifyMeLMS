@@ -11,7 +11,7 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import ValidationError
@@ -815,6 +815,12 @@ async def set_lesson_skills(
 # ============================================================================ publishing
 
 
+# Publish blocker for a sourced lesson type whose content isn't ready.
+_NOT_READY: dict[LessonType, Literal["assignment_not_ready"]] = {
+    LessonType.ASSIGNMENT: "assignment_not_ready"
+}
+
+
 @dataclass(frozen=True, slots=True)
 class _Draft:
     snapshot: dict[str, Any]
@@ -862,15 +868,19 @@ async def _draft(ctx: Ctx, course: Course) -> _Draft:
     if pdfs_pending:
         blockers.append(PublishBlocker(code="pdf_not_ready", lesson_ids=pdfs_pending))
 
-    # Assignment lessons publish what the assignments module holds (content_sources).
+    # Lessons whose content another module holds (assignments) publish what it returns. No
+    # registered source fails closed (ContentSourceMissingError), never skips the check.
     sourced: dict[UUID, dict[str, Any]] = {}
-    assignment_ids = [x.id for x in lessons if x.lesson_type == LessonType.ASSIGNMENT]
-    if assignment_ids:
-        source = content_sources.source_for(LessonType.ASSIGNMENT)
-        sourced = await source.published(ctx.session, assignment_ids) if source else {}
-        missing = [lesson_id for lesson_id in assignment_ids if lesson_id not in sourced]
+    for lesson_type in content_sources.SOURCED_TYPES:
+        ids = [x.id for x in lessons if x.lesson_type == lesson_type]
+        if not ids:
+            continue
+        source = content_sources.required_source(lesson_type)
+        found = await source.published(ctx.session, ids)
+        sourced.update(found)
+        missing = [lesson_id for lesson_id in ids if lesson_id not in found]
         if missing:
-            blockers.append(PublishBlocker(code="assignment_not_ready", lesson_ids=missing))
+            blockers.append(PublishBlocker(code=_NOT_READY[lesson_type], lesson_ids=missing))
 
     durations = {vid: info.duration_seconds for vid, info in videos.items()}
     return _Draft(

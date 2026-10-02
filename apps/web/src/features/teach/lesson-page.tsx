@@ -29,6 +29,7 @@ import {
 import { unwrap } from "@/lib/api/unwrap";
 
 import { allSkillsQuery, draftQuery, lessonQuery, readyVideosQuery } from "./api";
+import { AssignmentEditor } from "./assignment-editor";
 import { uploadFile } from "./files";
 import { normalizeNotesDoc } from "./notes-doc";
 import { useSetLessonSkills, useUpdateLesson } from "./outline-hooks";
@@ -214,6 +215,10 @@ function LessonContent({ courseId, lesson }: { courseId: string; lesson: Lesson 
       return <NotesContent courseId={courseId} lesson={lesson} />;
     case "pdf":
       return <PdfContent courseId={courseId} lesson={lesson} />;
+    case "assignment":
+      return (
+        <AssignmentEditor courseId={courseId} lessonId={lesson.id} lessonTitle={lesson.title} />
+      );
     default:
       return (
         <Alert>
