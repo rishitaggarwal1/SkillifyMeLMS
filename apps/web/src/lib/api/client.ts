@@ -32,4 +32,15 @@ export function createApiClient(
 
 export type ApiClient = ReturnType<typeof createApiClient>;
 
-export const api = createApiClient();
+// The shared client is created on import, and `next build` imports client components without the
+// runtime environment. So a missing API_INTERNAL_URL fails the first server-side request instead
+// of the import.
+const UNSET_BASE = "http://api-internal-url-not-set.invalid";
+
+export const api = createApiClient(
+  typeof window !== "undefined" ? BROWSER_API_BASE : process.env.API_INTERNAL_URL || UNSET_BASE,
+  async (request) => {
+    if (request.url.startsWith(UNSET_BASE)) throw new Error("API_INTERNAL_URL is not set");
+    return fetch(request);
+  },
+);

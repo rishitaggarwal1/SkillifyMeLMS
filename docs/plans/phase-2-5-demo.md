@@ -792,6 +792,16 @@ Every step ends with:
   no password. The seed now re-links users by email to their new Keycloak id and sets the
   file's password on any account it had to create. A test deletes an account and checks the
   file's password signs in after a rerun.
+- **Fixed after the first CI run (37062261105, red):**
+  - `next build` failed in the Docker and E2E jobs. Client components are prerendered without
+    the runtime environment, and the shared API client now required `API_INTERNAL_URL` when
+    imported. It now fails the first server-side request instead, with the same clear error. A
+    Vitest covers it.
+  - The demo smoke spec looked for "Python Foundations" on the first page of the course lists.
+    Courses that other specs grant to Demo College can push it further down, so it now loads
+    more pages until the course shows.
+- `check-yaml` (pre-commit) runs with `--unsafe` (syntax only) for Compose's `!reset` and
+  `!override` tags; CI's `docker compose config` validates the file itself.
 
 **Deviations in step 7:**
 1. **`keycloak-sync` is Python (standard library, `infra/keycloak/realm.py`), not `kcadm`.** One
