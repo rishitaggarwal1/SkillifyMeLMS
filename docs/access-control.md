@@ -41,13 +41,14 @@ Defined once, in `apps/api/app/modules/identity/authz.py` (`ROLE_PERMISSIONS`).
 | `member.invite` | ✓ | | | | Invite, resend, revoke |
 | `member.import` | ✓ | | | | CSV imports |
 | `audit.read` | ✓ | | | | Read the audit log |
-| `lab.author` | | | ✓ | | Author coding labs (used from Phase 3) |
+| `lab.author` | | | ✓ | | Author coding labs (used from Phase 4) |
 | `course.read` | ✓ | ✓ | | | See courses the org owns or was assigned, and their assignments |
 | `course.edit` | ✓ | ✓ | | | Author the org's own courses: drafts, publishing |
 | `course.assign` | ✓ | ✓ | | | Assign the org's own courses (publisher-made assignments) |
 | `course.distribute` | ✓ | | | | Narrow an org grant to the org's own batches |
 | `enrollment.upgrade` | ✓ | | | | Opt the org's enrollments into a newer major version |
 | `skill.manage` | ✓ | ✓ | ✓ | | Edit the skills taxonomy; the active org must also be a content publisher |
+| `assignment.grade` | ✓ | ✓ | | | Grade assignment submissions of the org's own students (Phase 2.5) |
 | `org.manage` | — | — | — | — | Platform only: create, update and archive organizations |
 
 `platform_admin` has every permission, in any organization.
@@ -93,6 +94,9 @@ Defined once, in `apps/api/app/modules/identity/authz.py` (`ROLE_PERMISSIONS`).
 | `POST /platform/organizations/{id}/admins` | Platform admin. Invites an `org_admin` into that (active) organization, exactly like an org admin's invitation, recorded in that organization's audit log |
 | `GET /platform/courses` | Platform admin. Every organization's courses, read-only: owner, status, current version, org-grant and batch-assignment counts |
 | `GET /platform/audit-log` | Platform admin. Every organization's entries plus platform-level ones, whatever organization is active; filters `organization_id`, `action`, `actor_user_id`, `target_type`, `target_id`, `since`/`until` (time-zone-aware) |
+| `GET`, `PUT /courses/{id}/lessons/{lesson_id}/assignment` | Owner-org editors (an assignment lesson's definition; others get 404). `PUT` takes the course revision as `If-Match` (428 when missing, 409 when stale), like every outline edit |
+| `GET /enrollments/{id}/lessons/{lesson_id}/assignment`, `POST .../submission-upload`, `PUT .../submission` | The enrolled student only (everyone else gets 404). `PUT` takes the submission revision as `If-Match` (`0` for the first; 428 when missing, 409 when stale); a graded submission can't be replaced (`409 already_graded`). Uploads are `submission` files: PDF, PNG or JPEG, checked by signature, up to `SUBMISSION_UPLOAD_MAX_BYTES` |
+| `GET /courses/{id}/lessons/{lesson_id}/submissions`, `GET /assignment-submissions/{id}`, `PUT /assignment-submissions/{id}/grade` | Graders (`assignment.grade`: instructor, org_admin) of the **students' org**. The course owner org sees none of another org's submissions; other orgs get 404. Grading takes the submission revision as `If-Match`, is audited (`assignment.graded`), refuses grading your own work, and completes the lesson in the same transaction |
 
 All paths are under `/api/v1`, and platform admins can call every endpoint.
 
@@ -159,9 +163,11 @@ org.
 | course_modules, lessons, lesson_skills (the draft) | Owner-org editors* only | Owner-org editors* |
 | course_versions, course_version_lessons | Owner-org editors*; readers** | Owner-org editors* (publish). Immutable: no UPDATE or DELETE |
 | course_assignments | Owner-org editors*; the receiving org's org_admins and instructors | Publisher-made rows: owner-org editors* (to other orgs only if the owner is a content publisher). Narrowing rows: the receiving org's org_admin, batch rows under an existing org grant only. Removal: only the org that created the row. No UPDATE |
-| enrollments, lesson_progress (the student's org) | The student; org_admin and instructors of that org | The student (own progress); org_admin; system jobs |
+| enrollments, lesson_progress (the student's org) | The student; org_admin and instructors of that org | The student (own progress); org_admin; system jobs; **instructors only where a graded submission exists** (`app.enrollment_graded`, `app.lesson_graded`, migration 0011). A trigger (`app.enrollments_grader_guard`) lets such a grader change only an enrollment's progress columns |
 | video_assets | Owner-org editors*; org_admin and instructors of a reader org** for assets in any published version; enrolled students for assets in their pinned major's latest minor, with current batch access | Owner-org editors* |
-| files | Same as video_assets, for the files published lessons use (a pdf lesson's PDF, a notes lesson's images) | Owner-org editors* |
+| files | Same as video_assets, for the files published lessons use (a pdf lesson's PDF, a notes lesson's images). `submission` files: the student who uploaded them, and the org's instructors and org_admins | Owner-org editors*; a student writes only their own `submission` files |
+| assignments (draft definitions, owner org) | Owner-org editors* only; students and graders read the published copy in the version | Owner-org editors* |
+| assignment_submissions, assignment_grades (the student's org) | The student (own); the org's instructors and org_admins; platform admins | Submissions: the student (own, only while `submitted`, only into their own active enrollment); graders mark them graded. Grades: graders only. No DELETE except platform admins |
 | catalog_entries | Everyone | Owner-org editors* |
 
 \* **Editors**: `instructor` or `org_admin` of the course's owner org, acting in that org, or platform

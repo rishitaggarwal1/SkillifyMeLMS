@@ -7,6 +7,7 @@ router.include_router(courses_router)
 from fastapi import APIRouter
 
 from app.core.errors import ERROR_RESPONSES
+from app.modules.assignments.router import router as assignments_router
 from app.modules.audit.router import platform as audit_platform_router
 from app.modules.audit.router import router as audit_router
 from app.modules.courses.router import router as courses_router
@@ -24,4 +25,5 @@ router.include_router(skills_router)
 router.include_router(courses_router)
 router.include_router(enrollments_router)
 router.include_router(media_router)
+router.include_router(assignments_router)
 router.include_router(platform_router)

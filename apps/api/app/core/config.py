@@ -103,6 +103,8 @@ class Settings(BaseSettings):
     # ---- Files: PDFs and notes images (presigned POST uploads, signed GET downloads).
     pdf_upload_max_bytes: int = Field(default=25 * 1024**2, ge=1)
     image_upload_max_bytes: int = Field(default=5 * 1024**2, ge=1)
+    # Students' assignment uploads (PDF, PNG or JPEG).
+    submission_upload_max_bytes: int = Field(default=10 * 1024**2, ge=1)
     file_upload_ttl_seconds: int = Field(default=600, ge=60, le=3600)
     file_download_ttl_seconds: int = Field(default=300, ge=30, le=3600)
 

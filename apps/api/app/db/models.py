@@ -2,6 +2,7 @@
 
 from app.db.base import Base
 from app.db.outbox import OutboxEvent
+from app.modules.assignments.models import Assignment, AssignmentGrade, AssignmentSubmission
 from app.modules.audit.models import AuditLog
 from app.modules.courses.models import (
     CatalogEntry,
@@ -28,6 +29,9 @@ from app.modules.media.models import StoredFile, VideoAsset
 from app.modules.skills.models import Skill
 
 __all__ = [
+    "Assignment",
+    "AssignmentGrade",
+    "AssignmentSubmission",
     "AuditLog",
     "Base",
     "Batch",

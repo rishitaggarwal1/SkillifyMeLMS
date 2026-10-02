@@ -26,7 +26,7 @@ class Permission(StrEnum):
     MEMBER_INVITE = "member.invite"
     MEMBER_IMPORT = "member.import"
     AUDIT_READ = "audit.read"
-    LAB_AUTHOR = "lab.author"  # used from Phase 3
+    LAB_AUTHOR = "lab.author"  # used from Phase 4 (coding labs)
     # Phase 2: courses and learning content.
     COURSE_READ = "course.read"  # courses the org owns or was assigned, and their assignments
     COURSE_EDIT = "course.edit"  # author the org's own courses (drafts, publishing)
@@ -35,6 +35,8 @@ class Permission(StrEnum):
     ENROLLMENT_UPGRADE = "enrollment.upgrade"  # opt the org's enrollments into a new major
     # Also requires the active org to be a content publisher (checked in the skills service).
     SKILL_MANAGE = "skill.manage"
+    # Phase 2.5: grade assignment submissions of the org's own students.
+    ASSIGNMENT_GRADE = "assignment.grade"
 
 
 # Single source of truth for role -> permissions (documented in docs/access-control.md).
@@ -55,6 +57,7 @@ ROLE_PERMISSIONS: Mapping[OrgRole, frozenset[Permission]] = {
             Permission.COURSE_DISTRIBUTE,
             Permission.ENROLLMENT_UPGRADE,
             Permission.SKILL_MANAGE,
+            Permission.ASSIGNMENT_GRADE,
         }
     ),
     OrgRole.INSTRUCTOR: frozenset(
@@ -66,6 +69,7 @@ ROLE_PERMISSIONS: Mapping[OrgRole, frozenset[Permission]] = {
             Permission.COURSE_EDIT,
             Permission.COURSE_ASSIGN,
             Permission.SKILL_MANAGE,
+            Permission.ASSIGNMENT_GRADE,
         }
     ),
     OrgRole.LAB_AUTHOR: frozenset(

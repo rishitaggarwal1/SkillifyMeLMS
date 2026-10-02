@@ -4,7 +4,9 @@
   default); watching is reported by the player heartbeat (video step)
 - notes: the student marks it complete
 - pdf: the file must have been opened (a signed URL issued), then the student marks it complete
-- quiz, lab, assignment: placeholders; they can't be completed and never count toward progress
+- assignment: completes when a grade is recorded (the assignments module calls
+  `complete_graded_lesson`)
+- quiz, lab: placeholders; they can't be completed and never count toward progress
 """
 
 from decimal import Decimal
@@ -19,6 +21,7 @@ class CompletionRule(StrEnum):
     MANUAL = "manual"
     MANUAL_AFTER_OPENING = "manual_after_opening"
     WATCHED = "watched"
+    GRADED = "graded"
     NOT_COMPLETABLE = "not_completable"
 
 
@@ -29,6 +32,7 @@ def completion_rule(lesson_type: LessonType) -> CompletionRule:
         LessonType.VIDEO: CompletionRule.WATCHED,
         LessonType.NOTES: CompletionRule.MANUAL,
         LessonType.PDF: CompletionRule.MANUAL_AFTER_OPENING,
+        LessonType.ASSIGNMENT: CompletionRule.GRADED,
     }[lesson_type]
 
 

@@ -47,10 +47,10 @@ async def test_every_event_validates_against_its_documented_schema(
     _, event_topics = documented_topics()
 
     # Publishing and assigning emit course and enrollment events; batch changes, member events.
-    course = await published_for_cse(api, campus, modules=(("video", "notes"),))
+    course = await published_for_cse(api, campus, modules=(("video", "notes", "assignment"),))
     enrollment = await api.enrollment_for(campus.cse, campus.c, course.id)
     assert enrollment
-    eid, (video, notes) = enrollment["id"], course.lesson_ids
+    eid, (video, notes, homework) = enrollment["id"], course.lesson_ids
     newcomer = await api.factory.member(campus.c, "student")
     batch = f"/batches/{campus.cse_batch.id}/members"
     ok(await api.request("POST", batch, campus.c_admin, campus.c,
@@ -68,6 +68,19 @@ async def test_every_event_validates_against_its_documented_schema(
     )  # fmt: skip
     assert response.status_code == 204
     await flush_video_progress(api.app.state.sessionmaker, api.app.state.redis)
+    # Submitting and grading an assignment emit the assignment events (and lesson_completed).
+    submission = ok(
+        await api.request(
+            "PUT", f"/enrollments/{eid}/lessons/{homework}/submission", campus.cse, campus.c,
+            json={"submission": {"kind": "text", "text": "print(1)"}}, headers={"If-Match": "0"},
+        )
+    )  # fmt: skip
+    ok(
+        await api.request(
+            "PUT", f"/assignment-submissions/{submission['id']}/grade", campus.c_instructor,
+            campus.c, json={"score": "7.5", "feedback": "ok"}, headers={"If-Match": "1"},
+        )
+    )  # fmt: skip
     # Opting into a new major emits the version change.
     ok(await api.publish(campus.author, campus.p, course.id, "major"), 201)
     ok(await api.request("POST", f"/courses/{course.id}/enrollment-upgrades", campus.c_admin,

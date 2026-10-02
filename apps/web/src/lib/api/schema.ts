@@ -4,6 +4,44 @@
  */
 
 export interface paths {
+  "/api/v1/assignment-submissions/{submission_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Submission */
+    get: operations["get_submission"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/assignment-submissions/{submission_id}/grade": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Grade Submission
+     * @description Record or correct the grade. The lesson completes and course progress is recomputed in
+     *     the same transaction; the action is audited.
+     */
+    put: operations["grade_submission"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/audit-log": {
     parameters: {
       query?: never;
@@ -280,6 +318,30 @@ export interface paths {
     patch: operations["update_lesson"];
     trace?: never;
   };
+  "/api/v1/courses/{course_id}/lessons/{lesson_id}/assignment": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Lesson Assignment
+     * @description The assignment lesson's definition (owner-org editors); null until first saved.
+     */
+    get: operations["get_lesson_assignment"];
+    /**
+     * Put Lesson Assignment
+     * @description Create or update the definition. It is published with the next course version.
+     */
+    put: operations["put_lesson_assignment"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/courses/{course_id}/lessons/{lesson_id}/preview": {
     parameters: {
       query?: never;
@@ -310,6 +372,27 @@ export interface paths {
     get?: never;
     /** Set Lesson Skills */
     put: operations["set_lesson_skills"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/courses/{course_id}/lessons/{lesson_id}/submissions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Submissions
+     * @description The active org's submissions for an assignment lesson, ungraded first (graders:
+     *     instructors and org admins of the students' org).
+     */
+    get: operations["list_submissions"];
+    put?: never;
     post?: never;
     delete?: never;
     options?: never;
@@ -568,6 +651,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/assignment": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get My Assignment
+     * @description The published assignment, the student's submission and, once graded, the grade.
+     */
+    get: operations["get_my_assignment"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/complete": {
     parameters: {
       query?: never;
@@ -657,6 +760,46 @@ export interface paths {
     get: operations["video_resume"];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/submission": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Submit Assignment
+     * @description Submit, or replace the submission until it is graded.
+     */
+    put: operations["submit_assignment"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/submission-upload": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Create Submission Upload
+     * @description A presigned upload for a file submission (PDF, PNG or JPEG). Upload, then submit its id.
+     */
+    post: operations["create_submission_upload"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1374,6 +1517,49 @@ export interface components {
        */
       organization_id?: string | null;
     };
+    /**
+     * AssignmentDraftOut
+     * @description The editable definition (owner-org editors). Students see the published copy.
+     */
+    AssignmentDraftOut: {
+      /**
+       * Course Id
+       * Format: uuid
+       */
+      course_id: string;
+      /**
+       * Course Revision
+       * @description Send it as If-Match on the next outline edit
+       */
+      course_revision: number;
+      /** Due At */
+      due_at: string | null;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Instructions */
+      instructions: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Lesson Id
+       * Format: uuid
+       */
+      lesson_id: string;
+      /** Max Marks */
+      max_marks: number;
+      /** Submission Kinds */
+      submission_kinds: ("file" | "text")[];
+      /** Title */
+      title: string;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
+    };
     /** AssignmentOut */
     AssignmentOut: {
       /**
@@ -1411,6 +1597,27 @@ export interface components {
       organization_id: string;
       /** Parent Assignment Id */
       parent_assignment_id: string | null;
+    };
+    /** AssignmentUpsert */
+    AssignmentUpsert: {
+      /**
+       * Due At
+       * @description Shown to students. Late submissions are accepted (no policy yet).
+       */
+      due_at?: string | null;
+      /**
+       * Instructions
+       * @description Tiptap JSON document with the notes allow-list (see courses/notes.py), without images.
+       */
+      instructions?: {
+        [key: string]: unknown;
+      } | null;
+      /** Max Marks */
+      max_marks: number;
+      /** Submission Kinds */
+      submission_kinds: ("file" | "text")[];
+      /** Title */
+      title: string;
     };
     /** AuditEntryOut */
     AuditEntryOut: {
@@ -1716,6 +1923,16 @@ export interface components {
        */
       next_cursor: string | null;
     };
+    /** CursorPage[GraderSubmissionRow] */
+    CursorPage_GraderSubmissionRow_: {
+      /** Items */
+      items: components["schemas"]["GraderSubmissionRow"][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for the next page; null when there are no more items.
+       */
+      next_cursor: string | null;
+    };
     /** CursorPage[ImportJobOut] */
     CursorPage_ImportJobOut_: {
       /** Items */
@@ -1972,7 +2189,7 @@ export interface components {
        * Kind
        * @enum {string}
        */
-      kind: "pdf" | "image";
+      kind: "pdf" | "image" | "submission";
       /** Size Bytes */
       size_bytes: number | null;
       /**
@@ -1990,6 +2207,88 @@ export interface components {
     FileUploadOut: {
       file: components["schemas"]["FileOut"];
       upload: components["schemas"]["PresignedPostOut"];
+    };
+    /** GradeBody */
+    GradeBody: {
+      /**
+       * Feedback
+       * @default
+       */
+      feedback: string;
+      /** Score */
+      score: number | string;
+    };
+    /** GradeOut */
+    GradeOut: {
+      /** Feedback */
+      feedback: string;
+      /**
+       * Graded At
+       * Format: date-time
+       */
+      graded_at: string;
+      /** Graded By */
+      graded_by: string | null;
+      /** Max Marks */
+      max_marks: number;
+      /** Score */
+      score: string;
+    };
+    /** GraderSubmissionDetail */
+    GraderSubmissionDetail: {
+      assignment: components["schemas"]["PublishedAssignment"];
+      /**
+       * Course Id
+       * Format: uuid
+       */
+      course_id: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Lesson Id
+       * Format: uuid
+       */
+      lesson_id: string;
+      student: components["schemas"]["StudentSummary"];
+      submission: components["schemas"]["SubmissionOut"];
+    };
+    /** GraderSubmissionRow */
+    GraderSubmissionRow: {
+      /**
+       * Enrollment Id
+       * Format: uuid
+       */
+      enrollment_id: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "file" | "text";
+      /** Max Marks */
+      max_marks: number | null;
+      /** Revision */
+      revision: number;
+      /** Score */
+      score: string | null;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "submitted" | "graded";
+      student: components["schemas"]["StudentSummary"];
+      /**
+       * Submitted At
+       * Format: date-time
+       */
+      submitted_at: string;
     };
     /**
      * ImageUrlsOut
@@ -2620,7 +2919,12 @@ export interface components {
        * Code
        * @enum {string}
        */
-      code: "empty_course" | "video_not_ready" | "pdf_not_ready" | "course_archived";
+      code:
+        | "empty_course"
+        | "video_not_ready"
+        | "pdf_not_ready"
+        | "assignment_not_ready"
+        | "course_archived";
       /** Lesson Ids */
       lesson_ids?: string[];
     };
@@ -2647,6 +2951,27 @@ export interface components {
        */
       release_notes: string;
       release_type: components["schemas"]["ReleaseType"];
+    };
+    /**
+     * PublishedAssignment
+     * @description An assignment as the student's course version published it.
+     */
+    PublishedAssignment: {
+      /**
+       * Assignment Id
+       * Format: uuid
+       */
+      assignment_id: string;
+      /** Due At */
+      due_at: string | null;
+      /** Instructions Html */
+      instructions_html: string;
+      /** Max Marks */
+      max_marks: number;
+      /** Submission Kinds */
+      submission_kinds: ("file" | "text")[];
+      /** Title */
+      title: string;
     };
     /** ReadinessResponse */
     ReadinessResponse: {
@@ -2726,6 +3051,113 @@ export interface components {
         | "lesson_settings_changed";
       /** Lesson Ids */
       lesson_ids?: string[];
+    };
+    /** StudentAssignmentOut */
+    StudentAssignmentOut: {
+      assignment: components["schemas"]["PublishedAssignment"];
+      submission: components["schemas"]["SubmissionOut"] | null;
+    };
+    /** StudentSummary */
+    StudentSummary: {
+      /** Email */
+      email: string;
+      /** Full Name */
+      full_name: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+    };
+    /** SubmissionFileOut */
+    SubmissionFileOut: {
+      /** Content Type */
+      content_type: string;
+      /** Expires At */
+      expires_at: string | null;
+      /** File Name */
+      file_name: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Url
+       * @description Short-lived signed download URL (null until confirmed)
+       */
+      url: string | null;
+    };
+    /** SubmissionOut */
+    SubmissionOut: {
+      file: components["schemas"]["SubmissionFileOut"] | null;
+      grade: components["schemas"]["GradeOut"] | null;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "file" | "text";
+      /**
+       * Revision
+       * @description Send it as If-Match to resubmit (students) or grade
+       */
+      revision: number;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "submitted" | "graded";
+      /**
+       * Submitted At
+       * Format: date-time
+       */
+      submitted_at: string;
+      /** Text Body */
+      text_body: string | null;
+    };
+    /** SubmissionUploadCreate */
+    SubmissionUploadCreate: {
+      /**
+       * Content Type
+       * @enum {string}
+       */
+      content_type: "application/pdf" | "image/png" | "image/jpeg";
+      /** File Name */
+      file_name: string;
+    };
+    /** SubmitBody */
+    SubmitBody: {
+      /** Submission */
+      submission: components["schemas"]["SubmitText"] | components["schemas"]["SubmitFile"];
+    };
+    /** SubmitFile */
+    SubmitFile: {
+      /**
+       * File Id
+       * Format: uuid
+       * @description An upload from POST .../submission-upload
+       */
+      file_id: string;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      kind: "file";
+    };
+    /** SubmitText */
+    SubmitText: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      kind: "text";
+      /** Text */
+      text: string;
     };
     /** UpgradeAccepted */
     UpgradeAccepted: {
@@ -2977,6 +3409,98 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  get_submission: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        submission_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GraderSubmissionDetail"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  grade_submission: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        /** @description The revision this change is based on */
+        "If-Match"?: string | null;
+      };
+      path: {
+        submission_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["GradeBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GraderSubmissionDetail"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
   list_audit_log: {
     parameters: {
       query?: {
@@ -4056,6 +4580,100 @@ export interface operations {
       };
     };
   };
+  get_lesson_assignment: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        course_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssignmentDraftOut"] | null;
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  put_lesson_assignment: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        /** @description The revision this change is based on */
+        "If-Match"?: string | null;
+      };
+      path: {
+        course_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssignmentUpsert"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssignmentDraftOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
   preview_notes: {
     parameters: {
       query?: never;
@@ -4128,6 +4746,55 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["LessonOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  list_submissions: {
+    parameters: {
+      query?: {
+        status?: ("submitted" | "graded") | null;
+        batch_id?: string | null;
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        course_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_GraderSubmissionRow_"];
         };
       };
       /** @description Client error */
@@ -4848,6 +5515,50 @@ export interface operations {
       };
     };
   };
+  get_my_assignment: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        enrollment_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StudentAssignmentOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
   complete_lesson: {
     parameters: {
       query?: never;
@@ -5046,6 +5757,104 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["VideoResume"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  submit_assignment: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        /** @description The revision this change is based on */
+        "If-Match"?: string | null;
+      };
+      path: {
+        enrollment_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SubmitBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SubmissionOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  create_submission_upload: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        enrollment_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SubmissionUploadCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FileUploadOut"];
         };
       };
       /** @description Client error */

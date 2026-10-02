@@ -424,6 +424,10 @@ async def complete_lesson(ctx: Ctx, enrollment_id: UUID, lesson_id: UUID) -> Les
         raise ConflictError(
             "Videos complete automatically once watched.", code="completed_by_watching"
         )
+    if rule is CompletionRule.GRADED:
+        raise ConflictError(
+            "Assignments complete once they are graded.", code="completed_by_grading"
+        )
     if rule is CompletionRule.MANUAL_AFTER_OPENING:
         existing = await LessonProgressRepository(ctx.session).get(enrollment_id, lesson_id)
         if existing is None or existing.pdf_opened_at is None:
@@ -437,6 +441,50 @@ async def complete_lesson(ctx: Ctx, enrollment_id: UUID, lesson_id: UUID) -> Les
     return LessonCompletionOut(
         enrollment=(await _outs(ctx, [refreshed]))[0], lesson=_progress_out(progress)
     )
+
+
+@dataclass(frozen=True, slots=True)
+class StudentLesson:
+    """The caller's own active enrollment, the version it shows, and one lesson in it."""
+
+    enrollment_id: UUID
+    organization_id: UUID
+    user_id: UUID
+    course_id: UUID
+    version: VersionRef
+    lesson: VersionLessonRef
+
+
+async def student_lesson(ctx: Ctx, enrollment_id: UUID, lesson_id: UUID) -> StudentLesson:
+    """For other modules' student APIs (assignments): 404 unless the caller is the enrolled
+    student and the lesson is in the version they're shown."""
+    enrollment, version = await _my_enrollment(ctx, enrollment_id)
+    lesson = await _lesson_in_version(ctx, version, lesson_id)
+    return StudentLesson(
+        enrollment.id, enrollment.organization_id, enrollment.user_id, enrollment.course_id,
+        version, lesson,
+    )  # fmt: skip
+
+
+async def complete_graded_lesson(
+    session: AsyncSession, enrollment_id: UUID, lesson_id: UUID, *, redis: Redis | None = None
+) -> int | None:
+    """An assignment was graded: complete its lesson and recompute progress, in the grader's
+    transaction (RLS lets a grader write progress only where a graded submission exists,
+    migration 0011). Returns the progress percentage, or None when the enrollment isn't active
+    or its current version no longer has the lesson (a later major dropped it)."""
+    enrollment = await EnrollmentRepository(session).get(enrollment_id)
+    if enrollment is None or enrollment.status != EnrollmentStatus.ACTIVE:
+        return None
+    version = await courses.resolve_version(
+        session, enrollment.course_id, enrollment.major_version, redis=redis
+    )
+    if version is None:
+        return None
+    lesson = await courses.version_lesson(session, version.id, lesson_id, redis=redis)
+    if lesson is None or completion_rule(lesson.lesson_type) is not CompletionRule.GRADED:
+        return None
+    return await record_completion(session, enrollment, version, lesson)
 
 
 async def record_completion(

@@ -3,8 +3,6 @@ from KEYCLOAK_PORT into compose, the realm import, the API settings and the web 
 
 from pathlib import Path
 
-import pytest
-
 REPO = Path(__file__).resolve().parents[3]
 
 # Files where a literal Keycloak port would silently break a non-default KEYCLOAK_PORT.
@@ -23,10 +21,17 @@ CHECKED = [
 ]
 
 
-@pytest.mark.parametrize("path", CHECKED)
-def test_no_hardcoded_keycloak_port(path: str) -> None:
-    content = (REPO / path).read_text(encoding="utf-8")
-    assert "8080" not in content, f"{path} hardcodes 8080; derive it from KEYCLOAK_PORT"
+def test_no_hardcoded_keycloak_port() -> None:
+    # One test for every file (the count doesn't grow with the codebase); the failure lists every
+    # offender with its line numbers.
+    offenders = [
+        f"{path}:{number}"
+        for path in CHECKED
+        for number, line in enumerate((REPO / path).read_text(encoding="utf-8").splitlines(), 1)
+        if "8080" in line
+    ]
+    listing = "\n".join(offenders)
+    assert offenders == [], f"hardcoded 8080; derive it from KEYCLOAK_PORT:\n{listing}"
 
 
 def test_env_example_declares_the_default_once() -> None:

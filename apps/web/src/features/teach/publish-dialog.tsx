@@ -25,6 +25,7 @@ const BLOCKERS: Record<PublishPreview["blockers"][number]["code"], string> = {
   empty_course: "Add at least one lesson.",
   video_not_ready: "These video lessons need a processed video:",
   pdf_not_ready: "These PDF lessons need an uploaded PDF:",
+  assignment_not_ready: "These assignment lessons need their details saved:",
   course_archived: "Archived courses can't be published.",
 };
 

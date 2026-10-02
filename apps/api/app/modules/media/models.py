@@ -35,6 +35,7 @@ class FileStatus(StrEnum):
 class FileKind(StrEnum):
     PDF = "pdf"  # pdf lessons
     IMAGE = "image"  # images in notes lessons
+    SUBMISSION = "submission"  # a student's assignment upload (PDF, PNG or JPEG)
 
 
 class VideoAsset(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -65,7 +66,7 @@ class StoredFile(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("storage_key", name="uq_files_storage_key"),
         CheckConstraint("status IN ('pending', 'ready', 'rejected')", name="ck_files_status"),
-        CheckConstraint("kind IN ('pdf', 'image')", name="ck_files_kind"),
+        CheckConstraint("kind IN ('pdf', 'image', 'submission')", name="ck_files_kind"),
         Index("ix_files_organization_id_status", "organization_id", "status"),
         Index("ix_files_organization_id_kind", "organization_id", "kind"),
         Index("ix_files_created_by", "created_by"),

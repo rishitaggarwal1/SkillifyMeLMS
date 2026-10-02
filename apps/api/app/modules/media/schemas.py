@@ -50,7 +50,10 @@ class PlaybackOut(BaseModel):
 
 # ============================================================================ files
 
-FileKindName = Literal["pdf", "image"]
+FileKindName = Literal["pdf", "image"]  # what editors upload
+# Students upload "submission" files for assignments (PDF, PNG or JPEG).
+StoredFileKind = Literal["pdf", "image", "submission"]
+SubmissionContentType = Literal["application/pdf", "image/png", "image/jpeg"]
 FileStatusName = Literal["pending", "ready", "rejected"]
 # The only image types accepted; everything else (SVG, BMP, TIFF, HEIC...) is refused.
 ImageContentType = Literal["image/png", "image/jpeg", "image/webp", "image/gif"]
@@ -77,7 +80,7 @@ class FileOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    kind: FileKindName
+    kind: StoredFileKind
     file_name: str
     content_type: str
     size_bytes: int | None

@@ -243,6 +243,60 @@ def _module_order(course: Any, module: Any, lesson: Any) -> dict[str, list[str]]
     return {"ids": [str(module.id)]}
 
 
+async def _assignment_draft(w: World, method: str) -> Request:
+    course = await w.factory.course(w.org)
+    lesson = await w.factory.lesson(await w.factory.module(course), lesson_type="assignment")
+    path = f"/api/v1/courses/{course.id}/lessons/{lesson.id}/assignment"
+    if method == "GET":
+        return path, {}
+    revision = await w.factory.course_revision(course.id)
+    body = {"title": "Homework", "max_marks": 10, "submission_kinds": ["text"]}
+    return path, {"json": body, "headers": {"If-Match": str(revision)}}
+
+
+async def _homework(w: World) -> tuple[Any, Any, Any, Any, Any]:
+    """Org A's student enrolled in a published course whose lesson is an assignment."""
+    course = await w.factory.course(w.org)
+    lesson = await w.factory.lesson(await w.factory.module(course), lesson_type="assignment")
+    version, assignment_id = await w.factory.homework_version(course, lesson)
+    batch = await w.factory.batch(w.org)
+    await w.factory.add_to_batch(batch, w.users["student"])
+    await w.factory.assignment(course, w.org, batch=batch)
+    enrollment = await w.factory.enrollment(course, w.users["student"], w.org)
+    return course, lesson, version, enrollment, assignment_id
+
+
+def _my_homework(action: str) -> Builder:
+    async def build(w: World) -> Request:
+        _, lesson, _, enrollment, _ = await _homework(w)
+        path = f"/api/v1/enrollments/{enrollment.id}/lessons/{lesson.id}/{action}"
+        if action == "submission-upload":
+            return path, {"json": {"file_name": "a.pdf", "content_type": "application/pdf"}}
+        if action == "submission":
+            body = {"submission": {"kind": "text", "text": "answer"}}
+            return path, {"json": body, "headers": {"If-Match": "0"}}
+        return path, {}
+
+    return build
+
+
+async def _submissions_queue(w: World) -> Request:
+    course, lesson, _, _, _ = await _homework(w)
+    return f"/api/v1/courses/{course.id}/lessons/{lesson.id}/submissions", {}
+
+
+def _graded(action: str) -> Builder:
+    async def build(w: World) -> Request:
+        _, lesson, version, enrollment, assignment_id = await _homework(w)
+        submission = await w.factory.submission(enrollment, lesson, version, assignment_id)
+        path = f"/api/v1/assignment-submissions/{submission.id}"
+        if action == "grade":
+            return f"{path}/grade", {"json": {"score": "5"}, "headers": {"If-Match": "1"}}
+        return path, {}
+
+    return build
+
+
 @dataclass(frozen=True)
 class Route:
     method: str
@@ -449,6 +503,64 @@ MATRIX = [
     ),
     Route("GET", "/api/v1/platform/courses", PLATFORM, at("/api/v1/platform/courses")),
     Route("GET", "/api/v1/platform/audit-log", PLATFORM, at("/api/v1/platform/audit-log")),
+    # --- assignments (Phase 2.5): owner-org editors define them; the enrolled student submits
+    # (everyone else 404); graders are instructors and org admins of the student's org.
+    Route(
+        "GET",
+        "/api/v1/courses/{course_id}/lessons/{lesson_id}/assignment",
+        STAFF_READ,
+        lambda w: _assignment_draft(w, "GET"),
+        names_resource=True,
+    ),
+    Route(
+        "PUT",
+        "/api/v1/courses/{course_id}/lessons/{lesson_id}/assignment",
+        STAFF_READ,
+        lambda w: _assignment_draft(w, "PUT"),
+        names_resource=True,
+    ),
+    Route(
+        "GET",
+        "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/assignment",
+        {"student"},
+        _my_homework("assignment"),
+        denied="404",
+    ),
+    Route(
+        "POST",
+        "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/submission-upload",
+        {"student"},
+        _my_homework("submission-upload"),
+        denied="404",
+    ),
+    Route(
+        "PUT",
+        "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/submission",
+        {"student"},
+        _my_homework("submission"),
+        denied="404",
+    ),
+    Route(
+        "GET",
+        "/api/v1/courses/{course_id}/lessons/{lesson_id}/submissions",
+        STAFF_READ,
+        lambda w: _submissions_queue(w),  # noqa: PLW0108 - builder defined after the matrix
+        names_resource=True,
+    ),
+    Route(
+        "GET",
+        "/api/v1/assignment-submissions/{submission_id}",
+        STAFF_READ,
+        _graded("detail"),
+        names_resource=True,
+    ),
+    Route(
+        "PUT",
+        "/api/v1/assignment-submissions/{submission_id}/grade",
+        STAFF_READ,
+        _graded("grade"),
+        names_resource=True,
+    ),
     # --- skills: everyone reads; org A isn't a content publisher, so only platform admins
     # write.
     Route("GET", "/api/v1/skills", EVERYONE, at("/api/v1/skills")),

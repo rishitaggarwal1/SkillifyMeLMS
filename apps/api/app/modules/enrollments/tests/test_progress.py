@@ -33,7 +33,9 @@ def test_completion_rules() -> None:
     assert completion_rule(LessonType.VIDEO) is CompletionRule.WATCHED
     assert completion_rule(LessonType.NOTES) is CompletionRule.MANUAL
     assert completion_rule(LessonType.PDF) is CompletionRule.MANUAL_AFTER_OPENING
-    for placeholder in (LessonType.QUIZ, LessonType.LAB, LessonType.ASSIGNMENT):
+    # Phase 2.5: assignments complete when graded (no longer placeholders).
+    assert completion_rule(LessonType.ASSIGNMENT) is CompletionRule.GRADED
+    for placeholder in (LessonType.QUIZ, LessonType.LAB):
         assert completion_rule(placeholder) is CompletionRule.NOT_COMPLETABLE
 
 

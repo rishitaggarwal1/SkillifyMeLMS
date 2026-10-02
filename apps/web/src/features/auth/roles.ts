@@ -31,7 +31,7 @@ const ROLE_AREAS: [role: OrgRole, area: Area][] = [
 ];
 
 /** Every (area, organization) the user can use, platform first, then by organization name.
- * lab_author has no area yet (labs arrive in Phase 3). */
+ * lab_author has no area yet (coding labs arrive in Phase 4). */
 export function destinations(me: Me): Destination[] {
   const out: Destination[] = [];
   if (me.is_platform_admin)

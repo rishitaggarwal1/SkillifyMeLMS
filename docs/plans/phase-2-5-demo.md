@@ -1,6 +1,6 @@
 # Phase 2.5 — Demo-ready portal (plan)
 
-**Status (2026-10-02): approved; steps 1 (platform admin API) and 2 (platform UI, role home) committed, see
+**Status (2026-10-02): approved; steps 1–3 (platform admin API, platform UI and role home, assignments backend) committed, see
 [Implementation status](#3a-implementation-status).** Phase 2 is
 complete and tagged `v0.2.0` ([phase-2.md](phase-2.md)).
 
@@ -458,9 +458,78 @@ Every step ends with:
    expired. The cost is a brief skeleton before the redirect.
 2. **The header's old "Admin" link is replaced** by the area links row (Platform admin, Org
    admin, Instructor, Student), filtered to what the active org allows.
-3. **Users with only `lab_author`** see "Nothing here yet" at `/`. Labs arrive in Phase 3.
+3. **Users with only `lab_author`** see "Nothing here yet" at `/`. Coding labs arrive in Phase 4.
 4. **Audit rows link to the actor and organization rather than naming them.** There is no batched
    name lookup across orgs yet, and adding one wasn't worth it for this screen.
+
+### Step 3: assignments backend (2026-10-02)
+
+- **Migration `0011_assignments`:**
+  - three tables, `assignments`, `assignment_submissions` and `assignment_grades`, each with
+    per-operation RLS
+  - `files.kind` gains `submission`, with policy branches so students write and read only their
+    own uploads
+  - helpers `app.lesson_graded` and `app.enrollment_graded`, which add a grader branch to the
+    `lesson_progress` and `enrollments` write policies (decision 1)
+  - the trigger `app.enrollments_grader_guard`, which lets such a grader change only
+    `progress_percent`, `completed_at` and `updated_at`
+- **Module `assignments`:**
+  - `models`, `schemas`, `repository`, `events`, `service`, `router`
+  - tests: 10 API and 4 RLS (raw SQL)
+- **Endpoints** (MATRIX rows; `docs/access-control.md`):
+  - authoring: `GET` and `PUT /courses/{id}/lessons/{lesson_id}/assignment`
+  - students: `GET /enrollments/{id}/lessons/{lesson_id}/assignment`, `POST .../submission-upload`,
+    `PUT .../submission`
+  - graders: `GET /courses/{id}/lessons/{lesson_id}/submissions` (ungraded first, then oldest;
+    `status` and `batch_id` filters; keyset cursor), `GET /assignment-submissions/{id}`,
+    `PUT /assignment-submissions/{id}/grade`
+- **New permission** `assignment.grade`, held by `org_admin` and `instructor`.
+- **Events** `assignment_submitted` and `assignment_graded`, on `learning.enrollments.v1` and keyed
+  by enrollment. Their schemas are in `docs/events.md`, and `test_event_schemas` produces them
+  through a real flow.
+- **Courses changes:**
+  - `assignment` is no longer a placeholder lesson type: it is required by default and counts
+    toward progress. Its completion rule is `graded`, so `.../complete` answers
+    `409 completed_by_grading`.
+  - Publishing is blocked (`assignment_not_ready`) until the definition is saved.
+  - The snapshot stores `{assignment_id, title, instructions_html, due_at, max_marks,
+    submission_kinds}`. Changing `max_marks` or `submission_kinds` makes a release structural
+    (decision 12).
+  - Lesson `PATCH` can't set an assignment's content
+    (`422 assignment_content_managed_separately`).
+- **New setting** `SUBMISSION_UPLOAD_MAX_BYTES` (10 MB).
+- **Folded in from the step 2 review:**
+  - `/` now shows an `AreaSkeleton` shaped like the destination page (tabs, title, tiles or rows)
+    before the redirect
+  - the lab-author message, comments and docs say coding labs arrive in **Phase 4**
+  - `test_config_ports` is one test listing every offender, so the API test count no longer grows
+    with web files (1410 → 1190)
+
+**Deviations in step 3:**
+1. **A content-source hook instead of a direct call.** `courses` defines `content_sources`
+   (`LessonContentSource`), and `assignments` registers itself at startup
+   (`app.main.create_app`). Publishing asks the hook for assignment lessons' content. The
+   reason: `assignments` must call `courses` (editor checks, versions) and `enrollments`
+   (student checks, completion), so `courses` calling `assignments` would create an import
+   cycle. **Any other entry point that publishes, such as the step 6 demo seed, must also call
+   `register_content_source()`.**
+2. **Submissions don't reference the draft rows.** `assignment_submissions.assignment_id` and
+   `lesson_id` aren't foreign keys: the draft rows may be deleted while the published version
+   and the student's work remain.
+3. **Uniqueness:** one submission per `(enrollment_id, assignment_id)`, and one grade per
+   `(submission_id, organization_id)`. The second is the composite foreign-key target; Phase 3
+   drops it to keep grade history.
+4. **Re-grading is allowed.** A grader can correct a grade, which is audited with before and
+   after, and emits `assignment_graded` with `regrade: true`. `lesson_completed` is still
+   emitted only once.
+5. **Scores are decimals.** They have two places (`8.50`) and are sent as strings, in the API and
+   in events. Graders can't grade their own submission (`409 cannot_grade_own`).
+6. **Instructions can't contain images yet** (`422 instructions_images`). Images would need
+   signed URLs per reader, like notes, and that isn't worth it for the thin slice.
+7. **Due dates are shown, never enforced.** There is no late policy (out of scope).
+8. **The web UI is unchanged in this step.** The builder and player still label assignment
+   lessons "Coming soon" until step 4, and a course with an assignment lesson can't be published
+   from the UI until its definition is saved (step 4 adds the editor).
 
 ## 4. Decisions (approved 2026-10-02)
 

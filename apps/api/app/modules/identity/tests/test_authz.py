@@ -47,6 +47,7 @@ EXPECTED = {
         "course.distribute",
         "enrollment.upgrade",
         "skill.manage",
+        "assignment.grade",
     },
     OrgRole.INSTRUCTOR: {
         "org.read",
@@ -56,6 +57,7 @@ EXPECTED = {
         "course.edit",
         "course.assign",
         "skill.manage",
+        "assignment.grade",
     },
     OrgRole.LAB_AUTHOR: {"org.read", "lab.author", "skill.manage"},
     OrgRole.STUDENT: {"org.read"},

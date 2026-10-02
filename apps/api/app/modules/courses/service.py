@@ -30,7 +30,7 @@ from app.core.storage import ObjectStorage
 from app.db.base import new_id
 from app.db.session import run_after_commit, run_after_commit_async
 from app.modules.audit import service as audit
-from app.modules.courses import events, notes
+from app.modules.courses import content_sources, events, notes
 from app.modules.courses.cache import VersionCache, lesson_fields
 from app.modules.courses.jobs import REVALIDATE_CATALOG
 from app.modules.courses.models import (
@@ -237,6 +237,77 @@ async def course_titles(session: AsyncSession, course_ids: Sequence[UUID]) -> di
 async def readable_course(ctx: Ctx, course_id: UUID) -> Course:
     """A course the caller's org may read (404 otherwise); requires `course.read`."""
     return await _readable(ctx, course_id)
+
+
+async def version_ref(
+    session: AsyncSession, version_id: UUID, *, redis: Redis | None = None
+) -> VersionRef | None:
+    """A published version the caller may read (RLS), else None."""
+    if redis is not None:
+        v = (await VersionCache(redis).versions(session, [version_id])).get(version_id)
+        if v is None:
+            return None
+        return VersionRef(v.id, v.course_id, v.major, v.minor, v.title, v.snapshot)
+    version = await VersionRepository(session).get(version_id)
+    return _ref(version) if version else None
+
+
+def snapshot_lesson(version: VersionRef, lesson_id: UUID) -> dict[str, Any] | None:
+    """A lesson as the version published it (title, content, ...)."""
+    wanted = str(lesson_id)
+    return next((x for _m, x in snapshot_lessons(version.snapshot) if x["id"] == wanted), None)
+
+
+@dataclass(frozen=True, slots=True)
+class DraftLessonRef:
+    course_id: UUID
+    organization_id: UUID
+    lesson_id: UUID
+    lesson_type: LessonType
+    title: str
+    content: dict[str, Any]
+    course_revision: int
+
+
+async def editable_lesson(ctx: Ctx, course_id: UUID, lesson_id: UUID) -> DraftLessonRef:
+    """A draft lesson of a course the caller edits (owner-org editors; 404 otherwise)."""
+    course = await _editable(ctx, course_id)
+    lesson = await _lesson(ctx, course_id, lesson_id)
+    return DraftLessonRef(
+        course.id, course.organization_id, lesson.id, lesson.lesson_type, lesson.title,
+        dict(lesson.content), course.revision,
+    )  # fmt: skip
+
+
+async def edit_lesson_content(
+    ctx: Ctx, course_id: UUID, lesson_id: UUID, content: dict[str, Any], if_match: int
+) -> int:
+    """For modules that own a lesson type's content (assignments): bump the course revision
+    (`If-Match`, 409 when stale) and store the lesson's content reference. Returns the new
+    revision. The content is the module's own reference, e.g. `{"assignment_id": ...}`."""
+    course = await _editable(ctx, course_id)
+    _require_active(course)
+    lesson = await _lesson(ctx, course_id, lesson_id)
+    parsed = CONTENT_MODELS[lesson.lesson_type].model_validate(content)
+    revision = await _bump(ctx, course, if_match)
+    await DraftRepository(ctx.session).update_lesson(
+        lesson_id, {"content": parsed.model_dump(mode="json", exclude_none=True)}
+    )
+    return revision
+
+
+def validate_notes_doc(doc: dict[str, Any]) -> None:
+    """The notes allow-list (raises a ValueError naming the offending path)."""
+    notes.validate_doc(doc)
+
+
+def notes_image_ids(doc: dict[str, Any]) -> list[UUID]:
+    return notes.image_file_ids(doc)
+
+
+def render_notes(doc: dict[str, Any] | None) -> str:
+    """Sanitized HTML for a notes document (the same renderer as notes lessons)."""
+    return notes.render_html(doc)
 
 
 # ============================================================================ helpers
@@ -594,6 +665,11 @@ async def _validate_content(
             details=[{"loc": list(e["loc"]), "msg": e["msg"]} for e in exc.errors()],
         ) from exc
     clean = parsed.model_dump(mode="json", exclude_none=True)
+    if lesson_type == LessonType.ASSIGNMENT and clean:
+        raise UnprocessableError(
+            "Set an assignment's details with PUT .../lessons/{lesson_id}/assignment.",
+            code="assignment_content_managed_separately",
+        )
     if len(json.dumps(clean)) > MAX_NOTES_BYTES:
         raise UnprocessableError("The lesson content is too large.", code="content_too_large")
     if video_id := clean.get("video_asset_id"):
@@ -786,9 +862,19 @@ async def _draft(ctx: Ctx, course: Course) -> _Draft:
     if pdfs_pending:
         blockers.append(PublishBlocker(code="pdf_not_ready", lesson_ids=pdfs_pending))
 
+    # Assignment lessons publish what the assignments module holds (content_sources).
+    sourced: dict[UUID, dict[str, Any]] = {}
+    assignment_ids = [x.id for x in lessons if x.lesson_type == LessonType.ASSIGNMENT]
+    if assignment_ids:
+        source = content_sources.source_for(LessonType.ASSIGNMENT)
+        sourced = await source.published(ctx.session, assignment_ids) if source else {}
+        missing = [lesson_id for lesson_id in assignment_ids if lesson_id not in sourced]
+        if missing:
+            blockers.append(PublishBlocker(code="assignment_not_ready", lesson_ids=missing))
+
     durations = {vid: info.duration_seconds for vid, info in videos.items()}
     return _Draft(
-        snapshot=build_snapshot(course, modules, lessons, tags, durations),
+        snapshot=build_snapshot(course, modules, lessons, tags, durations, sourced_content=sourced),
         lessons=lessons,
         module_positions={m.id: m.position for m in modules},
         video_durations=durations,

@@ -32,7 +32,7 @@ from app.db.base import new_id
 from app.db.session import run_after_commit
 from app.db.tenancy import independent_transaction, system_transaction
 from app.modules.audit import service as audit
-from app.modules.identity.authz import Permission, require_org_permission
+from app.modules.identity.authz import Permission, require_org, require_org_permission
 from app.modules.identity.dependencies import RequestContext
 from app.modules.media.models import FileKind, FileStatus, StoredFile, VideoAsset, VideoStatus
 from app.modules.media.providers import (
@@ -47,6 +47,7 @@ from app.modules.media.schemas import (
     FileOut,
     FileUploadOut,
     PresignedPostOut,
+    SubmissionContentType,
     UploadTicketOut,
     VideoOut,
     VideoUploadOut,
@@ -79,6 +80,8 @@ class FileInfo:
     organization_id: UUID
     kind: str
     status: str
+    file_name: str = ""
+    content_type: str = ""
 
     @property
     def is_ready(self) -> bool:
@@ -105,11 +108,15 @@ async def files(session: AsyncSession, ids: Sequence[UUID]) -> dict[UUID, FileIn
     if not ids:
         return {}
     rows = await session.execute(
-        select(StoredFile.id, StoredFile.organization_id, StoredFile.kind, StoredFile.status).where(
-            StoredFile.id.in_(ids)
-        )
-    )
-    return {r.id: FileInfo(r.id, r.organization_id, r.kind, r.status) for r in rows}
+        select(
+            StoredFile.id, StoredFile.organization_id, StoredFile.kind, StoredFile.status,
+            StoredFile.file_name, StoredFile.content_type,
+        ).where(StoredFile.id.in_(ids))
+    )  # fmt: skip
+    return {
+        r.id: FileInfo(r.id, r.organization_id, r.kind, r.status, r.file_name, r.content_type)
+        for r in rows
+    }
 
 
 async def playback_for(
@@ -315,6 +322,8 @@ class FileDownload:
 
 
 def _max_bytes(settings: Settings, kind: str) -> int:
+    if kind == FileKind.SUBMISSION:
+        return settings.submission_upload_max_bytes
     return (
         settings.pdf_upload_max_bytes if kind == FileKind.PDF else settings.image_upload_max_bytes
     )
@@ -357,21 +366,66 @@ async def create_file(
             "PDF files must be application/pdf; images must be PNG, JPEG, WebP or GIF.",
             code="invalid_content_type",
         )
+    return await _create(
+        ctx, storage, settings, org_id, kind=body.kind, file_name=body.file_name,
+        content_type=body.content_type,
+    )  # fmt: skip
+
+
+async def create_submission_upload(
+    ctx: RequestContext,
+    storage: ObjectStorage,
+    settings: Settings,
+    *,
+    file_name: str,
+    content_type: SubmissionContentType,
+) -> FileUploadOut:
+    """A student's assignment upload (the assignments module has checked the enrollment).
+    Same presigned POST rules as editors' files; kind `submission`, readable by the student and
+    their org's graders only (RLS, migration 0011)."""
+    org_id = require_org(ctx.principal)
+    return await _create(
+        ctx, storage, settings, org_id, kind=FileKind.SUBMISSION, file_name=file_name,
+        content_type=content_type,
+    )  # fmt: skip
+
+
+async def confirm_submission_file(
+    ctx: RequestContext, storage: ObjectStorage, settings: Settings, file_id: UUID
+) -> FileOut:
+    """Confirm the caller's own submission upload (size and leading bytes), like `confirm_file`.
+    404 for anything but a submission file the caller uploaded."""
+    file = await FileRepository(ctx.session).get(file_id)
+    if file is None or file.kind != FileKind.SUBMISSION or file.created_by != ctx.principal.user_id:
+        raise NotFoundError("File not found.")
+    return await _confirm(ctx, storage, settings, file)
+
+
+async def _create(
+    ctx: RequestContext,
+    storage: ObjectStorage,
+    settings: Settings,
+    org_id: UUID,
+    *,
+    kind: str,
+    file_name: str,
+    content_type: str,
+) -> FileUploadOut:
     file_id = new_id()
-    key = f"files/{org_id}/{file_id}/{body.kind}"  # never the user's file name
-    max_bytes = _max_bytes(settings, body.kind)
+    key = f"files/{org_id}/{file_id}/{kind}"  # never the user's file name
+    max_bytes = _max_bytes(settings, kind)
     ttl = settings.file_upload_ttl_seconds
     post = await asyncio.to_thread(
         storage.presigned_post,
         key,
-        content_type=body.content_type,
+        content_type=content_type,
         max_bytes=max_bytes,
         expires_in=ttl,
     )
     file = await FileRepository(ctx.session).create(
         StoredFile(
-            id=file_id, organization_id=org_id, kind=body.kind, storage_key=key,
-            file_name=body.file_name, content_type=body.content_type, status=FileStatus.PENDING,
+            id=file_id, organization_id=org_id, kind=kind, storage_key=key,
+            file_name=file_name, content_type=content_type, status=FileStatus.PENDING,
             created_by=ctx.principal.user_id,
         )
     )  # fmt: skip
@@ -381,7 +435,7 @@ async def create_file(
         action="file.created",
         target_type="file",
         target_id=file.id,
-        after={"kind": body.kind, "file_name": body.file_name},
+        after={"kind": kind, "file_name": file_name},
     )
     return FileUploadOut(
         file=_file_out(file),
@@ -398,7 +452,13 @@ async def confirm_file(
     `422 file_rejected` (the reason in `details`): the rejected status is committed first, so the
     file can never be attached, and the object is deleted. A missing object is `409` and leaves
     the file pending, so the browser can retry. Idempotent."""
-    file = await _own_file(ctx, file_id)
+    return await _confirm(ctx, storage, settings, await _own_file(ctx, file_id))
+
+
+async def _confirm(
+    ctx: RequestContext, storage: ObjectStorage, settings: Settings, file: StoredFile
+) -> FileOut:
+    file_id = file.id
     if file.status == FileStatus.READY:
         return _file_out(file)
     if file.status == FileStatus.REJECTED:

@@ -84,6 +84,8 @@ The mapping lives in `apps/api/app/events/envelope.py`. Add a row here whenever 
 | `lesson_completed` | `learning.enrollments.v1` | A student completes a lesson, once per lesson: marked done, or a video watched past its threshold |
 | `enrollment_version_changed` | `learning.enrollments.v1` | An org_admin opted an enrollment into a newer major version |
 | `video_progress` | `learning.progress.v1` | A buffered lesson's video progress is flushed to Postgres |
+| `assignment_submitted` | `learning.enrollments.v1` | A student submits an assignment, or replaces a submission that isn't graded yet |
+| `assignment_graded` | `learning.enrollments.v1` | A grader records or corrects a grade. The lesson's `lesson_completed` follows in the same transaction, the first time only |
 
 Both events are keyed by `batch_id`, so all changes to one batch arrive in order. Phase 2
 (enrollments) consumes them to enroll and unenroll students in the courses assigned to the batch.
@@ -252,6 +254,64 @@ batches, into a newer major version.
     "to_major": { "type": "integer", "minimum": 2 },
     "progress_percent": { "type": "integer", "minimum": 0, "maximum": 100 },
     "actor_user_id": { "type": "string", "format": "uuid" }
+  }
+}
+```
+
+### `assignment_submitted` (version 1)
+
+Keyed by enrollment ID, like the student's other learning events. `organization_id` is the
+student's org. `version_id` is the course version the student submitted against.
+`resubmission` is true when this replaced an earlier, ungraded submission.
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "assignment_submitted.v1 data",
+  "type": "object",
+  "required": ["submission_id", "assignment_id", "enrollment_id", "user_id", "course_id",
+               "lesson_id", "version_id", "kind", "resubmission"],
+  "additionalProperties": false,
+  "properties": {
+    "submission_id": { "type": "string", "format": "uuid" },
+    "assignment_id": { "type": "string", "format": "uuid" },
+    "enrollment_id": { "type": "string", "format": "uuid" },
+    "user_id": { "type": "string", "format": "uuid" },
+    "course_id": { "type": "string", "format": "uuid" },
+    "lesson_id": { "type": "string", "format": "uuid" },
+    "version_id": { "type": "string", "format": "uuid" },
+    "kind": { "enum": ["text", "file"] },
+    "resubmission": { "type": "boolean" }
+  }
+}
+```
+
+### `assignment_graded` (version 1)
+
+Keyed by enrollment ID. `score` is a decimal string with two places (e.g. `"8.50"`), so
+consumers never see float rounding. `max_marks` is the version's maximum, which a minor release
+can't change. `regrade` is true when the grader corrected an existing grade.
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "assignment_graded.v1 data",
+  "type": "object",
+  "required": ["submission_id", "assignment_id", "enrollment_id", "user_id", "course_id",
+               "lesson_id", "version_id", "score", "max_marks", "graded_by", "regrade"],
+  "additionalProperties": false,
+  "properties": {
+    "submission_id": { "type": "string", "format": "uuid" },
+    "assignment_id": { "type": "string", "format": "uuid" },
+    "enrollment_id": { "type": "string", "format": "uuid" },
+    "user_id": { "type": "string", "format": "uuid" },
+    "course_id": { "type": "string", "format": "uuid" },
+    "lesson_id": { "type": "string", "format": "uuid" },
+    "version_id": { "type": "string", "format": "uuid" },
+    "score": { "type": "string", "pattern": "^[0-9]{1,4}[.][0-9]{2}$" },
+    "max_marks": { "type": "integer", "minimum": 1, "maximum": 1000 },
+    "graded_by": { "type": "string", "format": "uuid" },
+    "regrade": { "type": "boolean" }
   }
 }
 ```

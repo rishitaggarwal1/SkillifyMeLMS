@@ -39,13 +39,14 @@ class LessonType(StrEnum):
     VIDEO = "video"
     NOTES = "notes"
     PDF = "pdf"
-    # Placeholders: their content is built in later phases (assessments, labs, assignments).
+    # Placeholders: their content is built in later phases (assessments, labs). Assignments
+    # have content since Phase 2.5 (the assignments module).
     QUIZ = "quiz"
     LAB = "lab"
     ASSIGNMENT = "assignment"
 
 
-PLACEHOLDER_LESSON_TYPES = frozenset({LessonType.QUIZ, LessonType.LAB, LessonType.ASSIGNMENT})
+PLACEHOLDER_LESSON_TYPES = frozenset({LessonType.QUIZ, LessonType.LAB})
 
 lesson_type_enum = Enum(
     LessonType,

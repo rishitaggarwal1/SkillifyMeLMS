@@ -13,6 +13,7 @@ from uuid_utils.compat import uuid7
 
 from app.db.base import new_id
 from app.db.types import LTree
+from app.modules.assignments.models import AssignmentSubmission
 from app.modules.audit.models import AuditLog
 from app.modules.courses.models import (
     CatalogEntry,
@@ -250,6 +251,75 @@ class Factory:
             )
         course.current_version_id = version.id
         return version
+
+    async def homework_version(
+        self, course: "Course", lesson: "Lesson", *, max_marks: int = 10
+    ) -> tuple["CourseVersion", UUID]:
+        """Publish a version in which `lesson` (an assignment lesson) has real published
+        assignment content, as publishing writes it. Returns (version, assignment id)."""
+        assignment_id = new_id()
+        version = await self.version(course, lesson)
+        content = {
+            "assignment_id": str(assignment_id),
+            "title": "Homework",
+            "instructions_html": "<p>Do it.</p>",
+            "due_at": None,
+            "max_marks": max_marks,
+            "submission_kinds": ["file", "text"],
+        }
+        lesson_json = {
+            "id": str(lesson.id),
+            "title": lesson.title,
+            "lesson_type": "assignment",
+            "position": 1,
+            "is_required": True,
+            "completion_threshold": None,
+            "estimated_minutes": None,
+            "content": content,
+            "skill_ids": [],
+            "video_duration_seconds": None,
+        }
+        snapshot = {
+            "schema": 1,
+            "course": {"id": str(course.id), "title": course.title, "description": ""},
+            "modules": [
+                {"id": str(lesson.module_id), "title": "Module", "position": 1,
+                 "lessons": [lesson_json]}
+            ],
+        }  # fmt: skip
+        async with self.sessionmaker() as session, session.begin():
+            await session.execute(
+                update(CourseVersion)
+                .where(CourseVersion.id == version.id)
+                .values(snapshot=snapshot)
+            )
+        return version, assignment_id
+
+    async def submission(
+        self,
+        enrollment: "Enrollment",
+        lesson: "Lesson",
+        version: "CourseVersion",
+        assignment_id: UUID,
+        *,
+        text: str = "my answer",
+    ) -> AssignmentSubmission:
+        submission = AssignmentSubmission(
+            id=new_id(),
+            organization_id=enrollment.organization_id,
+            assignment_id=assignment_id,
+            course_id=enrollment.course_id,
+            lesson_id=lesson.id,
+            version_id=version.id,
+            enrollment_id=enrollment.id,
+            user_id=enrollment.user_id,
+            kind="text",
+            text_body=text,
+            status="submitted",
+            revision=1,
+        )
+        await self._save(submission)
+        return submission
 
     async def skill(self, *, parent_path: str = "dsa") -> "Skill":
         sfx = _suffix()

@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { AreaSkeleton } from "./area-skeleton";
 import { switchOrganization, useMe } from "./queries";
 import { AREA_HOME, AREA_LABELS, homeFor, type Destination } from "./roles";
 
@@ -63,7 +64,9 @@ export function RoleHome({ children, onSwitch = switchOrganization }: Props) {
       <Alert>
         <AlertTitle>Nothing here yet</AlertTitle>
         <AlertDescription>
-          Your account has no role that uses the portal yet. Ask your organization admin.
+          {me.memberships.some((m) => m.roles.includes("lab_author"))
+            ? "You're a lab author: coding labs arrive in Phase 4. Until then there's nothing to open here."
+            : "Your account has no role that uses the portal yet. Ask your organization admin."}
         </AlertDescription>
       </Alert>
     );
@@ -126,6 +129,6 @@ function AutoOpen({
       {OPEN_FAILED}
     </p>
   ) : (
-    <Skeleton className="h-40 w-full" aria-label="Opening your area" />
+    <AreaSkeleton area={destination.area} />
   );
 }

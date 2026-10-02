@@ -168,7 +168,27 @@ class CourseApi:
                 )  # fmt: skip
                 built.lesson_ids.append(UUID(lesson["id"]))
                 built.lessons_by_module[module_id].append(UUID(lesson["id"]))
+                if lesson_type == "assignment":
+                    ok(await self.define_assignment(user, org, built.id, UUID(lesson["id"])))
         return built
+
+    async def define_assignment(
+        self, user: User, org: Organization, course_id: UUID, lesson_id: UUID, **fields: Any
+    ) -> Response:
+        """Save an assignment lesson's definition (defaults: 10 marks, text or file)."""
+        body = {
+            "title": "FizzBuzz",
+            "instructions": {
+                "type": "doc",
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Solve."}]}],
+            },
+            "max_marks": 10,
+            "submission_kinds": ["text", "file"],
+            **fields,
+        }
+        return await self.request(
+            "PUT", f"/courses/{course_id}/lessons/{lesson_id}/assignment", user, org, json=body
+        )
 
     async def publish(
         self, user: User, org: Organization, course_id: UUID, release_type: str = "major"

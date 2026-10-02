@@ -171,6 +171,18 @@ async def list_org_batches(
     )
 
 
+async def user_summaries(session: AsyncSession, user_ids: Sequence[UUID]) -> dict[UUID, UserOut]:
+    """Names and emails of users the caller may see (RLS: themselves; staff see their org's
+    members), in one query."""
+    users = await UserRepository(session).get_many(list(dict.fromkeys(user_ids)))
+    return {u.id: UserOut.model_validate(u, from_attributes=True) for u in users}
+
+
+async def batch_student_ids(session: AsyncSession, batch_id: UUID) -> list[UUID]:
+    """Every student user id in a batch (keyset pages under the hood)."""
+    return [uid async for page in iter_batch_student_ids(session, batch_id) for uid in page]
+
+
 async def org_is_content_publisher(session: AsyncSession, organization_id: UUID) -> bool:
     org = await OrganizationRepository(session).get(organization_id)
     return org is not None and org.is_content_publisher and org.status == "active"

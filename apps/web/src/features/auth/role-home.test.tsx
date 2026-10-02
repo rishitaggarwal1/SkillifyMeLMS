@@ -63,7 +63,7 @@ describe("homeFor", () => {
     ]);
   });
 
-  it("has nothing for a lab author only (labs come later)", () => {
+  it("has nothing for a lab author only (labs arrive in Phase 4)", () => {
     expect(homeFor(me({ memberships: [membership("c", "College", "lab_author")] }))).toEqual({
       kind: "none",
     });
@@ -118,6 +118,8 @@ describe("<RoleHome />", () => {
     const { onSwitch } = renderHome(
       me({ active_organization_id: "c", memberships: [membership("c", "College", "student")] }),
     );
+    // While opening: a placeholder shaped like the student dashboard, not a blank page.
+    expect(screen.getByRole("status", { name: "Opening your area" })).toBeInTheDocument();
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/learn"));
     expect(onSwitch).not.toHaveBeenCalled();
     expect(screen.queryByText("Landing")).toBeNull();
@@ -182,5 +184,6 @@ describe("<RoleHome />", () => {
   it("explains when there is no area yet", () => {
     renderHome(me({ memberships: [membership("c", "College", "lab_author")] }));
     expect(screen.getByText("Nothing here yet")).toBeInTheDocument();
+    expect(screen.getByText(/coding labs arrive in Phase 4/)).toBeInTheDocument();
   });
 });

@@ -62,9 +62,16 @@ class PdfContent(BaseModel):
 
 
 class PlaceholderContent(BaseModel):
-    """Quiz, lab and assignment lessons: their content arrives in later phases."""
+    """Quiz and lab lessons: their content arrives in later phases."""
 
     model_config = ConfigDict(extra="forbid")
+
+
+class AssignmentContent(BaseModel):
+    """Set by the assignments module (`PUT .../lessons/{id}/assignment`), never by lesson edits."""
+
+    model_config = ConfigDict(extra="forbid")
+    assignment_id: UUID | None = None
 
 
 CONTENT_MODELS: dict[LessonType, type[BaseModel]] = {
@@ -73,7 +80,7 @@ CONTENT_MODELS: dict[LessonType, type[BaseModel]] = {
     LessonType.PDF: PdfContent,
     LessonType.QUIZ: PlaceholderContent,
     LessonType.LAB: PlaceholderContent,
-    LessonType.ASSIGNMENT: PlaceholderContent,
+    LessonType.ASSIGNMENT: AssignmentContent,
 }
 
 
@@ -256,7 +263,13 @@ class StructuralChange(BaseModel):
 
 
 class PublishBlocker(BaseModel):
-    code: Literal["empty_course", "video_not_ready", "pdf_not_ready", "course_archived"]
+    code: Literal[
+        "empty_course",
+        "video_not_ready",
+        "pdf_not_ready",
+        "assignment_not_ready",
+        "course_archived",
+    ]
     lesson_ids: list[UUID] = Field(default_factory=list)
 
 

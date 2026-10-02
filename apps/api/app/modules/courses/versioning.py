@@ -13,7 +13,8 @@ A snapshot is the full published outline, stored immutably in `course_versions.s
 
 A **minor** release may only correct content. Compared with the previous version it must keep the
 same modules in the same order, the same lessons in the same modules and order, and each lesson's
-type, `is_required` and `completion_threshold`.
+type, `is_required` and `completion_threshold` (and an assignment's `max_marks` and
+`submission_kinds`: existing grades and submissions depend on them).
 """
 
 from collections.abc import Mapping, Sequence
@@ -65,7 +66,12 @@ def build_snapshot(
     lessons: Sequence[Lesson],
     skill_ids: Mapping[UUID, Sequence[UUID]],
     video_durations: Mapping[UUID, int | None],
+    *,
+    sourced_content: Mapping[UUID, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
+    """`sourced_content` replaces the published content of lessons whose content lives in another
+    module (assignments; see `content_sources`)."""
+    sourced = sourced_content or {}
     by_module: dict[UUID, list[Lesson]] = {m.id: [] for m in modules}
     for lesson in lessons:
         by_module[lesson.module_id].append(lesson)
@@ -80,7 +86,9 @@ def build_snapshot(
             "is_required": lesson.is_required,
             "completion_threshold": threshold_text(lesson.completion_threshold),
             "estimated_minutes": lesson.estimated_minutes,
-            "content": published_content(lesson.lesson_type, lesson.content),
+            "content": sourced[lesson.id]
+            if lesson.id in sourced
+            else published_content(lesson.lesson_type, lesson.content),
             "skill_ids": [str(s) for s in skill_ids.get(lesson.id, [])],
             "video_duration_seconds": video_durations.get(UUID(video_id)) if video_id else None,
         }
@@ -146,7 +154,12 @@ def structural_changes(
         changes.append(StructuralChange(code="lessons_reordered", lesson_ids=moved))
 
     def settings(lesson: Mapping[str, Any]) -> tuple[Any, ...]:
-        return lesson["lesson_type"], lesson["is_required"], lesson["completion_threshold"]
+        base = (lesson["lesson_type"], lesson["is_required"], lesson["completion_threshold"])
+        if lesson["lesson_type"] != LessonType.ASSIGNMENT.value:
+            return base
+        content = lesson.get("content") or {}
+        kinds = tuple(sorted(content.get("submission_kinds") or ()))
+        return (*base, content.get("max_marks"), kinds)
 
     changed = [UUID(i) for i in common if settings(old[i][1]) != settings(new[i][1])]
     if changed:
