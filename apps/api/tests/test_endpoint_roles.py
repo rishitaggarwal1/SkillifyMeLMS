@@ -367,7 +367,7 @@ MATRIX = [
     Route("GET", "/api/v1/me", EVERYONE, at("/api/v1/me")),
     # --- Organizations: platform admins only.
     Route("POST", "/api/v1/organizations", PLATFORM, _org_body),
-    Route("GET", "/api/v1/organizations", PLATFORM, at("/api/v1/organizations")),
+    Route("GET", "/api/v1/organizations", PLATFORM, at("/api/v1/organizations?q=org")),
     Route("GET", "/api/v1/organizations/current", EVERYONE, at("/api/v1/organizations/current")),
     Route("GET", "/api/v1/organizations/{organization_id}", PLATFORM, _new_org),
     Route(
@@ -425,6 +425,30 @@ MATRIX = [
     ),
     # --- audit
     Route("GET", "/api/v1/audit-log", ADMINS, at("/api/v1/audit-log")),
+    # --- platform admin (Phase 2.5): platform admins only, whatever org is active.
+    Route("GET", "/api/v1/platform/summary", PLATFORM, at("/api/v1/platform/summary")),
+    Route("GET", "/api/v1/platform/users", PLATFORM, at("/api/v1/platform/users")),
+    Route("GET", "/api/v1/platform/users/{user_id}", PLATFORM, lambda w: _platform_user(w, "")),
+    Route(
+        "POST",
+        "/api/v1/platform/users/{user_id}/disable",
+        PLATFORM,
+        lambda w: _platform_user(w, "disable"),
+    ),
+    Route(
+        "POST",
+        "/api/v1/platform/users/{user_id}/enable",
+        PLATFORM,
+        lambda w: _platform_user(w, "enable"),
+    ),
+    Route(
+        "POST",
+        "/api/v1/platform/organizations/{organization_id}/admins",
+        PLATFORM,
+        lambda w: _org_admin_invite(w),  # noqa: PLW0108 - builder defined after the matrix
+    ),
+    Route("GET", "/api/v1/platform/courses", PLATFORM, at("/api/v1/platform/courses")),
+    Route("GET", "/api/v1/platform/audit-log", PLATFORM, at("/api/v1/platform/audit-log")),
     # --- skills: everyone reads; org A isn't a content publisher, so only platform admins
     # write.
     Route("GET", "/api/v1/skills", EVERYONE, at("/api/v1/skills")),
@@ -625,6 +649,17 @@ MATRIX = [
         names_resource=True,
     ),
 ]
+
+
+async def _platform_user(w: World, action: str) -> Request:
+    user = await w.factory.member(w.org, "student")
+    return f"/api/v1/platform/users/{user.id}{f'/{action}' if action else ''}", {}
+
+
+async def _org_admin_invite(w: World) -> Request:
+    org = await w.factory.org()
+    body = {"email": f"admin-{uuid7().hex[-8:]}@college.test", "full_name": "First Admin"}
+    return f"/api/v1/platform/organizations/{org.id}/admins", {"json": body}
 
 
 async def _catalog_path(w: World) -> Request:

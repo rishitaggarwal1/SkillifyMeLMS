@@ -36,6 +36,10 @@ class IdentityProviderAdmin(Protocol):
         """Ask Keycloak to email a link to verify the address and set a password."""
         ...
 
+    async def set_user_enabled(self, keycloak_id: str, *, enabled: bool) -> None:
+        """Allow or block sign-in. Disabling also ends the user's existing Keycloak sessions."""
+        ...
+
 
 def _split_name(full_name: str) -> tuple[str, str]:
     first, _, last = full_name.strip().partition(" ")
@@ -149,3 +153,25 @@ class KeycloakAdmin:
         if response.status_code not in (httpx.codes.OK, httpx.codes.NO_CONTENT):
             msg = f"execute-actions-email failed ({response.status_code}): {response.text[:200]}"
             raise KeycloakAdminError(msg)
+
+    async def set_user_enabled(self, keycloak_id: str, *, enabled: bool) -> None:
+        headers = await self._auth_header()
+        # PUT /users/{id} merges the representation: only `enabled` changes.
+        response = await self.http.put(
+            f"{self.base}/users/{keycloak_id}",
+            json={"enabled": enabled},
+            headers=headers,
+            timeout=10.0,
+        )
+        if response.status_code not in (httpx.codes.OK, httpx.codes.NO_CONTENT):
+            msg = f"Updating user {keycloak_id} failed ({response.status_code})"
+            raise KeycloakAdminError(msg)
+        if not enabled:
+            # Refresh tokens stop working at once; access tokens expire within their short TTL,
+            # and the API already refuses disabled users.
+            response = await self.http.post(
+                f"{self.base}/users/{keycloak_id}/logout", headers=headers, timeout=10.0
+            )
+            if response.status_code not in (httpx.codes.OK, httpx.codes.NO_CONTENT):
+                msg = f"Ending sessions of {keycloak_id} failed ({response.status_code})"
+                raise KeycloakAdminError(msg)

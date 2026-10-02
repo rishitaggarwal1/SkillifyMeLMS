@@ -9,19 +9,23 @@ from uuid import UUID
 
 from uuid_utils.compat import uuid7
 
-from app.modules.identity.keycloak_admin import NewUser
+from app.modules.identity.keycloak_admin import KeycloakAdminError, NewUser
 
 
 @dataclass
 class FakeKeycloakAdmin:
     users: dict[str, str] = field(default_factory=dict)  # email -> keycloak id
     setup_emails: list[str] = field(default_factory=list)  # keycloak ids emailed
+    disabled: set[str] = field(default_factory=set)  # keycloak ids that can't sign in
     fail_emails: bool = False
+    fail_admin: bool = False  # set_user_enabled raises (Keycloak unreachable)
 
     def reset(self) -> None:
         self.users.clear()
         self.setup_emails.clear()
+        self.disabled.clear()
         self.fail_emails = False
+        self.fail_admin = False
 
     def add_existing(self, email: str, keycloak_id: str) -> None:
         self.users[email.lower()] = keycloak_id
@@ -40,6 +44,15 @@ class FakeKeycloakAdmin:
             msg = "smtp down"
             raise ConnectionError(msg)
         self.setup_emails.append(keycloak_id)
+
+    async def set_user_enabled(self, keycloak_id: str, *, enabled: bool) -> None:
+        if self.fail_admin:
+            msg = "keycloak down"
+            raise KeycloakAdminError(msg)
+        if enabled:
+            self.disabled.discard(keycloak_id)
+        else:
+            self.disabled.add(keycloak_id)
 
 
 @dataclass

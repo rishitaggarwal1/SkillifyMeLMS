@@ -1,13 +1,14 @@
 from datetime import datetime
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter
-from pydantic import BaseModel
+from fastapi import APIRouter, Query
+from pydantic import AwareDatetime, BaseModel
 
 from app.core.pagination import CursorPage, PageParams
 from app.modules.audit import service
-from app.modules.identity.authz import Permission, require_permission
+from app.modules.audit.models import AuditLog
+from app.modules.identity.authz import Permission, require_permission, require_platform_admin
 from app.modules.identity.dependencies import CurrentPrincipal, TenantSession
 
 router = APIRouter(prefix="/audit-log", tags=["audit"])
@@ -55,15 +56,46 @@ async def list_audit_log(
         target_type=target_type,
         target_id=target_id,
     )
-    return CursorPage(
-        items=[
-            AuditEntryOut.model_validate(
-                {
-                    **{c: getattr(e, c) for c in AuditEntryOut.model_fields},
-                    "ip": str(e.ip) if e.ip else None,
-                }
-            )
-            for e in entries
-        ],
-        next_cursor=cursor,
+    return CursorPage(items=[_entry_out(e) for e in entries], next_cursor=cursor)
+
+
+def _entry_out(e: AuditLog) -> AuditEntryOut:
+    fields = {c: getattr(e, c) for c in AuditEntryOut.model_fields}
+    return AuditEntryOut.model_validate({**fields, "ip": str(e.ip) if e.ip else None})
+
+
+platform = APIRouter(prefix="/platform/audit-log", tags=["platform"])
+
+
+@platform.get("", operation_id="platform_list_audit_log")
+async def platform_list_audit_log(
+    principal: CurrentPrincipal,
+    session: TenantSession,
+    page: PageParams,
+    *,
+    organization_id: Annotated[
+        UUID | None,
+        Query(description="One organization; omit for all (including platform-level entries)"),
+    ] = None,
+    action: Annotated[str | None, Query(max_length=100)] = None,
+    actor_user_id: UUID | None = None,
+    target_type: Annotated[str | None, Query(max_length=50)] = None,
+    target_id: Annotated[str | None, Query(max_length=100)] = None,
+    since: Annotated[AwareDatetime | None, Query(description="Entries at or after")] = None,
+    until: Annotated[AwareDatetime | None, Query(description="Entries before")] = None,
+) -> CursorPage[AuditEntryOut]:
+    """Admin actions across every organization, newest first (platform admins), whatever
+    organization is active."""
+    require_platform_admin(principal)
+    entries, cursor = await service.list_entries(
+        session,
+        page,
+        organization_id=organization_id,
+        action=action,
+        actor_user_id=actor_user_id,
+        target_type=target_type,
+        target_id=target_id,
+        since=since,
+        until=until,
     )
+    return CursorPage(items=[_entry_out(e) for e in entries], next_cursor=cursor)

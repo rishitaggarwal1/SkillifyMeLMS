@@ -8,6 +8,14 @@ from uuid import UUID
 from pydantic import BaseModel, Field, field_validator
 
 
+class EnrollmentCounts(BaseModel):
+    enrollments: dict[str, int] = Field(description="By status (active, revoked)")
+    active_today: int = Field(
+        description="Distinct students who opened a lesson since `active_since`"
+    )
+    active_since: datetime = Field(description="Midnight today, Asia/Kolkata (as UTC)")
+
+
 class EnrollmentOut(BaseModel):
     id: UUID
     course_id: UUID

@@ -10,7 +10,7 @@ idempotent and order-independent, so redelivered or out-of-order events are harm
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta, timezone
 from uuid import UUID
 
 from redis.asyncio import Redis
@@ -35,6 +35,7 @@ from app.modules.enrollments.repository import (
     UpsertedEnrollment,
 )
 from app.modules.enrollments.schemas import (
+    EnrollmentCounts,
     EnrollmentDetail,
     EnrollmentOut,
     EnrollmentVersion,
@@ -467,6 +468,32 @@ async def recompute_progress(
     percent = {eid: course_percent(done[eid], len(required)) for eid in enrollment_ids}
     await EnrollmentRepository(session).set_progress(percent)
     return percent
+
+
+# ============================================================================ platform counts
+
+# Asia/Kolkata has been UTC+05:30 without DST since 1945, so a fixed offset is exact and needs no
+# tz database (slim images and Windows hosts don't ship one).
+INDIA = timezone(timedelta(hours=5, minutes=30), "IST")
+
+
+def start_of_day_ist(now: datetime) -> datetime:
+    """Midnight today in India, as a UTC instant (the platform's "today")."""
+    local = now.astimezone(INDIA)
+    return local.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(UTC)
+
+
+async def enrollment_counts(session: AsyncSession, now: datetime) -> EnrollmentCounts:
+    """Platform dashboard counts. The caller must be a platform admin (RLS shows all rows).
+    "Active today" is learning activity (a lesson opened) since midnight IST; it deliberately
+    doesn't use `users.last_login_at`, which nothing writes."""
+    since = start_of_day_ist(now)
+    repo = EnrollmentRepository(session)
+    return EnrollmentCounts(
+        enrollments=await repo.count_by_status(),
+        active_today=await repo.active_users_since(since),
+        active_since=since,
+    )
 
 
 # ============================================================================ major opt-in

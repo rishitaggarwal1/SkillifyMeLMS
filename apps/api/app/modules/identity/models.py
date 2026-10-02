@@ -77,6 +77,13 @@ class Organization(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Index("ix_organizations_status", "status"),
         # The publishers' organization directory orders and pages by name (migration 0009).
         Index("ix_organizations_lower_name_id", func.lower(text("name")), "id"),
+        # Platform admins search organizations by name (migration 0010).
+        Index(
+            "ix_organizations_name_trgm",
+            func.lower(text("name")),
+            postgresql_using="gin",
+            postgresql_ops={"lower(name)": "gin_trgm_ops"},
+        ),
     )
 
     name: Mapped[str] = mapped_column(String(200))
@@ -103,6 +110,7 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             postgresql_using="gin",
             postgresql_ops={"lower(full_name)": "gin_trgm_ops"},
         ),
+        Index("ix_users_status", "status"),
     )
 
     keycloak_sub: Mapped[str] = mapped_column(String(255), unique=True)

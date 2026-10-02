@@ -1025,6 +1025,167 @@ export interface paths {
     patch: operations["update_organization"];
     trace?: never;
   };
+  "/api/v1/platform/audit-log": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Platform List Audit Log
+     * @description Admin actions across every organization, newest first (platform admins), whatever
+     *     organization is active.
+     */
+    get: operations["platform_list_audit_log"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/platform/courses": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Platform List Courses
+     * @description Every organization's courses, read-only: owner, status, version and assignment counts
+     *     (platform admins).
+     */
+    get: operations["platform_list_courses"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/platform/organizations/{organization_id}/admins": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Platform Invite Org Admin
+     * @description Invite an org admin into an organization, e.g. a college just created (platform admins).
+     *     The invitation behaves like one an org admin sends.
+     */
+    post: operations["platform_invite_org_admin"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/platform/summary": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Platform Summary
+     * @description Counts across the platform: organizations, users by role, courses, enrollments and
+     *     students active today (platform admins).
+     */
+    get: operations["platform_summary"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/platform/users": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Platform List Users
+     * @description Users across every organization (platform admins).
+     */
+    get: operations["platform_list_users"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/platform/users/{user_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Platform Get User
+     * @description A user with every membership and batch (platform admins).
+     */
+    get: operations["platform_get_user"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/platform/users/{user_id}/disable": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Platform Disable User
+     * @description Block sign-in and API access, and end the user's sessions (platform admins).
+     */
+    post: operations["platform_disable_user"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/platform/users/{user_id}/enable": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Platform Enable User */
+    post: operations["platform_enable_user"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/progress/heartbeat": {
     parameters: {
       query?: never;
@@ -1454,6 +1615,16 @@ export interface components {
        */
       updated_at: string;
     };
+    /** CourseOwner */
+    CourseOwner: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+    };
     /** CourseUpdate */
     CourseUpdate: {
       /** Description */
@@ -1579,6 +1750,26 @@ export interface components {
     CursorPage_OrganizationOut_: {
       /** Items */
       items: components["schemas"]["OrganizationOut"][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for the next page; null when there are no more items.
+       */
+      next_cursor: string | null;
+    };
+    /** CursorPage[PlatformCourseOut] */
+    CursorPage_PlatformCourseOut_: {
+      /** Items */
+      items: components["schemas"]["PlatformCourseOut"][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for the next page; null when there are no more items.
+       */
+      next_cursor: string | null;
+    };
+    /** CursorPage[PlatformUserOut] */
+    CursorPage_PlatformUserOut_: {
+      /** Items */
+      items: components["schemas"]["PlatformUserOut"][];
       /**
        * Next Cursor
        * @description Opaque cursor for the next page; null when there are no more items.
@@ -2142,6 +2333,19 @@ export interface components {
       /** Ids */
       ids: string[];
     };
+    /** OrgAdminInvite */
+    OrgAdminInvite: {
+      /**
+       * Email
+       * Format: email
+       */
+      email: string;
+      /**
+       * Full Name
+       * @default
+       */
+      full_name: string;
+    };
     /**
      * OrgRole
      * @enum {string}
@@ -2207,6 +2411,174 @@ export interface components {
       name?: string | null;
       /** Status */
       status?: ("active" | "archived") | null;
+    };
+    /** PlatformBatch */
+    PlatformBatch: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /**
+       * Organization Id
+       * Format: uuid
+       */
+      organization_id: string;
+    };
+    /**
+     * PlatformCourseOut
+     * @description A course as platform admins see it in the cross-organization list (read-only).
+     */
+    PlatformCourseOut: {
+      /**
+       * Batch Assignment Count
+       * @description Batches the course is assigned to
+       */
+      batch_assignment_count: number;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      current_version: components["schemas"]["VersionSummary"] | null;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Org Grant Count
+       * @description Organizations granted the course
+       */
+      org_grant_count: number;
+      owner: components["schemas"]["CourseOwner"];
+      /** Slug */
+      slug: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "active" | "archived";
+      /** Title */
+      title: string;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
+    };
+    /** PlatformMembership */
+    PlatformMembership: {
+      organization: components["schemas"]["OrganizationSummary"];
+      /** Organization Status */
+      organization_status: string;
+      /** Roles */
+      roles: components["schemas"]["OrgRole"][];
+    };
+    /**
+     * PlatformSummary
+     * @description Counts for the platform admin's landing page.
+     */
+    PlatformSummary: {
+      /**
+       * Active Since
+       * Format: date-time
+       */
+      active_since: string;
+      /**
+       * Active Today
+       * @description Distinct students who opened a lesson since midnight IST (learning activity; sign-ins aren't counted)
+       */
+      active_today: number;
+      /**
+       * Courses
+       * @description By status (active, archived), plus "published": active with a version
+       */
+      courses: {
+        [key: string]: number;
+      };
+      /**
+       * Enrollments
+       * @description By status (active, revoked)
+       */
+      enrollments: {
+        [key: string]: number;
+      };
+      /**
+       * Generated At
+       * Format: date-time
+       */
+      generated_at: string;
+      /**
+       * Organizations
+       * @description By status (active, archived)
+       */
+      organizations: {
+        [key: string]: number;
+      };
+      /**
+       * Users
+       * @description By account status (invited, active, disabled)
+       */
+      users: {
+        [key: string]: number;
+      };
+      /**
+       * Users By Role
+       * @description Distinct users holding each role in an active organization. Platform admins are a Keycloak realm role and aren't counted.
+       */
+      users_by_role: {
+        [key: string]: number;
+      };
+    };
+    /** PlatformUserDetail */
+    PlatformUserDetail: {
+      /** Batches */
+      batches: components["schemas"]["PlatformBatch"][];
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Email */
+      email: string;
+      /** Full Name */
+      full_name: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Memberships */
+      memberships: components["schemas"]["PlatformMembership"][];
+      /** Status */
+      status: string;
+    };
+    /**
+     * PlatformUserOut
+     * @description A user as platform admins see them: every organization they belong to.
+     */
+    PlatformUserOut: {
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Email */
+      email: string;
+      /** Full Name */
+      full_name: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Memberships */
+      memberships: components["schemas"]["PlatformMembership"][];
+      /** Status */
+      status: string;
     };
     /** PlaybackOut */
     PlaybackOut: {
@@ -5533,6 +5905,8 @@ export interface operations {
     parameters: {
       query?: {
         status?: ("active" | "archived") | null;
+        /** @description Name contains */
+        q?: string | null;
         limit?: number;
         cursor?: string | null;
       };
@@ -5817,6 +6191,373 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["OrganizationOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  platform_list_audit_log: {
+    parameters: {
+      query?: {
+        /** @description One organization; omit for all (including platform-level entries) */
+        organization_id?: string | null;
+        action?: string | null;
+        actor_user_id?: string | null;
+        target_type?: string | null;
+        target_id?: string | null;
+        /** @description Entries at or after */
+        since?: string | null;
+        /** @description Entries before */
+        until?: string | null;
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_AuditEntryOut_"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  platform_list_courses: {
+    parameters: {
+      query?: {
+        /** @description Owner organization */
+        organization_id?: string | null;
+        status?: ("active" | "archived") | null;
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_PlatformCourseOut_"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  platform_invite_org_admin: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        organization_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OrgAdminInvite"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InvitationOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  platform_summary: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PlatformSummary"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  platform_list_users: {
+    parameters: {
+      query?: {
+        /** @description Name or email contains */
+        q?: string | null;
+        role?: components["schemas"]["OrgRole"] | null;
+        organization_id?: string | null;
+        status?: ("invited" | "active" | "disabled") | null;
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_PlatformUserOut_"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  platform_get_user: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PlatformUserDetail"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  platform_disable_user: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PlatformUserDetail"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  platform_enable_user: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PlatformUserDetail"];
         };
       };
       /** @description Client error */

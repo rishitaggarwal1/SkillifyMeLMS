@@ -50,6 +50,8 @@ class Enrollment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         # "Continue learning": a student's most recently used enrollments.
         Index("ix_enrollments_user_last_accessed", "user_id", "last_accessed_at"),
         Index("ix_enrollments_source_assignment_id", "source_assignment_id"),
+        # The platform dashboard's "active today" count (migration 0010).
+        Index("ix_enrollments_last_accessed_at", "last_accessed_at"),
     )
 
     organization_id: Mapped[UUID] = mapped_column(

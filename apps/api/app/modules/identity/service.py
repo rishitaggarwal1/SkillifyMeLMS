@@ -8,7 +8,7 @@ audit entry in the same transaction, and emits batch membership events through t
 import csv
 import io
 from collections.abc import AsyncIterator, Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -39,8 +39,9 @@ from app.modules.identity.authz import (
     require_org,
     require_org_permission,
     require_permission,
+    require_platform_admin,
 )
-from app.modules.identity.keycloak_admin import IdentityProviderAdmin, NewUser
+from app.modules.identity.keycloak_admin import IdentityProviderAdmin, KeycloakAdminError, NewUser
 from app.modules.identity.models import (
     Batch,
     BatchStatus,
@@ -49,6 +50,7 @@ from app.modules.identity.models import (
     InvitationStatus,
     Organization,
     OrgRole,
+    User,
     UserStatus,
 )
 from app.modules.identity.principal import invalidate_principal, resolve_principal
@@ -68,14 +70,21 @@ from app.modules.identity.schemas import (
     BatchOut,
     BatchUpdate,
     DirectoryOrganization,
+    IdentityCounts,
     ImportJobOut,
     InvitationCreate,
     InvitationOut,
     MemberOut,
     MemberUpdate,
+    OrgAdminInvite,
     OrganizationCreate,
     OrganizationOut,
+    OrganizationSummary,
     OrganizationUpdate,
+    PlatformBatch,
+    PlatformMembership,
+    PlatformUserDetail,
+    PlatformUserOut,
     UserOut,
 )
 
@@ -86,6 +95,12 @@ class ValidationFailedError(AppError):
     status_code = 422
     code = "validation_error"
     message = "The request is invalid."
+
+
+class IdentityProviderUnavailableError(AppError):
+    status_code = 503
+    code = "identity_provider_unavailable"
+    message = "The sign-in service is unavailable. Try again shortly."
 
 
 @dataclass(frozen=True, slots=True)
@@ -200,10 +215,12 @@ async def create_organization(ctx: Ctx, data: OrganizationCreate) -> Organizatio
 
 
 async def list_organizations(
-    ctx: Ctx, params: CursorParams, status: str | None
+    ctx: Ctx, params: CursorParams, status: str | None, search: str | None = None
 ) -> tuple[list[OrganizationOut], str | None]:
     require_permission(ctx.principal, Permission.ORG_MANAGE)
-    orgs, cursor = await OrganizationRepository(ctx.session).list_page(params, status=status)
+    orgs, cursor = await OrganizationRepository(ctx.session).list_page(
+        params, status=status, search=search
+    )
     return [_org_out(o) for o in orgs], cursor
 
 
@@ -573,6 +590,13 @@ async def create_invitation(
     ctx: Ctx, idp: IdentityProviderAdmin, settings: Settings, data: InvitationCreate
 ) -> InvitationOut:
     org_id = require_org_permission(ctx.principal, Permission.MEMBER_INVITE)
+    return await _invite(ctx, idp, settings, org_id, data)
+
+
+async def _invite(
+    ctx: Ctx, idp: IdentityProviderAdmin, settings: Settings, org_id: UUID, data: InvitationCreate
+) -> InvitationOut:
+    """Invite into `org_id`; the caller has authorized it and set that org's RLS context."""
     email = data.email.lower()
     batch_ids = await _active_batches(ctx, org_id, data.batch_ids)
     invitations = InvitationRepository(ctx.session)
@@ -618,7 +642,7 @@ async def create_invitation(
     out = _invitation_out(invitation)
     await audit.record(
         ctx.session, ctx.actor, action="invitation.created", target_type="invitation",
-        target_id=invitation.id, after=out,
+        target_id=invitation.id, after=out, organization_id=org_id,
     )  # fmt: skip
     # New accounts need a password; existing ones (from another org) just see the new org.
     if ensured.status == UserStatus.INVITED:
@@ -700,6 +724,157 @@ async def expire_invitations(session: AsyncSession, now: datetime) -> int:
         await session.flush()  # write this org's events while its context is set
         expired += 1
     return expired
+
+
+# ============================================================================ platform admin
+# Platform-admin-only views and actions. Authorization is `require_platform_admin`; reads across
+# organizations rely on the existing `PLATFORM_ADMIN` RLS branches (no policy is widened).
+
+
+async def organization_summaries(
+    session: AsyncSession, organization_ids: Sequence[UUID]
+) -> dict[UUID, OrganizationSummary]:
+    """Names of organizations the session's RLS context can see (for other modules' lists)."""
+    orgs = await OrganizationRepository(session).get_many(list(dict.fromkeys(organization_ids)))
+    return {o.id: OrganizationSummary.model_validate(o, from_attributes=True) for o in orgs}
+
+
+async def identity_counts(session: AsyncSession) -> IdentityCounts:
+    """Platform dashboard counts. The caller must be a platform admin (RLS shows all rows)."""
+    return IdentityCounts(
+        organizations=await OrganizationRepository(session).count_by_status(),
+        users=await UserRepository(session).count_by_status(),
+        users_by_role=await MembershipRepository(session).users_by_role(),
+    )
+
+
+async def _platform_users_out(ctx: Ctx, users: Sequence[User]) -> list[PlatformUserOut]:
+    """Users with every membership, in two queries (no N+1)."""
+    memberships = await MembershipRepository(ctx.session).for_users([u.id for u in users])
+    orgs = {
+        o.id: o
+        for o in await OrganizationRepository(ctx.session).get_many(
+            list({m.organization_id for m in memberships})
+        )
+    }
+    roles: dict[UUID, dict[UUID, list[OrgRole]]] = {u.id: {} for u in users}
+    for m in memberships:
+        roles[m.user_id].setdefault(m.organization_id, []).append(OrgRole(m.role))
+    out = []
+    for u in users:
+        rows = [
+            PlatformMembership(
+                organization=OrganizationSummary.model_validate(orgs[org_id], from_attributes=True),
+                organization_status=orgs[org_id].status,
+                roles=sorted(r),
+            )
+            for org_id, r in roles[u.id].items()
+            if org_id in orgs
+        ]
+        rows.sort(key=lambda m: m.organization.name.lower())
+        out.append(
+            PlatformUserOut(
+                id=u.id,
+                email=u.email,
+                full_name=u.full_name,
+                status=u.status,
+                created_at=u.created_at,
+                memberships=rows,
+            )
+        )
+    return out
+
+
+async def platform_list_users(
+    ctx: Ctx,
+    params: CursorParams,
+    *,
+    q: str | None,
+    role: OrgRole | None,
+    organization_id: UUID | None,
+    status: str | None,
+) -> tuple[list[PlatformUserOut], str | None]:
+    require_platform_admin(ctx.principal)
+    users, cursor = await UserRepository(ctx.session).list_all(
+        params, q=q, role=role, organization_id=organization_id, status=status
+    )
+    return await _platform_users_out(ctx, users), cursor
+
+
+async def platform_get_user(ctx: Ctx, user_id: UUID) -> PlatformUserDetail:
+    require_platform_admin(ctx.principal)
+    user = await UserRepository(ctx.session).get(user_id)
+    if user is None:
+        raise NotFoundError("User not found.")
+    [base] = await _platform_users_out(ctx, [user])
+    batches = await BatchMemberRepository(ctx.session).batches_of_user(user_id)
+    return PlatformUserDetail(
+        **base.model_dump(),
+        batches=[
+            PlatformBatch(id=b.id, name=b.name, organization_id=b.organization_id) for b in batches
+        ],
+    )
+
+
+async def set_user_enabled(
+    ctx: Ctx, idp: IdentityProviderAdmin, user_id: UUID, *, enabled: bool
+) -> PlatformUserDetail:
+    """Disable or re-enable an account everywhere: our `users.status` (the API refuses disabled
+    users) and Keycloak (no new sign-ins; disabling also ends existing sessions)."""
+    require_platform_admin(ctx.principal)
+    if not enabled and user_id == ctx.principal.user_id:
+        raise ConflictError("You can't disable your own account.", code="cannot_disable_self")
+    users = UserRepository(ctx.session)
+    user = await users.get(user_id)
+    if user is None:
+        raise NotFoundError("User not found.")
+    before = await platform_get_user(ctx, user_id)
+    status = UserStatus(user.status)
+    if not enabled:
+        status = UserStatus.DISABLED
+    elif status == UserStatus.DISABLED:
+        # Someone who never signed in goes back to "invited" (their setup link keeps working).
+        pending = await InvitationRepository(ctx.session).user_has_pending(user_id)
+        status = UserStatus.INVITED if pending else UserStatus.ACTIVE
+    if status != user.status:
+        await users.update(user_id, {"status": status})
+    # Last step before commit: if Keycloak fails, the status change rolls back with the request.
+    # Repeating the call converges Keycloak even when our status already matched.
+    try:
+        await idp.set_user_enabled(user.keycloak_sub, enabled=enabled)
+    except KeycloakAdminError as exc:
+        raise IdentityProviderUnavailableError from exc
+    after = await platform_get_user(ctx, user_id)
+    if status != before.status:
+        await audit.record(
+            ctx.session, replace(ctx.actor, organization_id=None),
+            action="user.enabled" if enabled else "user.disabled", target_type="user",
+            target_id=user_id, before={"status": before.status}, after={"status": after.status},
+        )  # fmt: skip
+    _invalidate_after_commit(ctx, [user.keycloak_sub])
+    return after
+
+
+async def invite_org_admin(
+    ctx: Ctx, idp: IdentityProviderAdmin, settings: Settings, organization_id: UUID,
+    data: OrgAdminInvite,
+) -> InvitationOut:  # fmt: skip
+    """Platform admins invite an organization's (first) org_admin, e.g. right after creating it.
+    Runs in that organization's RLS context, as an org_admin's invitation would."""
+    require_platform_admin(ctx.principal)
+    org = await OrganizationRepository(ctx.session).get(organization_id)
+    if org is None:
+        raise NotFoundError("Organization not found.")
+    if org.status != "active":
+        raise ConflictError("The organization is archived.", code="organization_archived")
+    await set_tenant_context(
+        ctx.session, organization_id=organization_id, user_id=ctx.principal.user_id,
+        is_platform_admin=True,
+    )  # fmt: skip
+    return await _invite(
+        ctx, idp, settings, organization_id,
+        InvitationCreate(email=data.email, full_name=data.full_name, roles=[OrgRole.ORG_ADMIN]),
+    )  # fmt: skip
 
 
 # ============================================================================ imports

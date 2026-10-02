@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -5,7 +6,7 @@ from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.pagination import CursorParams, paginate_by_id
-from app.db.base import new_id
+from app.db.base import new_id, uuid7_floor
 from app.modules.audit.models import AuditLog
 
 
@@ -29,10 +30,17 @@ class AuditLogRepository:
         actor_user_id: UUID | None = None,
         target_type: str | None = None,
         target_id: str | None = None,
+        since: datetime | None = None,
+        until: datetime | None = None,
     ) -> tuple[list[AuditLog], str | None]:
         stmt = select(AuditLog)
         if organization_id is not None:
             stmt = stmt.where(AuditLog.organization_id == organization_id)
+        # Time ranges as id ranges (UUIDv7): served by the primary key / (organization_id, id).
+        if since is not None:
+            stmt = stmt.where(AuditLog.id >= uuid7_floor(since))
+        if until is not None:
+            stmt = stmt.where(AuditLog.id < uuid7_floor(until))
         if action is not None:
             stmt = stmt.where(AuditLog.action == action)
         if actor_user_id is not None:

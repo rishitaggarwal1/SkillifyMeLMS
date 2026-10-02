@@ -57,8 +57,10 @@ from app.modules.courses.schemas import (
     AssignmentCreate,
     AssignmentOut,
     CatalogEntryOut,
+    CourseCounts,
     CourseCreate,
     CourseOut,
+    CourseOwner,
     CourseUpdate,
     DraftModule,
     DraftOut,
@@ -69,6 +71,7 @@ from app.modules.courses.schemas import (
     LessonUpdate,
     ModuleOut,
     NotesPreviewOut,
+    PlatformCourseOut,
     PublishBlocker,
     PublishPreview,
     PublishRequest,
@@ -86,7 +89,11 @@ from app.modules.courses.versioning import (
 )
 from app.modules.enrollments import jobs as enrollment_jobs
 from app.modules.identity import service as identity
-from app.modules.identity.authz import Permission, require_org_permission
+from app.modules.identity.authz import (
+    Permission,
+    require_org_permission,
+    require_platform_admin,
+)
 from app.modules.identity.dependencies import RequestContext
 from app.modules.media import service as media
 from app.modules.media.service import FileDownloadOut, PlaybackOut
@@ -364,6 +371,49 @@ async def create_course(ctx: Ctx, data: CourseCreate) -> CourseOut:
         target_id=course.id, after=out,
     )  # fmt: skip
     return out
+
+
+async def platform_list_courses(
+    ctx: Ctx, params: CursorParams, *, organization_id: UUID | None, status: str | None
+) -> tuple[list[PlatformCourseOut], str | None]:
+    """Every organization's courses, read-only (platform admins). Owner names, versions and
+    assignment counts are fetched in one query each (no N+1)."""
+    require_platform_admin(ctx.principal)
+    courses, cursor = await CourseRepository(ctx.session).list_all(
+        params, organization_id=organization_id, status=status
+    )
+    ids = [c.id for c in courses]
+    owner_ids = [c.organization_id for c in courses]
+    owners = await identity.organization_summaries(ctx.session, owner_ids)
+    version_ids = [c.current_version_id for c in courses if c.current_version_id]
+    versions = {v.id: v for v in await VersionRepository(ctx.session).get_many(version_ids)}
+    counts = await AssignmentRepository(ctx.session).counts_by_course(ids)
+    items = []
+    for c in courses:
+        owner = owners.get(c.organization_id)
+        grants, batches = counts[c.id]
+        items.append(
+            PlatformCourseOut(
+                id=c.id,
+                title=c.title,
+                slug=c.slug,
+                status=c.status,  # type: ignore[arg-type]
+                owner=CourseOwner(id=c.organization_id, name=owner.name if owner else ""),
+                current_version=_summary(versions[c.current_version_id])
+                if c.current_version_id in versions
+                else None,
+                org_grant_count=grants,
+                batch_assignment_count=batches,
+                created_at=c.created_at,
+                updated_at=c.updated_at,
+            )
+        )
+    return items, cursor
+
+
+async def course_counts(session: AsyncSession) -> CourseCounts:
+    """Platform dashboard counts. The caller must be a platform admin (RLS shows all rows)."""
+    return CourseCounts(courses=await CourseRepository(session).count_by_status())
 
 
 async def list_courses(

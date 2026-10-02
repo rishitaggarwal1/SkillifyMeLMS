@@ -27,10 +27,13 @@ from app.modules.identity.schemas import (
     MemberUpdate,
     MeResponse,
     MeUser,
+    OrgAdminInvite,
     OrganizationCreate,
     OrganizationOut,
     OrganizationSummary,
     OrganizationUpdate,
+    PlatformUserDetail,
+    PlatformUserOut,
 )
 
 router = APIRouter()
@@ -107,9 +110,14 @@ async def create_organization(ctx: Ctx, body: OrganizationCreate) -> Organizatio
 
 @orgs.get("", operation_id="list_organizations")
 async def list_organizations(
-    ctx: Ctx, page: PageParams, status_: StatusFilter = None
+    ctx: Ctx,
+    page: PageParams,
+    status_: StatusFilter = None,
+    q: Annotated[
+        str | None, Query(min_length=1, max_length=100, description="Name contains")
+    ] = None,
 ) -> CursorPage[OrganizationOut]:
-    items, cursor = await service.list_organizations(ctx, page, status_)
+    items, cursor = await service.list_organizations(ctx, page, status_, q)
     return CursorPage(items=items, next_cursor=cursor)
 
 
@@ -352,5 +360,68 @@ async def download_import_errors(ctx: Ctx, job_id: UUID) -> Response:
     )
 
 
-for sub in (orgs, batches, members, invitations, imports):
+# ============================================================================ platform admin
+
+platform = APIRouter(prefix="/platform", tags=["platform"])
+
+
+@platform.get("/users", operation_id="platform_list_users")
+async def platform_list_users(
+    ctx: Ctx,
+    page: PageParams,
+    *,
+    q: Annotated[
+        str | None, Query(min_length=1, max_length=100, description="Name or email contains")
+    ] = None,
+    role: OrgRole | None = None,
+    organization_id: UUID | None = None,
+    status_: Annotated[
+        Literal["invited", "active", "disabled"] | None, Query(alias="status")
+    ] = None,
+) -> CursorPage[PlatformUserOut]:
+    """Users across every organization (platform admins)."""
+    items, cursor = await service.platform_list_users(
+        ctx, page, q=q, role=role, organization_id=organization_id, status=status_
+    )
+    return CursorPage(items=items, next_cursor=cursor)
+
+
+@platform.get("/users/{user_id}", operation_id="platform_get_user")
+async def platform_get_user(ctx: Ctx, user_id: UUID) -> PlatformUserDetail:
+    """A user with every membership and batch (platform admins)."""
+    return await service.platform_get_user(ctx, user_id)
+
+
+@platform.post("/users/{user_id}/disable", operation_id="platform_disable_user")
+async def platform_disable_user(ctx: Ctx, request: Request, user_id: UUID) -> PlatformUserDetail:
+    """Block sign-in and API access, and end the user's sessions (platform admins)."""
+    return await service.set_user_enabled(
+        ctx, request.app.state.keycloak_admin, user_id, enabled=False
+    )
+
+
+@platform.post("/users/{user_id}/enable", operation_id="platform_enable_user")
+async def platform_enable_user(ctx: Ctx, request: Request, user_id: UUID) -> PlatformUserDetail:
+    return await service.set_user_enabled(
+        ctx, request.app.state.keycloak_admin, user_id, enabled=True
+    )
+
+
+@platform.post(
+    "/organizations/{organization_id}/admins",
+    status_code=status.HTTP_201_CREATED,
+    operation_id="platform_invite_org_admin",
+    dependencies=[Depends(invite_rate_limit)],
+)
+async def platform_invite_org_admin(
+    ctx: Ctx, request: Request, organization_id: UUID, body: OrgAdminInvite
+) -> InvitationOut:
+    """Invite an org admin into an organization, e.g. a college just created (platform admins).
+    The invitation behaves like one an org admin sends."""
+    return await service.invite_org_admin(
+        ctx, request.app.state.keycloak_admin, request.app.state.settings, organization_id, body
+    )
+
+
+for sub in (orgs, batches, members, invitations, imports, platform):
     router.include_router(sub)

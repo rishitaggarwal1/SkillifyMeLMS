@@ -83,12 +83,22 @@ class OrganizationRepository:
         return list(rows)
 
     async def list_page(
-        self, params: CursorParams, *, status: str | None = None
+        self, params: CursorParams, *, status: str | None = None, search: str | None = None
     ) -> tuple[list[Organization], str | None]:
         stmt = select(Organization)
         if status is not None:
             stmt = stmt.where(Organization.status == status)
+        if search:
+            # Substring of the name (trigram index on lower(name), migration 0010).
+            pattern = f"%{_escape_like(search.lower())}%"
+            stmt = stmt.where(func.lower(Organization.name).like(pattern, escape="\\"))
         return await paginate_by_id(self.session, stmt, Organization.id, params)
+
+    async def count_by_status(self) -> dict[str, int]:
+        rows = await self.session.execute(
+            select(Organization.status, func.count()).group_by(Organization.status)
+        )
+        return {status: int(n) for status, n in rows}
 
     async def directory(
         self,
@@ -204,6 +214,41 @@ class UserRepository:
             )
         return await paginate_by_id(self.session, stmt, User.id, params)
 
+    async def list_all(
+        self,
+        params: CursorParams,
+        *,
+        q: str | None = None,
+        role: str | None = None,
+        organization_id: UUID | None = None,
+        status: str | None = None,
+    ) -> tuple[list[User], str | None]:
+        """Users across every organization, newest first (platform admins: RLS shows all).
+        `role` / `organization_id` filter on memberships; `q` matches name or email."""
+        stmt = select(User)
+        if role is not None or organization_id is not None:
+            membership = select(Membership.id).where(Membership.user_id == User.id)
+            if role is not None:
+                membership = membership.where(Membership.role == role)
+            if organization_id is not None:
+                membership = membership.where(Membership.organization_id == organization_id)
+            stmt = stmt.where(exists(membership))
+        if status is not None:
+            stmt = stmt.where(User.status == status)
+        if q:
+            pattern = f"%{_escape_like(q.lower())}%"
+            stmt = stmt.where(
+                or_(
+                    func.lower(User.email).like(pattern, escape="\\"),
+                    func.lower(User.full_name).like(pattern, escape="\\"),
+                )
+            )
+        return await paginate_by_id(self.session, stmt, User.id, params)
+
+    async def count_by_status(self) -> dict[str, int]:
+        rows = await self.session.execute(select(User.status, func.count()).group_by(User.status))
+        return {status: int(n) for status, n in rows}
+
     async def ensure_many(self, users: Sequence["EnsureUser"]) -> list["EnsuredUser"]:
         """Find-or-create users by Keycloak id through app.ensure_users() (SECURITY DEFINER: org
         admins can't see users outside their org). Requires org_admin in the current org."""
@@ -275,6 +320,28 @@ class MembershipRepository:
         for user_id, role in rows:
             result[user_id].add(role)
         return result
+
+    async def for_users(self, user_ids: Sequence[UUID]) -> list[Membership]:
+        """Every membership of many users, across orgs, in one query."""
+        if not user_ids:
+            return []
+        return list(
+            await self.session.scalars(
+                select(Membership)
+                .where(Membership.user_id.in_(user_ids))
+                .order_by(Membership.organization_id, Membership.role)
+            )
+        )
+
+    async def users_by_role(self) -> dict[str, int]:
+        """Distinct users holding each role in at least one active organization."""
+        rows = await self.session.execute(
+            select(Membership.role, func.count(Membership.user_id.distinct()))
+            .join(Organization, Organization.id == Membership.organization_id)
+            .where(Organization.status == "active")
+            .group_by(Membership.role)
+        )
+        return {role: int(n) for role, n in rows}
 
     async def count_with_role(self, organization_id: UUID, role: str) -> int:
         return int(
@@ -518,6 +585,17 @@ class BatchMemberRepository:
             )
         )
 
+    async def batches_of_user(self, user_id: UUID) -> list[Batch]:
+        """Every batch the user belongs to, in any org (ix_batch_members_user_org)."""
+        return list(
+            await self.session.scalars(
+                select(Batch)
+                .join(BatchMember, BatchMember.batch_id == Batch.id)
+                .where(BatchMember.user_id == user_id)
+                .order_by(Batch.organization_id, Batch.name)
+            )
+        )
+
     async def is_member(self, batch_id: UUID, user_id: UUID) -> bool:
         found = await self.session.scalar(
             select(BatchMember.id).where(
@@ -550,6 +628,15 @@ class InvitationRepository:
                 Invitation.status == "pending",
             )
         )
+
+    async def user_has_pending(self, user_id: UUID) -> bool:
+        """Whether the user has a pending invitation in any org (ix_invitations_user_id)."""
+        found = await self.session.scalar(
+            select(Invitation.id)
+            .where(Invitation.user_id == user_id, Invitation.status == "pending")
+            .limit(1)
+        )
+        return found is not None
 
     async def expired_pending(self, now: datetime, limit: int = 500) -> list[Invitation]:
         return list(

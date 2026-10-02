@@ -7,7 +7,7 @@ silently overwrite each other. `PATCH /courses/{id}` (course details, not the ou
 optionally.
 """
 
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, Path, Query, Request, status
@@ -34,6 +34,7 @@ from app.modules.courses.schemas import (
     ModuleUpdate,
     NotesPreviewOut,
     OrderUpdate,
+    PlatformCourseOut,
     PublishPreview,
     PublishRequest,
     RevisionOut,
@@ -338,6 +339,25 @@ async def get_catalog_entry(session: DbSession, slug: CatalogSlug) -> CatalogEnt
     return await service.get_catalog_entry(session, slug)
 
 
+platform = APIRouter(prefix="/platform", tags=["platform"])
+
+
+@platform.get("/courses", operation_id="platform_list_courses")
+async def platform_list_courses(
+    ctx: RequestCtx,
+    page: PageParams,
+    organization_id: Annotated[UUID | None, Query(description="Owner organization")] = None,
+    status_: Annotated[Literal["active", "archived"] | None, Query(alias="status")] = None,
+) -> CursorPage[PlatformCourseOut]:
+    """Every organization's courses, read-only: owner, status, version and assignment counts
+    (platform admins)."""
+    items, cursor = await service.platform_list_courses(
+        ctx, page, organization_id=organization_id, status=status_
+    )
+    return CursorPage(items=items, next_cursor=cursor)
+
+
 router.include_router(courses)
 router.include_router(catalog)
 router.include_router(assignments)
+router.include_router(platform)

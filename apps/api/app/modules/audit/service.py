@@ -5,6 +5,7 @@ rolls back with it.
 """
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -64,6 +65,8 @@ async def list_entries(
     actor_user_id: UUID | None = None,
     target_type: str | None = None,
     target_id: str | None = None,
+    since: datetime | None = None,
+    until: datetime | None = None,
 ) -> tuple[list[AuditLog], str | None]:
     return await AuditLogRepository(session).list_page(
         params,
@@ -72,4 +75,6 @@ async def list_entries(
         actor_user_id=actor_user_id,
         target_type=target_type,
         target_id=target_id,
+        since=since,
+        until=until,
     )

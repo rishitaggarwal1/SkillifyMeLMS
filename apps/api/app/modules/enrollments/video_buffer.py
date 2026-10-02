@@ -19,6 +19,9 @@ from app.db.base import new_id
 DIRTY = "progress:dirty"
 CLEAN_TTL = 7 * 86400
 SEGMENT_SECONDS = 5
+# Largest uncovered gap (at a segment's edges or between its watched intervals) that still counts
+# the segment as watched. Matches the web tracker's own 0.25 s slack (heartbeat.ts).
+SEGMENT_GAP_SECONDS = 0.25
 
 _WRITE = """
 local data = cjson.decode(ARGV[1])
@@ -45,7 +48,11 @@ end
 local played = math.min(data.played, limit, position)
 data.server_at = now
 -- Merge partial intervals within each segment, so pausing mid-segment loses no watch time.
--- Only fully traversed segments count. Seeking never fills a gap.
+-- Only fully traversed segments count. Seeking never fills a gap. GAP (ARGV[5]) tolerates the
+-- media pipeline's sub-second jitter: playback "from 0" often first reports currentTime a few ms
+-- in, and players attach their tracker a moment after playback starts. It is far below the
+-- segment length, so it never credits a skipped segment.
+local gap = tonumber(ARGV[5])
 if played > 0 then
   local first = math.floor((position - played) / 5)
   local last = math.ceil(position / 5) - 1
@@ -60,11 +67,11 @@ if played > 0 then
       local merged = {}
       for _, range in ipairs(ranges) do
         local prev = merged[#merged]
-        if prev and range[1] <= prev[2] + 0.001 then
+        if prev and range[1] <= prev[2] + gap then
           prev[2] = math.max(prev[2], range[2])
         else table.insert(merged, range) end
       end
-      if #merged == 1 and merged[1][1] <= lower + 0.001 and merged[1][2] >= upper - 0.001 then
+      if #merged == 1 and merged[1][1] <= lower + gap and merged[1][2] >= upper - gap then
         redis.call('SETBIT', KEYS[2], segment, 1)
         redis.call('HDEL', KEYS[4], tostring(segment))
       else
@@ -158,6 +165,7 @@ class VideoBuffer:
             "?" if baseline is None else baseline.hex(),
             repr(_now()),
             repr(interval_seconds * 1.5),
+            repr(SEGMENT_GAP_SECONDS),
         )
         return bool(written)
 

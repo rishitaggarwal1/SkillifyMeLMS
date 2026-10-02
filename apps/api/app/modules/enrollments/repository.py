@@ -57,6 +57,23 @@ class EnrollmentRepository:
     async def get(self, enrollment_id: UUID) -> Enrollment | None:
         return await self.session.get(Enrollment, enrollment_id, populate_existing=True)
 
+    async def count_by_status(self) -> dict[str, int]:
+        rows = await self.session.execute(
+            select(Enrollment.status, func.count()).group_by(Enrollment.status)
+        )
+        return {status: int(n) for status, n in rows}
+
+    async def active_users_since(self, since: datetime) -> int:
+        """Distinct students who opened a lesson since `since` (ix_enrollments_last_accessed_at)."""
+        return int(
+            await self.session.scalar(
+                select(func.count(Enrollment.user_id.distinct())).where(
+                    Enrollment.last_accessed_at >= since
+                )
+            )
+            or 0
+        )
+
     async def lock_many(self, ids: Sequence[UUID]) -> list[Enrollment]:
         return list(
             await self.session.scalars(

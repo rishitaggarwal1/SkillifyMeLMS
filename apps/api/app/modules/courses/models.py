@@ -74,6 +74,8 @@ class Course(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Index("ix_courses_organization_id_status", "organization_id", "status"),
         Index("ix_courses_created_by", "created_by"),
         Index("ix_courses_current_version_id", "current_version_id"),
+        # Platform admins filter courses by status across organizations (migration 0010).
+        Index("ix_courses_status", "status"),
     )
 
     organization_id: Mapped[UUID] = mapped_column(

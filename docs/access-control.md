@@ -86,7 +86,20 @@ Defined once, in `apps/api/app/modules/identity/authz.py` (`ROLE_PERMISSIONS`).
 | `GET /courses/{id}/versions/{version_id}/lessons/{lesson_id}/playback`, `.../pdf`, `.../images` | Course readers' staff: org_admin, instructor of the owner org or of an org the course is assigned to (any published version). Students get 403 (they use their enrollment routes) |
 | `POST /enrollments/{id}/lessons/{lesson_id}/pdf-access`, `GET .../images` | The active enrollment's student, with a current batch assignment; the file must be used by that lesson in their pinned major's latest minor |
 
+| `GET /organizations?q=` | Platform admin (name contains `q`) |
+| `GET /platform/summary` | Platform admin. Counts: organizations, users (by status and by role), courses, enrollments, and students active today (a lesson opened since midnight IST; `users.last_login_at` is deliberately not used) |
+| `GET /platform/users`, `GET /platform/users/{id}` | Platform admin. Users across every organization (`q`, `role`, `organization_id`, `status`), with every membership; the detail adds batches |
+| `POST /platform/users/{id}/disable`, `.../enable` | Platform admin, never on themselves (`409 cannot_disable_self`). Sets `users.status` (the API refuses disabled accounts with `403 account_disabled`) **and** Keycloak's `enabled` flag; disabling also ends the user's Keycloak sessions. If Keycloak can't be reached the change is rolled back (`503 identity_provider_unavailable`). Audited as a platform-level entry (`organization_id` null) |
+| `POST /platform/organizations/{id}/admins` | Platform admin. Invites an `org_admin` into that (active) organization, exactly like an org admin's invitation, recorded in that organization's audit log |
+| `GET /platform/courses` | Platform admin. Every organization's courses, read-only: owner, status, current version, org-grant and batch-assignment counts |
+| `GET /platform/audit-log` | Platform admin. Every organization's entries plus platform-level ones, whatever organization is active; filters `organization_id`, `action`, `actor_user_id`, `target_type`, `target_id`, `since`/`until` (time-zone-aware) |
+
 All paths are under `/api/v1`, and platform admins can call every endpoint.
+
+**Platform-admin endpoints (Phase 2.5)** are separate `/platform/*` routes gated by
+`require_platform_admin`. They read across organizations through the `PLATFORM_ADMIN` branches the
+RLS policies already had; no org-level policy was widened for them, and there is no
+impersonation.
 
 **Status codes:**
 - **401:** no token or an invalid one (`WWW-Authenticate: Bearer`).

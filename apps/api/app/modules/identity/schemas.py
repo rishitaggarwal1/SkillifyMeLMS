@@ -147,6 +147,50 @@ class MemberUpdate(BaseModel):
     _unique = field_validator("roles")(_unique_roles)
 
 
+# ---------------------------------------------------------------------------- platform admin
+
+
+class PlatformMembership(BaseModel):
+    organization: OrganizationSummary
+    organization_status: str
+    roles: list[OrgRole]
+
+
+class PlatformBatch(BaseModel):
+    id: UUID
+    name: str
+    organization_id: UUID
+
+
+class PlatformUserOut(BaseModel):
+    """A user as platform admins see them: every organization they belong to."""
+
+    id: UUID
+    email: str
+    full_name: str
+    status: str
+    created_at: datetime
+    memberships: list[PlatformMembership]
+
+
+class PlatformUserDetail(PlatformUserOut):
+    batches: list[PlatformBatch]
+
+
+class OrgAdminInvite(BaseModel):
+    email: EmailStr
+    full_name: Annotated[str, StringConstraints(strip_whitespace=True, max_length=200)] = ""
+
+
+class IdentityCounts(BaseModel):
+    organizations: dict[str, int] = Field(description="By status (active, archived)")
+    users: dict[str, int] = Field(description="By account status (invited, active, disabled)")
+    users_by_role: dict[str, int] = Field(
+        description="Distinct users holding each role in an active organization. Platform "
+        "admins are a Keycloak realm role and aren't counted here."
+    )
+
+
 # ---------------------------------------------------------------------------- invitations
 
 

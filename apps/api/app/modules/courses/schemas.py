@@ -118,6 +118,32 @@ class CourseOut(BaseModel):
     updated_at: datetime
 
 
+class CourseOwner(BaseModel):
+    id: UUID
+    name: str
+
+
+class PlatformCourseOut(BaseModel):
+    """A course as platform admins see it in the cross-organization list (read-only)."""
+
+    id: UUID
+    title: str
+    slug: str
+    status: Literal["active", "archived"]
+    owner: CourseOwner
+    current_version: VersionSummary | None
+    org_grant_count: int = Field(description="Organizations granted the course")
+    batch_assignment_count: int = Field(description="Batches the course is assigned to")
+    created_at: datetime
+    updated_at: datetime
+
+
+class CourseCounts(BaseModel):
+    courses: dict[str, int] = Field(
+        description='By status (active, archived), plus "published": active with a version'
+    )
+
+
 # ============================================================================ draft tree
 
 

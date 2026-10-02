@@ -69,6 +69,31 @@ class CourseRepository:
             self.session, select(Course).where(condition), Course.id, params
         )
 
+    async def list_all(
+        self, params: CursorParams, *, organization_id: UUID | None, status: str | None
+    ) -> tuple[list[Course], str | None]:
+        """Courses of every organization, newest first (platform admins: RLS shows all)."""
+        stmt = select(Course)
+        if organization_id is not None:
+            stmt = stmt.where(Course.organization_id == organization_id)
+        if status is not None:
+            stmt = stmt.where(Course.status == status)
+        return await paginate_by_id(self.session, stmt, Course.id, params)
+
+    async def count_by_status(self) -> dict[str, int]:
+        """Courses by status, plus "published" (has a current version) among active ones."""
+        rows = await self.session.execute(
+            select(Course.status, func.count(), func.count(Course.current_version_id)).group_by(
+                Course.status
+            )
+        )
+        counts: dict[str, int] = {"published": 0}
+        for status, total, published in rows:
+            counts[status] = int(total)
+            if status == "active":
+                counts["published"] = int(published)
+        return counts
+
     async def create(self, **values_: Any) -> Course:
         course = Course(id=new_id(), **values_)
         self.session.add(course)
@@ -372,6 +397,22 @@ class AssignmentRepository:
     ) -> tuple[list[CourseAssignment], str | None]:
         stmt = select(CourseAssignment).where(CourseAssignment.course_id == course_id)
         return await paginate_by_id(self.session, stmt, CourseAssignment.id, params)
+
+    async def counts_by_course(self, course_ids: Sequence[UUID]) -> dict[UUID, tuple[int, int]]:
+        """(org grants, batch assignments) per course, in one query."""
+        counts = dict.fromkeys(course_ids, (0, 0))
+        if course_ids:
+            rows = await self.session.execute(
+                select(
+                    CourseAssignment.course_id,
+                    func.count().filter(CourseAssignment.batch_id.is_(None)),
+                    func.count(CourseAssignment.batch_id),
+                )
+                .where(CourseAssignment.course_id.in_(course_ids))
+                .group_by(CourseAssignment.course_id)
+            )
+            counts.update({cid: (int(grants), int(batches)) for cid, grants, batches in rows})
+        return counts
 
     async def org_grant(self, course_id: UUID, organization_id: UUID) -> CourseAssignment | None:
         return await self.session.scalar(

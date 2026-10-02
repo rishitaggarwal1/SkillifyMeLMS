@@ -223,6 +223,19 @@ async def test_pause_inside_segment_keeps_watched_time(api: CourseApi, campus: C
     assert resume["watched_ratio"] == 15 / 120
 
 
+async def test_sub_second_jitter_still_completes_a_segment(api: CourseApi, campus: Campus) -> None:
+    """Playback "from 0" can first be measured a few milliseconds in (seen in the done-when e2e:
+    a first interval of [0.0036, 5] left segment 0 unwatched forever). Gaps up to
+    SEGMENT_GAP_SECONDS count as watched; a real skip doesn't."""
+    ids = await video_setup(api, campus)
+    await heartbeat(api, campus, ids, 15, 15 - 0.0036)  # [0.0036, 15]
+    assert await watched(api, campus, ids) == 15 / 120
+    await heartbeat(api, campus, ids, 30, 14.8)  # [15.2, 30]: a 0.2 s hole at 15
+    assert await watched(api, campus, ids) == 30 / 120
+    await heartbeat(api, campus, ids, 45, 14)  # [31, 45]: a 1 s skip is not watching
+    assert await watched(api, campus, ids) == 40 / 120  # segment [30, 35) stays unwatched
+
+
 @pytest.mark.parametrize("completed", [False, True])
 async def test_replaced_video_resets_partial_watch_and_rejects_old_player(
     api: CourseApi, campus: Campus, completed: bool

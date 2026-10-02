@@ -165,3 +165,57 @@ async def test_bulk_create_and_setup_email(settings: Settings) -> None:
 
     assert set(created) == set(emails)
     assert again == created  # partialImport skips existing users; ids resolve the same
+
+
+async def test_disable_blocks_password_login_and_refresh(settings: Settings) -> None:
+    """set_user_enabled against real Keycloak: disabling refuses new logins and revokes the
+    refresh token; enabling allows logins again."""
+    assert settings.kc_test_client_secret is not None
+    email = f"kc-disable-{uuid7().hex[-10:]}@college.test"
+    password = f"It-{uuid7().hex}"  # throwaway credential for this test user only
+    token_url = _token_url(settings, "localhost")
+    client = {
+        "client_id": TEST_CLIENT,
+        "client_secret": settings.kc_test_client_secret.get_secret_value(),
+    }
+
+    async with httpx.AsyncClient() as http:
+        admin = KeycloakAdmin(http, settings)
+        kc_id = (await admin.ensure_users([NewUser(email, "Disable Test")]))[email]
+        headers = await admin._auth_header()
+        try:
+            await http.put(
+                f"{admin.base}/users/{kc_id}",
+                json={"emailVerified": True, "requiredActions": []},
+                headers=headers,
+            )
+            reset = await http.put(
+                f"{admin.base}/users/{kc_id}/reset-password",
+                json={"type": "password", "value": password, "temporary": False},
+                headers=headers,
+            )
+            assert reset.status_code == 204, reset.text
+
+            async def login() -> httpx.Response:
+                return await http.post(
+                    token_url,
+                    data={**client, "grant_type": "password", "username": email,
+                          "password": password, "scope": "openid"},
+                )  # fmt: skip
+
+            first = await login()
+            assert first.status_code == 200, first.text
+            refresh_token = first.json()["refresh_token"]
+
+            await admin.set_user_enabled(kc_id, enabled=False)
+            assert (await login()).status_code == 400  # invalid_grant: account disabled
+            refreshed = await http.post(
+                token_url,
+                data={**client, "grant_type": "refresh_token", "refresh_token": refresh_token},
+            )
+            assert refreshed.status_code == 400  # the session was ended
+
+            await admin.set_user_enabled(kc_id, enabled=True)
+            assert (await login()).status_code == 200
+        finally:
+            await http.delete(f"{admin.base}/users/{kc_id}", headers=headers)
