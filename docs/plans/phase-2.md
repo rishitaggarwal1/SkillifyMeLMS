@@ -953,8 +953,17 @@ Step 6 implementation notes:
   It supports name search (a plain substring, not a LIKE pattern), lookup by `ids`, and cursor
   pagination by name. The service also returns 403 to everyone else.
 - **Dev note:** the compose web container runs `next dev` (Turbopack) on a Windows bind mount and
-  didn't pick up file edits despite `WATCHPACK_POLLING`. Restart the `web` service after editing
-  web files.
+  didn't pick up file edits despite `WATCHPACK_POLLING`. The app is unchanged. README
+  "Windows development" recommends a checkout inside WSL2 with Docker's WSL2 backend, and
+  `make dev-web-host` runs the web app on the host against the containerised stack.
+- **Step 6 follow-up (2026-09-30):**
+  - The directory's 403 follows the identity convention (default message, specific code
+    `content_publisher_staff_required`).
+  - `docs/access-control.md` records the caveat: every publisher org sees all active org names.
+    That is fine while SkillifyMe is the only publisher; revisit before another org gets
+    `is_content_publisher`.
+  - The skills cache documents its limit: switch to a server-side `ids=` lookup past 500 skills.
+    19 are seeded today.
 
 1. Data model, migrations and RLS (skills, courses and draft tree, versions, assignments,
    enrollments, progress, media tables).

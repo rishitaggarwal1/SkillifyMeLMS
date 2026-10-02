@@ -80,9 +80,38 @@ make migrate         # alembic upgrade head
 make migration m="add courses"
 make gen-api         # regenerate apps/web/src/lib/api/schema.ts from the OpenAPI spec
 make logs s=api      # follow one service's logs
+make dev-web-host    # stack in Docker, web app on the host (see "Windows development")
 make down            # stop (keeps data)
 make clean           # stop and wipe local data volumes
 ```
+
+## Windows development
+
+The stack runs in Docker, and the web container runs `next dev` on the source you mount into it.
+On Windows, file watching across that mount is unreliable: with the checkout on a Windows drive
+(or under `/mnt/c` in WSL), edits often don't reach the container, even with polling enabled.
+When that happens the web app keeps serving old code until you restart it.
+
+**Recommended:** develop inside WSL2.
+
+1. Enable Docker Desktop's **WSL 2 based engine** (Settings → General), and turn on integration
+   for your distro (Settings → Resources → WSL integration).
+2. Clone the repository **inside the WSL2 filesystem**, e.g. `~/src/LMS`, not under `/mnt/c/...`.
+   Files there are native Linux files, so file events and I/O are fast.
+3. Install the prerequisites inside WSL (make, uv, Node 22 + pnpm) and run every `make` command
+   from the WSL shell. VS Code's *WSL* extension opens the folder directly.
+
+**Fallback, without moving the checkout:** `make dev-web-host`.
+
+- It starts everything in Docker except the web container, then runs the web app on your
+  machine (`pnpm dev`), where file watching works.
+- It uses the same settings from `.env`, pointed at the host ports (API on `API_PORT`, Keycloak
+  on `KEYCLOAK_PORT`, Redis on `REDIS_PORT`), and serves on `WEB_PORT`, so sign-in redirects
+  are unchanged.
+- The API's catalog revalidation calls (`http://web:3000/api/revalidate`) can't reach a host
+  process and are retried, then dropped. This makes no difference in development, where
+  `next dev` never caches pages.
+- Stop it with Ctrl+C. `make dev` goes back to the containerised web app.
 
 ## Notes
 

@@ -223,9 +223,9 @@ async def organization_directory(
         if not (DIRECTORY_ROLES & set(roles)) or not await org_is_content_publisher(
             ctx.session, org_id
         ):
-            raise PermissionDeniedError(
-                "Only staff of a content-publisher organization can browse organizations."
-            )
+            # Same shape as the other role gates here (cf. `platform_admin_required`): the
+            # default message, a specific code.
+            raise PermissionDeniedError(code="content_publisher_staff_required")
     after: tuple[str, UUID] | None = None
     if params.cursor:
         data = decode_cursor(params.cursor)

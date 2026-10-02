@@ -49,6 +49,33 @@ dev: .env ## Start the full local stack in docker and wait until every service i
 	@echo ""
 	@echo "  Follow logs with: make logs"
 
+# Fallback for slow or missing file watching in the web container (Windows bind mounts under
+# /mnt/c or a Windows drive): everything else runs in Docker, the web app on the host. The web
+# settings mirror the compose `web` service, pointed at the host-published ports. They are exported
+# only to this target's recipe, so secrets never appear on a command line.
+dev-web-host: export API_INTERNAL_URL = http://localhost:$(API_PORT)
+dev-web-host: export KEYCLOAK_PORT := $(KEYCLOAK_PORT)
+dev-web-host: export KEYCLOAK_REALM := $(KEYCLOAK_REALM)
+dev-web-host: export KEYCLOAK_INTERNAL_URL = http://localhost:$(KEYCLOAK_PORT)
+dev-web-host: export OIDC_WEB_CLIENT_ID := $(OIDC_WEB_CLIENT_ID)
+dev-web-host: export KC_WEB_CLIENT_SECRET := $(KC_WEB_CLIENT_SECRET)
+dev-web-host: export WEB_ORIGIN = http://localhost:$(WEB_PORT)
+dev-web-host: export SESSION_SECRET := $(SESSION_SECRET)
+dev-web-host: export REVALIDATE_SECRET := $(REVALIDATE_SECRET)
+dev-web-host: export REDIS_URL = redis://localhost:$(REDIS_PORT)/1
+dev-web-host: export AUTH_RATE_LIMIT_PER_MINUTE := $(or $(AUTH_RATE_LIMIT_PER_MINUTE),20)
+dev-web-host: export NEXT_TELEMETRY_DISABLED = 1
+
+.PHONY: dev-web-host
+dev-web-host: .env ## Run the stack in Docker but the web app on the host (fast reload on Windows)
+	$(COMPOSE) up -d --wait --scale web=0
+	$(COMPOSE) stop web
+	cd $(WEB) && pnpm install --frozen-lockfile
+	@echo ""
+	@echo "  Web (host)     http://localhost:$(WEB_PORT)    API http://localhost:$(API_PORT)"
+	@echo ""
+	cd $(WEB) && pnpm dev --port $(WEB_PORT)
+
 .PHONY: down
 down: ## Stop the stack (keeps data volumes)
 	$(COMPOSE) down

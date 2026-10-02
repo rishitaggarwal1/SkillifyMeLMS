@@ -117,7 +117,14 @@ export const skillsSearchQuery = (q: string) =>
     staleTime: 5 * 60_000,
   });
 
-/** The whole (global, small) skills taxonomy, cached: names for skills a lesson is tagged with. */
+/**
+ * The whole (global, small) skills taxonomy, cached: names for skills a lesson is tagged with.
+ *
+ * Size limit: this downloads every skill (about 200 bytes each) on the first lesson page. Switch
+ * to a server-side lookup, an `ids=` filter on `GET /skills` like the organization directory's,
+ * once the taxonomy passes **500 skills** (5 requests, ~100 KB). The loop also stops at 2,000
+ * skills (20 pages); tags past that would show as "Skill".
+ */
 export const allSkillsQuery = () =>
   queryOptions({
     queryKey: ["skills", "all"] as const,

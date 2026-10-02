@@ -59,6 +59,10 @@ async def test_only_publisher_staff_and_platform_admins(
             "/api/v1/organizations/directory", headers=auth_headers(user, org=org.id)
         )
         assert response.status_code == expected, (org.name, response.text)
+        if expected == 403:
+            error = response.json()["error"]
+            assert error["code"] == "content_publisher_staff_required"
+            assert error["message"] == "You do not have permission to perform this action."
     admin = await factory.user()
     response = await client.get(
         "/api/v1/organizations/directory", headers=auth_headers(admin, platform_admin=True)
