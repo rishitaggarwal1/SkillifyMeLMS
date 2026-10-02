@@ -374,5 +374,8 @@ def _code_block(language: str | None, code: str) -> str:
 
 
 def stylesheet() -> str:
-    """The Pygments CSS for `pre.highlight` blocks (served with the web app's notes styles)."""
-    return str(HtmlFormatter().get_style_defs("pre.highlight"))  # type: ignore[no-untyped-call]
+    """The Pygments CSS for `pre.highlight` blocks (served with the web app's notes styles).
+    Only rules scoped to `pre.highlight` are kept: Pygments also emits global `pre` and
+    line-number rules, which would restyle every `<pre>` in the app."""
+    css = str(HtmlFormatter().get_style_defs("pre.highlight"))  # type: ignore[no-untyped-call]
+    return "\n".join(line for line in css.splitlines() if line.startswith("pre.highlight"))

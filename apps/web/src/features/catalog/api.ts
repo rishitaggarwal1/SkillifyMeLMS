@@ -25,9 +25,14 @@ const isBuild = () => process.env.NEXT_PHASE === "phase-production-build";
 async function getJson<T>(path: string): Promise<T | null> {
   let response: Response;
   try {
-    response = await fetch(apiUrl(path), {
-      next: { tags: [CATALOG_TAG], revalidate: CATALOG_REVALIDATE_SECONDS },
-    });
+    response = await fetch(
+      apiUrl(path),
+      // Development always reads fresh: `next dev` keeps tagged fetches in its data cache too,
+      // and the API's revalidation call can't reach a web process running on the host.
+      process.env.NODE_ENV === "development"
+        ? { cache: "no-store" }
+        : { next: { tags: [CATALOG_TAG], revalidate: CATALOG_REVALIDATE_SECONDS } },
+    );
   } catch (error) {
     if (isBuild()) return null;
     throw error;

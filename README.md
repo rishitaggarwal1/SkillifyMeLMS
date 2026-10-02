@@ -109,8 +109,8 @@ When that happens the web app keeps serving old code until you restart it.
   on `KEYCLOAK_PORT`, Redis on `REDIS_PORT`), and serves on `WEB_PORT`, so sign-in redirects
   are unchanged.
 - The API's catalog revalidation calls (`http://web:3000/api/revalidate`) can't reach a host
-  process and are retried, then dropped. This makes no difference in development, where
-  `next dev` never caches pages.
+  process and are retried, then dropped. This makes no difference in development: the catalog
+  pages read the API fresh on every request there (`cache: "no-store"` in development builds).
 - Stop it with Ctrl+C. `make dev` goes back to the containerised web app.
 
 ## Notes

@@ -9,9 +9,11 @@ import { VideoPlayer } from "./video-player";
 export function EnrollmentVideo({
   enrollmentId,
   lessonId,
+  onVideoChanged,
 }: {
   enrollmentId: string;
   lessonId: string;
+  onVideoChanged?: () => void;
 }) {
   const path = { enrollment_id: enrollmentId, lesson_id: lessonId };
   const playback = useQuery({
@@ -37,9 +39,17 @@ export function EnrollmentVideo({
     staleTime: 0,
   });
   const { refetch } = playback;
+  const { refetch: refetchResume } = resume;
   const renew = useCallback(() => {
     void refetch();
   }, [refetch]);
+  // A new release replaced this lesson's video: fetch its playback and (reset) resume point; the
+  // player remounts on the new asset id.
+  const reload = useCallback(() => {
+    void refetchResume();
+    void refetch();
+    onVideoChanged?.();
+  }, [refetch, refetchResume, onVideoChanged]);
   if (playback.error || resume.error)
     return <p role="alert">This video is unavailable. Check your course access and try again.</p>;
   if (!playback.data || !resume.data) return <p role="status">Loading video…</p>;
@@ -50,6 +60,7 @@ export function EnrollmentVideo({
       position={resume.data.position_seconds}
       identity={{ ...path, video_asset_id: resume.data.video_asset_id }}
       onExpired={renew}
+      onVideoChanged={reload}
     />
   );
 }

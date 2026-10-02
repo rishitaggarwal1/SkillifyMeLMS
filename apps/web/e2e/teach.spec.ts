@@ -17,7 +17,7 @@ async function addLesson(page: Page, moduleTitle: string, title: string, type: s
 
 test("an instructor builds, orders, writes, publishes and grants a course", async ({ page }) => {
   test.setTimeout(120_000);
-  const title = `Builder course ${Date.now()}`;
+  const title = `Builder course ${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   await signIn(page, "author@skillifyme.local", "/teach/courses");
 
   // Create the course.

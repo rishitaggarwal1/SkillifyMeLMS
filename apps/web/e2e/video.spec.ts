@@ -42,7 +42,9 @@ test("upload, signed playback and student resume on a real video", async ({ page
   await page.getByRole("button", { name: "Upload video", exact: true }).click();
   const { video } = await (await created).json();
   await expect(page.getByText("Video ready", { exact: true })).toBeVisible({ timeout: 30_000 });
-  const course = await api(page, "POST", "/courses", { title: `Video flow ${Date.now()}` });
+  const course = await api(page, "POST", "/courses", {
+    title: `Video flow ${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  });
   // Outline edits require If-Match with the revision the previous response returned.
   const courseModule = await api(
     page,

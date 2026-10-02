@@ -13,11 +13,14 @@ export function VideoPlayer({
   position = 0,
   identity,
   onExpired,
+  onVideoChanged,
 }: {
   playback: Playback;
   position?: number;
   identity?: WatchIdentity;
   onExpired?: () => void;
+  /** The lesson's video was replaced in a new release (heartbeat answered 409 video_changed). */
+  onVideoChanged?: () => void;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const resume = useRef(position);
@@ -74,6 +77,11 @@ export function VideoPlayer({
       hls?.destroy();
     };
   }, [playback.url, playback.kind, playback.expires_at, onExpired]);
+  // Latest callback without restarting the heartbeat tracker when the parent re-renders.
+  const onVideoChangedRef = useRef(onVideoChanged);
+  useEffect(() => {
+    onVideoChangedRef.current = onVideoChanged;
+  }, [onVideoChanged]);
   const enrollmentId = identity?.enrollment_id;
   const lessonId = identity?.lesson_id;
   const assetId = identity?.video_asset_id;
@@ -91,8 +99,11 @@ export function VideoPlayer({
           credentials: "same-origin",
         })
           .then((response) => {
-            if (!response.ok)
+            if (response.status === 409 && onVideoChangedRef.current) {
+              onVideoChangedRef.current(); // a new release replaced the video: load it
+            } else if (!response.ok) {
               setError("Progress could not be saved. Reload the lesson to reconnect.");
+            }
           })
           .catch(() => setError("Progress could not be saved. Check your connection."));
       },

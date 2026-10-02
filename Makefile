@@ -145,9 +145,10 @@ test-e2e: ## Playwright E2E against the running stack
 
 # ------------------------------------------------------------------------------------------ codegen
 .PHONY: gen-api
-gen-api: ## Regenerate web API types from FastAPI's OpenAPI spec
+gen-api: ## Regenerate web API types (OpenAPI) and the notes code stylesheet
 	cd $(API) && uv run python -m app.cli.export_openapi openapi.json
 	cd $(WEB) && pnpm gen:api
+	cd $(API) && uv run python -m app.cli.export_notes_css ../web/src/styles/notes-code.css
 
 .PHONY: check-api-schema
 check-api-schema: gen-api ## Fail if the committed web API types are stale

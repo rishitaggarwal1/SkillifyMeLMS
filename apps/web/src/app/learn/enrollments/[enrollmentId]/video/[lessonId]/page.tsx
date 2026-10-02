@@ -1,15 +1,9 @@
-import { EnrollmentVideo } from "@/features/video/enrollment-video";
+import { redirect } from "next/navigation";
 
+/** The step 3 video page, kept as a redirect: video lessons now play inside the course player. */
 export default async function VideoPage({
   params,
-}: {
-  params: Promise<{ enrollmentId: string; lessonId: string }>;
-}) {
+}: PageProps<"/learn/enrollments/[enrollmentId]/video/[lessonId]">) {
   const { enrollmentId, lessonId } = await params;
-  return (
-    <main className="mx-auto max-w-4xl space-y-4 p-4">
-      <h1 className="text-xl font-semibold">Lesson video</h1>
-      <EnrollmentVideo enrollmentId={enrollmentId} lessonId={lessonId} />
-    </main>
-  );
+  redirect(`/learn/enrollments/${enrollmentId}/lessons/${lessonId}`);
 }

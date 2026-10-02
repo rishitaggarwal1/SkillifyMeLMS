@@ -29,7 +29,7 @@ test("a published public course appears in the catalog for signed-out visitors",
   browser,
   request,
 }) => {
-  const title = `Catalog course ${Date.now()}`;
+  const title = `Catalog course ${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   await signIn(page, "author@skillifyme.local", "/teach/videos");
   const course = await api(page, "POST", "/courses", {
     title,
