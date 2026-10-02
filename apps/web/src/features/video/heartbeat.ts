@@ -40,16 +40,31 @@ export function trackVideo(
     lastSentPosition = currentPosition;
     played = 0;
   };
-  const reset = () => {
+  /** When an event happened, in performance.now() time. A busy main thread (low-end phones)
+   * can run handlers seconds late; event.timeStamp says when the event actually fired. It is
+   * trusted only if plausible (some environments report epoch time instead). */
+  const firedAt = (event?: Event) => {
+    const now = performance.now();
+    const at = event?.timeStamp;
+    return at !== undefined && at <= now && now - at < 60_000 ? at : now;
+  };
+  const reset = (event?: Event) => {
     played = 0;
     lastPosition = video.currentTime;
-    lastTime = performance.now();
+    lastTime = firedAt(event);
+  };
+  // Playback starts from where the video was paused (lastPosition: seeks while paused already
+  // reset it). Keep that position and take the time playback started, so a late handler doesn't
+  // throw away the seconds played before it ran.
+  const play = (event: Event) => {
+    lastTime = firedAt(event);
   };
   const pause = () => flush();
   const seeking = () => {
     if (played > 0) flush(false, lastPosition);
     reset();
   };
+  const seeked = (event: Event) => reset(event);
   const hidden = () => {
     if (document.visibilityState === "hidden") flush(true);
   };
@@ -59,8 +74,8 @@ export function trackVideo(
   }, 15_000);
   video.addEventListener("timeupdate", sample);
   video.addEventListener("seeking", seeking);
-  video.addEventListener("seeked", reset);
-  video.addEventListener("play", reset);
+  video.addEventListener("seeked", seeked);
+  video.addEventListener("play", play);
   video.addEventListener("pause", pause);
   video.addEventListener("ended", pause);
   document.addEventListener("visibilitychange", hidden);
@@ -70,8 +85,8 @@ export function trackVideo(
     window.clearInterval(timer);
     video.removeEventListener("timeupdate", sample);
     video.removeEventListener("seeking", seeking);
-    video.removeEventListener("seeked", reset);
-    video.removeEventListener("play", reset);
+    video.removeEventListener("seeked", seeked);
+    video.removeEventListener("play", play);
     video.removeEventListener("pause", pause);
     video.removeEventListener("ended", pause);
     document.removeEventListener("visibilitychange", hidden);

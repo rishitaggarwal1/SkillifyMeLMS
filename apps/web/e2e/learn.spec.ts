@@ -163,6 +163,9 @@ test("a student completes a course on a small phone; another batch can't see it"
     await student.getByRole("button", { name: "Mark complete" }).click();
     await expect(student.getByText("Course completed", { exact: true })).toBeVisible();
 
+    // The stable course link instructors share resolves to this student's enrollment.
+    await student.goto(`/learn/courses/${course.id}`);
+    await expect(student).toHaveURL(/\/learn\/enrollments\/[0-9a-f-]{36}\/lessons\//);
     await student.getByRole("link", { name: "← My learning" }).click();
     await expect(student.getByRole("link", { name: new RegExp(title) })).toContainText("Completed");
   } finally {
@@ -175,6 +178,8 @@ test("a student completes a course on a small phone; another batch can't see it"
     await signIn(other, "ece.student@demo-college.local", "/learn");
     await expect(other.getByRole("heading", { level: 1, name: "My learning" })).toBeVisible();
     await expect(other.getByRole("link", { name: new RegExp(title) })).toHaveCount(0);
+    const shared = await other.goto(`/learn/courses/${course.id}`);
+    expect(shared?.status()).toBe(404);
   } finally {
     await other.close();
   }

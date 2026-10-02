@@ -165,3 +165,20 @@ async def test_students_only_reach_their_own_enrollments(api: CourseApi, campus:
     # A lesson that isn't in the student's version is a 404 too.
     other = await _complete(api, campus.cse, campus.c, enrollment, UUID(int=3))
     assert other.status_code == 404
+
+
+async def test_enrollments_filter_by_course(api: CourseApi, campus: Campus) -> None:
+    mine = await published_for_cse(api, campus, modules=(("notes",),))
+    other = await published_for_cse(api, campus, modules=(("notes",),))
+
+    async def ids(course_id: object) -> list[str]:
+        page = ok(
+            await api.request("GET", f"/enrollments?course_id={course_id}", campus.cse, campus.c)
+        )
+        return [e["course_id"] for e in page["items"]]
+
+    assert await ids(mine.id) == [str(mine.id)]
+    assert await ids(other.id) == [str(other.id)]
+    # Another student of the same org (not in the batch) has no enrollment in it.
+    page = ok(await api.request("GET", f"/enrollments?course_id={mine.id}", campus.ece, campus.c))
+    assert page["items"] == []

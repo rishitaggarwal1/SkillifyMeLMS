@@ -1,8 +1,8 @@
 # Phase 2 — Courses and learning content (plan)
 
-**Status (2026-10-02):** steps 1–7 are complete and committed. Step 3 (video) also made
-`If-Match` required on outline and lesson edits. Step 8 (end-to-end flow and the Bunny smoke
-script) is next. See
+**Status (2026-10-02):** all 8 steps are complete and committed. Step 3 (video) also made
+`If-Match` required on outline and lesson edits. The Bunny smoke script has not been run against
+a real library yet: there are no credentials. See
 [Implementation status](#implementation-status). Phase 1 (identity, organizations, roles, RLS) is
 complete; see [What Phase 1 provides](#what-phase-1-provides). Resume by re-reading `CLAUDE.md`
 and `docs/access-control.md`, then present this plan for approval before coding.
@@ -144,6 +144,15 @@ See the step 3 notes under [Build order](#build-order).
 - **Tests:** Vitest (`outline` helpers, dashboard and player components), Playwright
   `e2e/learn.spec.ts` (360px: notes, Mark complete, ticks, PDF opened then completed, course
   completed; another batch can't see the course), and pytest `test_notes_css`.
+
+### Step 8 — end-to-end flow and Bunny smoke script
+
+- **Tests:** `e2e/done-when.spec.ts`, plus `scripts/smoke_test_bunny.py` (manual).
+- **Also in this step:**
+  - the `/learn/courses/...` resolver routes and the `course_id` filter on `GET /enrollments`
+  - the `CATALOG_DATA_CACHE` setting
+  - the CI fixture fix and CI E2E job changes
+  - the watch-tracker and redirect-origin fixes
 
 ### Deviations between this plan and the committed code
 
@@ -986,6 +995,14 @@ Step 7 implementation notes:
   - **Deviation:** the plan said `/learn/courses/[id]`. Everything a student sees hangs off their
     enrollment (pinned major, progress, signed URLs), so the URL names the enrollment.
   - The step 3 `/learn/enrollments/[id]/video/[lessonId]` now redirects to the player.
+  - **Shareable links (2026-10-02):** `/learn/courses/[courseId]` and
+    `/learn/courses/[courseId]/lessons/[lessonId]` are thin route handlers.
+    - They look up the signed-in student's active enrollment in that course (`GET /enrollments?course_id=`,
+      as the student, backed by `uq_enrollments_user_course`) and redirect to the enrollment URL,
+      or answer **404** when there is none.
+    - Redirects are built from `WEB_ORIGIN`, never from `request.url`, which carries the bind
+      address behind the standalone server.
+    - Instructors copy the link from the course page ("Student link").
 - **Player:**
   - On phones the outline is a native `<details>` drawer (no JavaScript); on large screens it's
     a sticky sidebar.
@@ -1010,6 +1027,50 @@ Step 7 implementation notes:
   production build serve them, and wiping the `.next` cache volume didn't help. Step 7 was
   verified with `make dev-web-host`. Moving the checkout into WSL2, as the README recommends, is
   expected to fix the container.
+
+Step 8 implementation notes:
+- **Done-when flow** (`e2e/done-when.spec.ts`): everything goes through the UI.
+  1. `author@` builds video (MP4 fixture, local provider), notes and PDF lessons and publishes.
+  2. They grant the course to Demo College through the directory.
+  3. Demo College's admin assigns it to CSE 2026 from the assigned-course page.
+  4. `cse.student@`, at 360px, watches the video to the end (completed by the real heartbeat →
+     flush path; 33%), marks the notes complete (66%), and opens the PDF and marks it complete
+     ("Course completed"; 100% on the dashboard).
+  5. `ece.student@` doesn't see the course, and the shared link gives them 404.
+  - It runs once, under the mobile project, with its own viewports.
+- **Bunny smoke script** (`scripts/smoke_test_bunny.py`): manual only. CI, the Makefile and the
+  test suites don't reference it.
+  - It refuses to start, before any network call, when any `BUNNY_*` setting is missing or empty,
+    and names which.
+  - It prints the exact check list first, then runs it: `create_upload` → TUS upload with the
+    returned signed headers → poll `refresh_status` → the webhook path (temporary
+    `video_assets` row, POST to the local API, row becomes ready) → signed HLS manifest returns
+    200 → a tampered token and an expired token are refused (403).
+  - It always deletes the video and the row, prints PASS/FAIL/SKIP per check, and exits
+    non-zero on any failure. It uses `ensure()`, not `assert`, so `python -O` can't skip checks.
+  - Verified so far: the refusal (none or only some settings) and the failure path (fake
+    credentials). **Not yet run against a real Bunny library: no credentials.**
+- **Catalog freshness** is the explicit web setting `CATALOG_DATA_CACHE`. `off` (compose web
+  service and `make dev-web-host`) reads the API fresh; unset (production, CI) uses the tagged
+  ISR data cache.
+- **CI was failing since Phase 1 step 1** (Pytest). `migrated_database` connected to the test
+  database to create roles before creating that database, which a fresh cluster doesn't have.
+  Roles are now created through the `postgres` maintenance database. Verified on Linux against a
+  fresh Postgres with CI's `.env.example` settings: 1,310 passed. Because the API job had always
+  failed, CI's E2E job (which depends on it) had never run. It now also:
+  - starts Celery beat with a 5 s flush, so watched videos complete
+  - gives the API and worker `WEB_INTERNAL_URL`, so publish-time revalidation reaches the
+    production web server
+  - `catalog.spec` reloads until revalidation lands
+- **Bugs the new end-to-end runs found:**
+  - The resolver routes redirected to the bind address in production (fixed: `WEB_ORIGIN`).
+  - The step 3 watch tracker discarded playback that happened before a late `play` handler ran.
+    Under load the first 5 s segment was lost, and the video stayed at 58% watched. The tracker
+    now keeps the paused position and times playback from `event.timeStamp`, and is
+    unit-tested.
+- **Where Playwright ran locally:** against `make dev-web-host` (the containerised `next dev`
+  doesn't serve two-dynamic-segment routes on this Windows checkout), and once against a
+  production build to simulate CI. CI on Linux is the pass condition.
 
 1. Data model, migrations and RLS (skills, courses and draft tree, versions, assignments,
    enrollments, progress, media tables).

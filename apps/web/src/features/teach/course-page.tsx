@@ -3,9 +3,12 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorAlert, PageTitle } from "@/features/admin/ui";
 import { hasPermission, useMe } from "@/features/auth/queries";
@@ -61,6 +64,7 @@ function CourseEditor({ course }: { course: Course }) {
           ) : null
         }
       />
+      {course.current_version ? <StudentLink courseId={course.id} /> : null}
       <OutlineEditor courseId={course.id} />
       <Versions courseId={course.id} />
       {course.current_version ? (
@@ -81,8 +85,41 @@ function AssignedCourse({ course }: { course: Course }) {
         This course is assigned to your organization by its publisher. You can read it and choose
         which of your batches get it; only the publisher can edit it.
       </p>
+      <StudentLink courseId={course.id} />
       <Versions courseId={course.id} />
       <AssignmentsPanel course={course} />
+    </div>
+  );
+}
+
+/** The stable link instructors share with students: it resolves to each student's enrollment. */
+function StudentLink({ courseId }: { courseId: string }) {
+  const link = `${window.location.origin}/learn/courses/${courseId}`;
+  return (
+    <div className="flex max-w-xl flex-col gap-1.5">
+      <Label htmlFor={`student-link-${courseId}`}>Student link</Label>
+      <div className="flex gap-2">
+        <Input
+          id={`student-link-${courseId}`}
+          readOnly
+          value={link}
+          onFocus={(e) => e.target.select()}
+        />
+        <Button
+          variant="outline"
+          onClick={() =>
+            void navigator.clipboard
+              .writeText(link)
+              .then(() => toast.success("Link copied"))
+              .catch(() => toast.error("Copy failed; select the link and copy it."))
+          }
+        >
+          Copy
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Opens the course for students in an assigned batch; others see “not found”.
+      </p>
     </div>
   );
 }

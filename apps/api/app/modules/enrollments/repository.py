@@ -87,13 +87,21 @@ class EnrollmentRepository:
         )
 
     async def list_for_user(
-        self, user_id: UUID, organization_id: UUID, params: CursorParams
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        params: CursorParams,
+        *,
+        course_id: UUID | None = None,
     ) -> tuple[list[Enrollment], str | None]:
         stmt = select(Enrollment).where(
             Enrollment.user_id == user_id,
             Enrollment.organization_id == organization_id,
             Enrollment.status == EnrollmentStatus.ACTIVE,
         )
+        if course_id is not None:
+            # At most one row per (user, course): uq_enrollments_user_course.
+            stmt = stmt.where(Enrollment.course_id == course_id)
         return await paginate_by_id(self.session, stmt, Enrollment.id, params)
 
     async def upsert_active(self, rows: Sequence[Mapping[str, Any]]) -> list[UpsertedEnrollment]:

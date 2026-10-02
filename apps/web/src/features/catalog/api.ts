@@ -22,17 +22,22 @@ function apiUrl(path: string): string {
  */
 const isBuild = () => process.env.NEXT_PHASE === "phase-production-build";
 
+/**
+ * `CATALOG_DATA_CACHE=off` (local development: compose and `make dev-web-host`) reads the API
+ * fresh on every request. Anything else, including unset (production, CI), uses the tagged data
+ * cache that publish-time revalidation and the time-based window refresh.
+ */
+export function catalogFetchOptions(
+  env: Record<string, string | undefined> = process.env,
+): RequestInit {
+  if (env.CATALOG_DATA_CACHE === "off") return { cache: "no-store" };
+  return { next: { tags: [CATALOG_TAG], revalidate: CATALOG_REVALIDATE_SECONDS } };
+}
+
 async function getJson<T>(path: string): Promise<T | null> {
   let response: Response;
   try {
-    response = await fetch(
-      apiUrl(path),
-      // Development always reads fresh: `next dev` keeps tagged fetches in its data cache too,
-      // and the API's revalidation call can't reach a web process running on the host.
-      process.env.NODE_ENV === "development"
-        ? { cache: "no-store" }
-        : { next: { tags: [CATALOG_TAG], revalidate: CATALOG_REVALIDATE_SECONDS } },
-    );
+    response = await fetch(apiUrl(path), catalogFetchOptions());
   } catch (error) {
     if (isBuild()) return null;
     throw error;

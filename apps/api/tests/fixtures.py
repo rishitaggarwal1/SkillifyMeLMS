@@ -94,9 +94,14 @@ def migrated_database(settings: Settings) -> None:
     owner_url = settings.migration_database_url.get_secret_value()
     if settings.app_db_password is not None and settings.relay_db_password is not None:
         # Roles are cluster-wide; make sure they exist (fresh CI databases, old dev volumes).
+        # Connect to the maintenance database: on a fresh cluster the test database doesn't
+        # exist yet (it is created just below).
+        maintenance_url = (
+            make_url(owner_url).set(database="postgres").render_as_string(hide_password=False)
+        )
         asyncio.run(
             ensure_roles(
-                owner_url,
+                maintenance_url,
                 {
                     APP_ROLE: settings.app_db_password.get_secret_value(),
                     RELAY_ROLE: settings.relay_db_password.get_secret_value(),

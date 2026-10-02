@@ -1,9 +1,10 @@
 """Enrollments HTTP API: the student's courses, the course player's data, lesson completion, and
 org_admin opt-in to a new major version."""
 
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Request, status
+from fastapi import APIRouter, Query, Request, status
 
 from app.core.pagination import CursorPage, PageParams
 from app.core.redis import RedisClient
@@ -88,9 +89,13 @@ async def notes_images(
 
 
 @router.get("/enrollments", operation_id="list_my_enrollments")
-async def list_my_enrollments(ctx: RequestCtx, page: PageParams) -> CursorPage[EnrollmentOut]:
+async def list_my_enrollments(
+    ctx: RequestCtx,
+    page: PageParams,
+    course_id: Annotated[UUID | None, Query(description="Only this course (at most one)")] = None,
+) -> CursorPage[EnrollmentOut]:
     """The signed-in student's active enrollments in the active organization."""
-    items, cursor = await service.list_my_enrollments(ctx, page)
+    items, cursor = await service.list_my_enrollments(ctx, page, course_id=course_id)
     return CursorPage(items=items, next_cursor=cursor)
 
 

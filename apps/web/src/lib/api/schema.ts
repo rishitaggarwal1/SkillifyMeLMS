@@ -4390,6 +4390,8 @@ export interface operations {
   list_my_enrollments: {
     parameters: {
       query?: {
+        /** @description Only this course (at most one) */
+        course_id?: string | null;
         limit?: number;
         cursor?: string | null;
       };

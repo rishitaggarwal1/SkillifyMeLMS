@@ -81,7 +81,7 @@ test("an instructor builds, orders, writes, publishes and grants a course", asyn
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByText("This is the first release")).toBeVisible();
   await dialog.getByRole("button", { name: "Publish", exact: true }).click();
-  await expect(page.getByText("Published v1.0")).toBeVisible();
+  await expect(page.getByText("Published v1.0").first()).toBeVisible();
 
   // Grant it to another organization through the publisher's directory.
   await page.getByLabel("Grant to an organization").fill("Demo College");

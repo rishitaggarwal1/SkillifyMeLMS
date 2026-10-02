@@ -320,6 +320,8 @@ services:
       WEB_ORIGIN: http://localhost:${WEB_PORT:?}
       SESSION_SECRET: ${SESSION_SECRET:?}
       REVALIDATE_SECRET: ${REVALIDATE_SECRET:?}
+      # Local dev reads the public catalog fresh (no data cache); production/CI leave it unset.
+      CATALOG_DATA_CACHE: "off"
       REDIS_URL: redis://redis:6379/1
       AUTH_RATE_LIMIT_PER_MINUTE: ${AUTH_RATE_LIMIT_PER_MINUTE:-20}
       COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"

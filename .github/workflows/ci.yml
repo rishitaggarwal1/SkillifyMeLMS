@@ -116,11 +116,19 @@ jobs:
           uv run --no-dev python -m app.cli.db_roles
           uv run --no-dev alembic upgrade head
           uv run --no-dev python -m app.cli.seed
-      - name: Start API and worker
+      - name: Start API, worker and beat
         working-directory: apps/api
+        # WEB_INTERNAL_URL: the web server runs on the runner, so publish-time catalog
+        # revalidation goes there. Beat flushes buffered video progress (watched videos complete)
+        # every few seconds instead of the default 30.
+        env:
+          WEB_INTERNAL_URL: http://127.0.0.1:3000
+          PROGRESS_FLUSH_INTERVAL_SECONDS: "5"
         run: |
           nohup uv run --no-dev uvicorn app.asgi:app --host 127.0.0.1 --port 8000 > /tmp/api.log 2>&1 &
           nohup uv run --no-dev celery -A app.worker worker --loglevel=INFO > /tmp/worker.log 2>&1 &
+          nohup uv run --no-dev celery -A app.worker beat --loglevel=INFO \
+            --schedule=/tmp/celerybeat-schedule > /tmp/beat.log 2>&1 &
           for i in $(seq 1 30); do
             curl -fsS http://127.0.0.1:8000/health/ready && exit 0
             sleep 1
@@ -150,9 +158,9 @@ jobs:
           name: playwright-report
           path: apps/web/playwright-report
           retention-days: 7
-      - name: API and worker logs
+      - name: API, worker and beat logs
         if: failure()
-        run: cat /tmp/api.log /tmp/worker.log
+        run: cat /tmp/api.log /tmp/worker.log /tmp/beat.log
 
   # ------------------------------------------------------------------------------------------ Images
   docker:

@@ -65,6 +65,7 @@ dev-web-host: export REVALIDATE_SECRET := $(REVALIDATE_SECRET)
 dev-web-host: export REDIS_URL = redis://localhost:$(REDIS_PORT)/1
 dev-web-host: export AUTH_RATE_LIMIT_PER_MINUTE := $(or $(AUTH_RATE_LIMIT_PER_MINUTE),20)
 dev-web-host: export NEXT_TELEMETRY_DISABLED = 1
+dev-web-host: export CATALOG_DATA_CACHE = off
 
 .PHONY: dev-web-host
 dev-web-host: .env ## Run the stack in Docker but the web app on the host (fast reload on Windows)

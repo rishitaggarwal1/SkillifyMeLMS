@@ -59,6 +59,34 @@ describe("video heartbeats", () => {
     expect(send.mock.lastCall?.[0].played_seconds).toBe(30);
     cleanup();
   });
+  it("keeps the seconds played before a late play handler runs (busy main thread)", () => {
+    const video = player();
+    video.playbackRate = 2;
+    const send = vi.fn();
+    const cleanup = trackVideo(video, identity, send);
+    const startedAt = performance.now();
+    vi.advanceTimersByTime(3000); // the handler runs 3 s after playback actually started...
+    video.currentTime = 6; // ...by which time 6 s of video (at 2x) have played
+    const play = new Event("play");
+    Object.defineProperty(play, "timeStamp", { value: startedAt });
+    video.dispatchEvent(play);
+    video.dispatchEvent(new Event("pause"));
+    expect(send.mock.lastCall?.[0]).toMatchObject({ position_seconds: 6, played_seconds: 6 });
+    cleanup();
+  });
+  it("still ignores an implausible event time", () => {
+    const video = player();
+    const send = vi.fn();
+    const cleanup = trackVideo(video, identity, send);
+    vi.advanceTimersByTime(2000);
+    video.currentTime = 30; // far more than 2 s of playback can explain
+    const play = new Event("play");
+    Object.defineProperty(play, "timeStamp", { value: Date.now() }); // epoch, not perf time
+    video.dispatchEvent(play);
+    video.dispatchEvent(new Event("pause"));
+    expect(send.mock.lastCall?.[0].played_seconds ?? 0).toBe(0);
+    cleanup();
+  });
   it("does not overwrite resume during cleanup before metadata loads", () => {
     const video = document.createElement("video");
     const send = vi.fn();

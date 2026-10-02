@@ -110,8 +110,22 @@ When that happens the web app keeps serving old code until you restart it.
   are unchanged.
 - The API's catalog revalidation calls (`http://web:3000/api/revalidate`) can't reach a host
   process and are retried, then dropped. This makes no difference in development: the catalog
-  pages read the API fresh on every request there (`cache: "no-store"` in development builds).
+  pages read the API fresh on every request there (`CATALOG_DATA_CACHE=off`, set by
+  `make dev-web-host` and the compose web service).
 - Stop it with Ctrl+C. `make dev` goes back to the containerised web app.
+
+## Bunny Stream smoke test (manual)
+
+Development and CI use the local video provider (MinIO). To check our Bunny integration against a
+real library, put every `BUNNY_*` value in `.env` and run:
+
+```bash
+uv run --project apps/api python scripts/smoke_test_bunny.py
+```
+
+It refuses to start if any `BUNNY_*` setting is missing, prints the checks it will perform, creates
+one test video (deleted at the end), and exits non-zero on failure. The webhook check needs
+`make dev` running. It is never run by CI or `make test`.
 
 ## Notes
 

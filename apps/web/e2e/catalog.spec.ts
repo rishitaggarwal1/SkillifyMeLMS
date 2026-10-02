@@ -29,6 +29,7 @@ test("a published public course appears in the catalog for signed-out visitors",
   browser,
   request,
 }) => {
+  test.setTimeout(90_000); // the catalog page may need a revalidation round trip (CI: production)
   const title = `Catalog course ${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   await signIn(page, "author@skillifyme.local", "/teach/videos");
   const course = await api(page, "POST", "/courses", {
@@ -56,10 +57,14 @@ test("a published public course appears in the catalog for signed-out visitors",
   const visitor = await browser.newContext({ viewport: { width: 360, height: 780 } });
   try {
     const catalog = await visitor.newPage();
-    await catalog.goto("/catalog");
-    await expect(catalog.getByRole("heading", { level: 1, name: "Course catalog" })).toBeVisible();
+    // Production (CI) serves the statically generated catalog: the new course appears once the
+    // worker's publish-time revalidation has reached the web app, so reload until it does.
     const card = catalog.getByRole("list", { name: "Courses" }).getByRole("link", { name: title });
-    await expect(card).toBeVisible();
+    await expect(async () => {
+      await catalog.goto("/catalog");
+      await expect(card).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 45_000 });
+    await expect(catalog.getByRole("heading", { level: 1, name: "Course catalog" })).toBeVisible();
     await card.click();
     await expect(catalog.getByRole("heading", { level: 1, name: title })).toBeVisible();
     await expect(catalog.getByText("1 lesson")).toBeVisible();

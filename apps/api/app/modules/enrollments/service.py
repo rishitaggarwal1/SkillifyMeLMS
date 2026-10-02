@@ -304,11 +304,11 @@ def _progress_out(p: LessonProgress) -> LessonProgressOut:
 
 
 async def list_my_enrollments(
-    ctx: Ctx, params: CursorParams
+    ctx: Ctx, params: CursorParams, *, course_id: UUID | None = None
 ) -> tuple[list[EnrollmentOut], str | None]:
     org_id = require_org(ctx.principal)
     rows, cursor = await EnrollmentRepository(ctx.session).list_for_user(
-        ctx.principal.user_id, org_id, params
+        ctx.principal.user_id, org_id, params, course_id=course_id
     )
     return await _outs(ctx, rows), cursor
 
