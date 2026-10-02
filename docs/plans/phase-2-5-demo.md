@@ -1,6 +1,6 @@
 # Phase 2.5 — Demo-ready portal (plan)
 
-**Status (2026-10-02): approved; step 1 (platform admin API) committed, see
+**Status (2026-10-02): approved; steps 1 (platform admin API) and 2 (platform UI, role home) committed, see
 [Implementation status](#3a-implementation-status).** Phase 2 is
 complete and tagged `v0.2.0` ([phase-2.md](phase-2.md)).
 
@@ -424,6 +424,43 @@ Every step ends with:
    - The Lua write script now accepts gaps up to `SEGMENT_GAP_SECONDS = 0.25` (the tracker's own
      slack) at a segment's edges and between its intervals.
    - A new test shows a 0.2 s hole still completes a segment and a 1 s skip doesn't.
+
+### Step 2: platform UI, role-aware home and header (2026-10-02)
+
+- **`/platform`** (`PlatformShell`, `is_platform_admin`; added to the `proxy.ts` matcher):
+  - the dashboard, where the per-role counts are titled **"Users by organization role"** with a
+    note that platform admins aren't included (requested at step 1 review)
+  - `/platform/organizations`: search, status filter, create (the slug is derived from the name
+    and can be edited)
+  - `/platform/organizations/[id]`: invite the org admin, the org's admins, settings
+    (name, publisher), archive and restore, links to its members, courses and audit log
+  - `/platform/users` (search; org-role, status and org filters) and `/platform/users/[id]`
+    (memberships, batches, disable/enable with confirmation, never yourself)
+  - `/platform/courses` (read-only; owner and status filters)
+  - `/platform/audit` (action, target type and IST date filters; org and actor from links)
+- **Role-aware home:** `/` sends a single-role user to their area, switching the active org
+  first if needed, and shows a chooser for several (org, area) pairs. Signed-out visitors keep
+  the landing page.
+- **Header:** a second row shows the **active role and org** (the role comes from the area of
+  the current path) and links to the areas available in the active org.
+- **Tests:**
+  - Vitest: `roles`/`RoleHome` (redirect per role, org switch first, chooser, failure, nothing for
+    lab-author-only), slugify, IST day bounds, UUID search params
+  - Playwright `e2e/platform.spec.ts`, at 360px on the mobile project and checked for no sideways
+    scroll: each role's home redirect and header; the multi-role chooser; a platform admin
+    creates a college, invites its admin (the email arrives in Mailpit) and finds them in users
+    and the audit log; non-platform admins are refused
+
+**Deviations in step 2:**
+1. **The home redirect runs in the browser** (`RoleHome`), not in a server component. Deciding
+   needs `/me` with a possibly refreshed access token, and only route handlers can write the
+   refreshed cookies. A server-side redirect would fail for anyone whose access token just
+   expired. The cost is a brief skeleton before the redirect.
+2. **The header's old "Admin" link is replaced** by the area links row (Platform admin, Org
+   admin, Instructor, Student), filtered to what the active org allows.
+3. **Users with only `lab_author`** see "Nothing here yet" at `/`. Labs arrive in Phase 3.
+4. **Audit rows link to the actor and organization rather than naming them.** There is no batched
+   name lookup across orgs yet, and adding one wasn't worth it for this screen.
 
 ## 4. Decisions (approved 2026-10-02)
 

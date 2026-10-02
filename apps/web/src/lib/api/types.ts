@@ -25,6 +25,14 @@ export type Video = Schemas["VideoOut"];
 export type StoredFile = Schemas["FileOut"];
 export type DirectoryOrganization = Schemas["DirectoryOrganization"];
 
+// ---- platform admin
+export type Organization = Schemas["OrganizationOut"];
+export type PlatformSummary = Schemas["PlatformSummary"];
+export type PlatformUser = Schemas["PlatformUserOut"];
+export type PlatformUserDetail = Schemas["PlatformUserDetail"];
+export type PlatformCourse = Schemas["PlatformCourseOut"];
+export type AuditEntry = Schemas["AuditEntryOut"];
+
 export const LESSON_TYPE_LABELS: Record<LessonType, string> = {
   video: "Video",
   notes: "Notes",
