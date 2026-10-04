@@ -5,6 +5,7 @@
 !.env.dev-server.example
 # Demo logins written by `make seed-demo` (passwords): never commit
 .secrets/
+.claude/
 
 # Python
 __pycache__/

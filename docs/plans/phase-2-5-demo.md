@@ -832,6 +832,30 @@ Every step ends with:
 10. **Images are built on the VM until CI pushes them** (decision 10: no pushes in this phase);
     the runbook says so.
 
+### Step 8: close-out (in progress, 2026-10-04)
+
+- Root `AGENTS.md` records the binding decisions and verification workflow in its
+  own commit. `.claude/` is now ignored alongside `.secrets/`.
+- **Inherited CI failure:** run
+  [37066623603](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37066623603)
+  failed the mobile and desktop `e2e/catalog.spec.ts` visibility assertion.
+  Reproduced locally with an unchanged production build and the unchanged spec:
+  a build without `API_INTERNAL_URL` prerenders an empty catalog before any
+  tagged fetch, so its route has no `catalog` data-tag dependency. Publish-time
+  tag revalidation alone cannot invalidate that fallback page. The authenticated
+  revalidation handler now also invalidates `/catalog` and `/catalog/[slug]`.
+  The visibility assertion, timeout and setup data are unchanged.
+- **Local login regression:** the unchanged platform role test exposed background
+  page prefetches following proxy redirects into `/auth/login` after cookies were
+  cleared. The trace showed multiple concurrent login flows overwriting the PKCE
+  state cookie, so the real callback failed. The proxy now uses the bundled
+  Next.js documentation's prefetch matcher exclusions; actual page navigation
+  remains protected and API authorization is unchanged. Matcher regression
+  tests cover all four areas and both prefetch headers. No E2E assertions changed.
+- **Deviation:** this app cache repair and the handover instructions were added
+  during close-out so the existing checks and release workflow can be completed.
+  No feature scope was added.
+
 ## 4. Decisions (approved 2026-10-02)
 
 All 13 recommendations were approved as written. Additions are marked **Added**.

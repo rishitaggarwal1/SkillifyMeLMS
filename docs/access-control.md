@@ -238,6 +238,11 @@ every foreign key is indexed.
 - **CSRF:** state-changing requests must carry our own `Origin` (and `Sec-Fetch-Site: same-origin`
   when present), on top of SameSite=Lax.
 - **Logout** is POST-only. It clears the cookies and ends the Keycloak SSO session.
+- **Page prefetches** bypass the login-redirect proxy (Next.js's
+  `next-router-prefetch` or `purpose: prefetch` matcher exclusions). Page shells contain no
+  private data and API authorization still applies. This prevents background prefetches
+  from starting extra OIDC flows and overwriting the current login's state cookie; actual
+  page navigation remains protected.
 
 ## Rate limits
 
