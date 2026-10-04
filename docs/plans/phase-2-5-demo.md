@@ -1,7 +1,10 @@
 # Phase 2.5 — Demo-ready portal (plan)
 
-**Status (2026-10-03): approved; steps 1–6 (platform admin, role home, assignments, progress reports, college-admin screens, demo seed) committed, see
-[Implementation status](#3a-implementation-status).** Phase 2 is
+**Status: complete (2026-10-04).** Steps 1–8 are implemented, all local checks
+pass and both repair commits have green CI. The final documentation close-out
+commit must also have green CI before `v0.2.5` is created. See
+[Release record](#release-record) and
+[Implementation status](#3a-implementation-status). Phase 2 is
 complete and tagged `v0.2.0` ([phase-2.md](phase-2.md)).
 
 **Goal:** a demo-ready portal where four roles work end to end on `make dev`, with demo logins,
@@ -19,6 +22,233 @@ If something seems to need more scope, stop and ask.
 - All four roles work end to end on `make dev` with `make seed-demo`.
 - `docker compose -f docker-compose.yml -f docker-compose.prod.yml config` validates with a
   server-style `.env`.
+
+## Release record
+
+The tables below record what shipped, including failed historical CI runs rather than
+retrospectively describing them as green. Release tagging requires green CI on the
+close-out commit; check it with `python scripts/ci_status.py <full-sha>`.
+Record that final run URL in the annotated `v0.2.5` tag and the release summary;
+the table records the implementation and repair commits.
+
+| Step | Commit | GitHub Actions |
+|---|---|---|
+| 1. Platform admin API | `1713652` | [37025158943](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37025158943) — green |
+| 2. Platform UI, role home and header | `d570a13` | [37033530343](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37033530343) — green |
+| 3. Assignments backend | `1740ccf` | [37039263527](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37039263527) — green |
+| 4. Assignments UI, publish hook and CI checker | `a58adec` | [37046381301](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37046381301) — green |
+| 5. Reports and college-admin screens | `f448209` | [37050553924](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37050553924) — green |
+| 6. Demo seed, paginated pickers and CSV cap | `de0c652` | [37054584596](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37054584596) — green |
+| 7. Deployment readiness | `321bbfc` | [37062261105](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37062261105) — red: web build and smoke failures |
+| 7. Build and paged smoke follow-up | `6ebb234` | [37066623603](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37066623603) — red: catalog E2E |
+| Handover: root instructions (file-only commit) | `160fc45` | [37193462779](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37193462779) — red: inherited catalog E2E |
+| Close-out repairs: catalog paths and prefetch login | `fc87c29` | [37194725913](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37194725913) — green |
+| Close-out repairs: demo paging and commit-before-response | `9217b03` | [37197780394](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37197780394) — green |
+
+### Post-handover repairs
+
+- **Catalog invalidation — `fc87c29ee41d84b4e273fd854bc77302ac583d76`:**
+  `apps/web/src/app/api/revalidate/route.ts` now calls `revalidatePath("/catalog")`
+  and `revalidatePath("/catalog/[slug]", "page")` alongside the existing tag
+  expiration. A build without `API_INTERNAL_URL` prerendered an empty catalog
+  before making a tagged fetch, so that fallback had no `catalog` data-tag
+  dependency to invalidate after publication. This caused both projects of
+  `e2e/catalog.spec.ts:27` to fail the published-course link visibility assertion
+  (2,000 ms inside a 45,000 ms retry). The app repair preserves the assertion,
+  timeouts and setup data.
+- **Login prefetch race — `fc87c29ee41d84b4e273fd854bc77302ac583d76`:**
+  `apps/web/src/proxy.ts` excludes `next-router-prefetch` and `purpose: prefetch`
+  requests from the login-redirect matcher in all four areas. Background
+  prefetches had started concurrent OIDC flows and overwritten the active PKCE
+  state cookie during role switching. Actual navigation still redirects to
+  login, page shells expose no private data and API authorization still applies.
+  `apps/web/src/proxy.test.ts` adds 12 navigation/prefetch regression checks;
+  `docs/access-control.md` records the contract. No E2E assertions changed.
+- **Handover support — `fc87c29ee41d84b4e273fd854bc77302ac583d76`:**
+  `.gitignore` adds `.claude/`; the Step 8 implementation notes record the app
+  repairs and their causes. Root `AGENTS.md` was committed separately in `160fc45`.
+- **Demo paging helper — `9217b03bcb7690d87ec855d745b7999baa0a4c0a`:**
+  `apps/web/e2e/demo-smoke.spec.ts` waits for the first course row before checking
+  whether the demo course or Load more is visible, then uses its existing paging
+  loop. Previously the instructor region rendered before the query finished;
+  the helper exited without paging and then waited for a course on a later page.
+  The user approved this synchronization correction. All existing assertions,
+  timeouts and the 20-page limit are unchanged; all four demo roles pass in the
+  full suite at 360px.
+- **Commit before response — `9217b03bcb7690d87ec855d745b7999baa0a4c0a`:**
+  `apps/api/app/db/session.py` changes the shared `DbSession` dependency to
+  `Depends(get_db_session, scope="function")`. Its previous request scope sent
+  the HTTP response before exiting `session.begin()` and committing. In the
+  failing `e2e/done-when.spec.ts:41` trace, POST `/modules` returned 201 for Arrays,
+  then immediate course/draft refetches saw revision 1 and no modules; the test
+  timed out at line 35 waiting for the Add lesson form. Every DB write through
+  `DbSession`/`TenantSession` shared this risk, including normal CRUD endpoints;
+  the Bunny webhook and CLI/background jobs already use explicit transactions.
+  Function scope commits and runs after-commit hooks before sending success
+  headers, allowing failed commits to reach the existing error middleware.
+  `apps/api/tests/test_request_transactions.py` adds exactly two real-Postgres
+  regressions: a separate connection sees the API write at response-header
+  delivery, and a deferred constraint failure returns the standard 500 envelope,
+  writes nothing and runs neither synchronous nor asynchronous after-commit
+  hooks. Both tests failed before the source repair and passed afterward. No
+  endpoint-specific fix, migration, API schema or E2E assertion change was made.
+
+### Final endpoints
+
+All API routes are under `/api/v1`. Every new method has a `MATRIX` row in
+`apps/api/tests/test_endpoint_roles.py` and is documented in `docs/access-control.md`.
+Phase 1 and 2 routes remain available; this table lists the Phase 2.5 additions and changes.
+
+| Area | Endpoints and contracts |
+|---|---|
+| Platform summary | `GET /platform/summary`: platform admins only; active today is learning activity since midnight Asia/Kolkata |
+| Platform users | `GET /platform/users`, `GET /platform/users/{id}`, `POST /platform/users/{id}/disable`, `POST /platform/users/{id}/enable`: platform admins only; disable ends Keycloak sessions, refuses self-disable, rolls back on provider failure |
+| Platform organizations | `POST /platform/organizations/{id}/admins`: platform admin invites an org admin; existing `GET /organizations` gains name search `q=` |
+| Platform courses and audit | `GET /platform/courses`, `GET /platform/audit-log`: platform-wide, whatever org is active; audit filters include `organization_id`, actor, target, action and aware `since`/`until` |
+| Assignment authoring | `GET`, `PUT /courses/{id}/lessons/{lesson_id}/assignment`: owner-org editors; `PUT` requires the course revision in `If-Match` (428 missing, 409 stale) |
+| Student assignments | `GET /enrollments/{id}/lessons/{lesson_id}/assignment`, `POST .../submission-upload`, `PUT .../submission`: enrolled student only; submission `If-Match` is 0 initially, then its revision; graded work cannot be replaced |
+| Grading | `GET /courses/{id}/lessons/{lesson_id}/submissions`, `GET /assignment-submissions/{id}`, `PUT /assignment-submissions/{id}/grade`: instructors and org admins of the student's org; grade uses submission `If-Match`, is audited and completes the lesson in the same transaction |
+| Reports | `GET /courses/{id}/progress?batch_id=`, `GET /courses/{id}/progress.csv?batch_id=`, `GET /batches/{id}/courses`: staff of the student's org, own assigned batches only; CSV refuses more than 10,000 students |
+
+Lists are cursor-paginated. Cross-org and other-student resource access returns 404.
+Shared request transactions commit before success headers are sent; commit failures
+roll back and return the standard error envelope, without running after-commit hooks.
+Submission files reuse the existing file confirmation/download routes with PDF/PNG/JPEG
+signature checks and a 10 MB cap. No new HTTP routes were added by the seed or close-out.
+
+Web routes added: `/platform` and its organizations, users, courses and audit pages;
+`/admin/courses`; `/teach/courses/[id]/progress`,
+`/teach/courses/[id]/assignments/[lessonId]`, `/teach/submissions/[id]`.
+Existing builder/player routes gained assignment forms; the home and header gained role-aware
+destinations. The existing authenticated `POST /api/revalidate` now invalidates the catalog
+paths as well as the data tag; protected page prefetches do not start extra login flows.
+
+### Final tables and database changes
+
+| Migration or operator | Changes |
+|---|---|
+| `0010_platform_admin_indexes` | Organization-name trigram index; `users.status`, `courses.status` and `enrollments.last_accessed_at` indexes. No RLS policy changes |
+| `0011_assignments`: `assignments` | Owner-org draft definitions: course/lesson, title, instructions, due date, maximum marks and allowed submission kinds; one definition per lesson; per-operation RLS |
+| `0011_assignments`: `assignment_submissions` | Student-org active submission, pinned version, text or file, status and revision; unique `(enrollment_id, assignment_id)`; draft assignment/lesson IDs deliberately have no FK |
+| `0011_assignments`: `assignment_grades` | Student-org score (`numeric`, two decimals), feedback, grader and timestamp; unique `(submission_id, organization_id)` and a composite submission FK; re-grades update this row |
+| `0011_assignments`: existing tables | `files.kind` gains `submission` with student/grader policies. `app.lesson_graded` and `app.enrollment_graded` permit completion writes for graded work; `app.enrollments_grader_guard` restricts a grader to progress columns |
+| `db_roles` on servers | A separate Keycloak login role and owned database, only when `KEYCLOAK_DB_PASSWORD` is configured; not an app migration or a new LMS table |
+
+`platform` and `reports` own no tables. Assignment content is published in immutable course
+snapshots; `assignment_submitted` and `assignment_graded` use the enrollment outbox topic.
+The demo seed and close-out add no migration.
+
+### Full deviation list
+
+This consolidates every numbered step deviation; the implementation notes below retain the
+context and tests. Later repairs supersede earlier interim behavior where stated.
+
+1. Platform audit has its own `/platform/audit-log` endpoint; UUIDv7 time bounds reuse existing indexes.
+2. The tableless `platform` module omits models/repository and composes service interfaces.
+3. Enabling restores `invited` for never-signed-in invitees and `active` for everyone else.
+4. Organization substring search matches names, not slugs.
+5. Platform admins are excluded from membership-role counts and the UI explains why.
+6. A Phase 2 watch-tracking flake was repaired with 0.25 s segment-gap tolerance; larger skips remain uncredited.
+7. Role-home redirects run in the browser so refreshed cookies can be written by route handlers.
+8. Area links replace the old Admin header link.
+9. Lab-author-only users see "Nothing here yet" until Phase 4.
+10. Audit screens link to actors/orgs rather than adding a cross-org name lookup.
+11. Assignment publishing uses a content-source hook, centrally wired and lazily loaded; missing registration fails closed.
+12. Submission assignment/lesson IDs do not reference draft rows, preserving work after draft deletion.
+13. There is one submission per enrollment/assignment and one grade per submission/org; the composite grade target can change for Phase 3 history.
+14. Re-grading is allowed, audited and emits a re-grade event; completion still emits once.
+15. Scores are two-place decimal strings; graders cannot grade themselves.
+16. Assignment instructions do not support images in this slice.
+17. Due dates are displayed, not enforced; late policy is deferred.
+18. Assignment UI remained unchanged during the backend step and arrived in the following UI step.
+19. Grading uses dedicated queue/review pages instead of an inline course panel.
+20. Saving instructions saves the current whole assignment definition.
+21. Students see grades on reload/focus; no realtime push until Phase 4.
+22. `GET /batches/{id}/courses` was added for a batched course-summary view.
+23. Reports page students by `(lower(name), id)` instead of id alone.
+24. CSV exports are built in memory from 500-row pages, with the later 10,000-student cap and a surfaced download error.
+25. Report columns use the latest outline; students on older majors see "n/a" for missing lessons.
+26. `outline_lessons` tolerates missing snapshot keys, like the player.
+27. `/admin` still lands on Batches although Courses is the first tab.
+28. The 360px review also fixed escaping screen-reader labels and the first-page-only progress batch picker.
+29. The demo seed calls services with each demo user's context instead of signing in over HTTP.
+30. Seed video watch credit uses a guarded CLI helper; normal heartbeat credit remains bounded by real time.
+31. Credentials have Linux mode 0600; Windows bind mounts retain NTFS permissions.
+32. The demo seed ensures its own orgs and CSE batch instead of depending on `make seed`.
+33. Keycloak render/sync uses standard-library Python instead of `kcadm`.
+34. Server Keycloak uses `start`, not `start --optimized`; no custom pre-built image was added.
+35. Container-internal service-DNS URLs remain fixed; host-side URLs come from `.env`.
+36. No `API_PUBLIC_URL` was added because the browser uses the BFF and Bunny needs a separate public route first.
+37. Local brute-force protection stays off for automated shared-user logins; the server override forces it on.
+38. Local Keycloak retains its dev store; servers use Postgres. Seed reruns repair account links/passwords after local container recreation.
+39. `KEYCLOAK_PORT` is compose-only; app settings use `KEYCLOAK_PUBLIC_URL`.
+40. The host sweep excludes local tooling where local addresses belong.
+41. Read-only configuration mounts remain on servers; application-source mounts are removed.
+42. Runtime images are built on the VM until a deployment phase enables CI registry pushes.
+43. Close-out adds root handover instructions and ignores `.claude/` alongside `.secrets/`.
+44. Close-out repairs catalog path invalidation for empty build-time fallback pages, preserving the E2E visibility assertion and timeout.
+45. Close-out excludes background prefetches from login redirects, preventing concurrent flows from overwriting PKCE state; actual navigation and API authorization remain protected.
+46. The approved demo smoke helper waits for initial course rows before checking pagination; existing assertions, timeouts and the paging limit are unchanged.
+47. The shared API session dependency uses function scope so commit and after-commit hooks finish before response delivery; failed commits can return the standard error envelope. This repairs the read-after-write race exposed during full E2E verification, without endpoint-specific changes.
+
+The first-page audit in step 6 also widened existing pickers to all pages (with a documented
+20-page/2,000-item cap) and added Load more to member candidates. It did not add feature scope.
+Local production verification uses the documented Windows host-web fallback, with the
+worker's revalidation URL pointed at the host; containerised `next dev` on this bind mount
+is not the production E2E check.
+
+### Open follow-ups / carried forward
+
+- **Phase 3 assignments:** rubrics, late policy, attempt/grade history, plagiarism and AI feedback are deferred. Instructions images are also deferred.
+- **Phase 4:** coding labs for lab authors and Centrifugo grade notifications; current grade reads refresh on focus/reload.
+- **Phase 5 reports:** replace the OLTP stopgap with ClickHouse, preserving its API shape; revisit in-memory CSV and its 10,000-student limit.
+- **Large directories/pickers:** move beyond the documented 2,000-item cap when needed. Platform organization details still show only the first 25 org admins, acceptable for a handful.
+- **Bunny:** the real-credential smoke script remains unrun; no library credentials are available. Mocked HTTP tests and local MinIO video are the verified paths.
+- **Publisher directory:** revisit global active-org name discovery before granting a second org `is_content_publisher`.
+- **Skills:** replace the whole-taxonomy name cache with a server-side `ids=` lookup beyond about 500 skills.
+- **Read replicas:** enrollment/resume GETs reset replaced-video progress; route those writes to the primary or move them off the read path before enabling replicas.
+- **Heartbeat revocation window:** playback is denied immediately, but up to 60 s of watch credit may survive until reconciliation/cache expiry.
+- **Deployment:** nothing is provisioned or deployed. `infra/dev-vm/README.md` remains "not yet executed"; CI builds but does not publish images. Keycloak's non-optimized boot and server backup/restore operations remain operational follow-ups.
+- **Windows:** WSL2 remains the recommended checkout location; host web is the fallback. Credentials on a Windows bind mount retain host NTFS permissions.
+
+The earlier Redis persistence requirement is addressed in the server override (AOF,
+`noeviction`, configured `maxmemory`); it is not an unfinished Phase 2.5 item.
+
+### Close-out verification (2026-10-04)
+
+- `make dev` passed after starting Docker Desktop. GNU make is installed outside
+  PATH on this Windows machine; verification adds its installation directory to
+  the process PATH rather than changing the repository's commands.
+- `make lint`: passed (ruff, format, mypy, ESLint, Prettier and TypeScript).
+- `make test`: passed in one invocation: 1,259 API tests against the real compose
+  backing services, 157 web unit tests (including 12 proxy navigation/prefetch
+  checks), and the full Playwright suite with **41 passed, 7 intentional skips,
+  0 failures** using the unchanged local two-worker configuration.
+- `make gen-api`: passed; generated API types and notes CSS are unchanged.
+- `make seed-demo`: passed without reset or password rotation; the existing
+  credentials were reused and never printed.
+- The read-only `e2e/demo-smoke.spec.ts` passed all four roles in the full suite
+  at 360px: platform admin landed in `/platform`, college admin in `/admin`,
+  instructor in `/teach`, student in `/learn`. No demo work was submitted or graded.
+- The earlier full-suite failures (smoke paging, then commit-before-response)
+  are recorded under Post-handover repairs. Both catalog projects and the
+  previously failing course-completion flow pass in the final full run.
+- `docker compose --env-file .env.server -f docker-compose.yml -f
+  docker-compose.prod.yml config --quiet`: passed, also with tools/debug profiles.
+  `.env.server` was generated by `scripts/server_env_for_ci.sh` with fake
+  `example.test` values and is ignored. No server was deployed.
+- `caddy validate`: passed in the official Caddy image with that server-style
+  environment and a throwaway password hash. The first invocation hit a Windows
+  quoting error; the identical CI command through Git Bash passed.
+- Production builds without runtime settings passed. The unchanged catalog
+  spec failed before the path repair and passed in both projects afterward.
+- Repair commit `fc87c29` has green CI across all six jobs:
+  [37194725913](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37194725913).
+- Repair commit `9217b03` has green CI across all six jobs:
+  [37197780394](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37197780394)
+  (verified with `scripts/ci_status.py`, exit 0). The final documentation close-out
+  commit is checked with the same script; `v0.2.5` is created only after that run
+  is green, and its annotated tag records the final commit's CI run URL.
 
 ## 1. Current state (verified 2026-10-02 at `651fe97`)
 
@@ -832,7 +1062,7 @@ Every step ends with:
 10. **Images are built on the VM until CI pushes them** (decision 10: no pushes in this phase);
     the runbook says so.
 
-### Step 8: close-out (in progress, 2026-10-04)
+### Step 8: close-out (2026-10-04)
 
 - Root `AGENTS.md` records the binding decisions and verification workflow in its
   own commit. `.claude/` is now ignored alongside `.secrets/`.
@@ -852,8 +1082,15 @@ Every step ends with:
   Next.js documentation's prefetch matcher exclusions; actual page navigation
   remains protected and API authorization is unchanged. Matcher regression
   tests cover all four areas and both prefetch headers. No E2E assertions changed.
-- **Deviation:** this app cache repair and the handover instructions were added
-  during close-out so the existing checks and release workflow can be completed.
+- **Full-suite repairs:** the approved demo helper waits for its initial course
+  rows before checking pagination. A subsequent run exposed the shared API
+  session's commit-after-response race; function scope now commits before success
+  headers and permits failed commits to use the existing error middleware. Two
+  real-Postgres regressions verify separate-connection visibility and commit-failure
+  rollback, including synchronous/asynchronous after-commit hook behavior.
+- **Deviation:** the cache, login, paging and shared transaction repairs and the
+  handover instructions were added during close-out to complete the existing
+  checks and release workflow. Commit SHAs are listed under Post-handover repairs.
   No feature scope was added.
 
 ## 4. Decisions (approved 2026-10-02)

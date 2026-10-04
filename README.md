@@ -88,21 +88,50 @@ make down            # stop (keeps data)
 make clean           # stop and wipe local data volumes
 ```
 
-## Demo data (`make seed-demo`)
+## Demo
 
-`make seed-demo` sets up a demo of all four roles, separate from `make seed`'s dev users. It is
-idempotent: run it again any time.
+Start the stack, then create the demo data:
 
-- **Logins** `demo.<role>@skillifyme.co.in`: `platform-admin`, `author` (SkillifyMe), `admin` and
-  `instructor` (Demo College), and students `student`, `student2` … `student8` (CSE 2026).
-- **Passwords** are random and written **only** to `.secrets/demo-credentials.txt` (gitignored,
-  owner-only). They're never printed. A rerun keeps them.
-- **Course:** "Python Foundations" (2 modules, 6 lessons, including an assignment), published,
-  granted to Demo College and assigned to CSE 2026, with students from 0% to 100%, three
-  submissions and one grade.
-- `make seed-demo args=--reset` puts the progress back. `make seed-demo args=--rotate-passwords`
-  issues new passwords. Both refuse outside `ENVIRONMENT=local` unless you add
-  `--i-know-this-is-not-local`.
+```bash
+make dev
+make seed-demo
+```
+
+Open the web app and sign in with one of the four roles below. The home page sends each
+single-role user to their area.
+
+| Role | Login | Landing and demo |
+|---|---|---|
+| Platform admin | `demo.platform-admin@skillifyme.co.in` | `/platform`: platform counts, organizations and users |
+| College admin | `demo.admin@skillifyme.co.in` | `/admin`: batches; `/admin/courses` shows granted courses and distribution |
+| Instructor | `demo.instructor@skillifyme.co.in` | `/teach`: assigned courses, submissions to grade and batch progress |
+| Student | `demo.student@skillifyme.co.in` | `/learn`: Python Foundations, 83% complete |
+
+`demo.author@skillifyme.co.in` is the instructor in the SkillifyMe publisher org who owns and
+edits the course. The other students are `demo.student2@skillifyme.co.in` through
+`demo.student8@skillifyme.co.in`, all in Demo College's CSE 2026 batch.
+
+The seed publishes **Python Foundations** (two modules, six lessons, including an assignment),
+grants it to Demo College and assigns it to CSE 2026. Students range from 0% to 100%, with three
+submissions and one grade. A normal rerun creates missing data and keeps users' changes and
+existing passwords.
+
+Random passwords are written only to **`.secrets/demo-credentials.txt`**, which stays out of git;
+they are never printed or logged. Compose mounts `./.secrets` at `/secrets` and writes
+`/secrets/demo-credentials.txt`. When invoking the CLI directly, `DEMO_CREDENTIALS_FILE` can
+override the path. File mode is 0600 inside Linux; Windows bind mounts retain their host NTFS
+permissions.
+
+```bash
+make seed-demo args=--reset             # restore demo progress and submissions
+make seed-demo args=--rotate-passwords  # issue new passwords for every demo login
+```
+
+Both flags refuse outside `ENVIRONMENT=local` unless you explicitly add
+`--i-know-this-is-not-local`. **Production always refuses the demo seed**, including with that
+override. The read-only `apps/web/e2e/demo-smoke.spec.ts` checks the four demo logins and their
+landings at 360px, without submitting or grading anything; it reads the credentials file and
+disables tracing.
 
 ## Windows development
 
