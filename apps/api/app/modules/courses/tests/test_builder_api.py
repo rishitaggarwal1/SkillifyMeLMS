@@ -6,14 +6,14 @@ from tests.course_api import Campus, CourseApi, ok
 
 
 async def test_author_builds_a_course(api: CourseApi, campus: Campus) -> None:
-    course = await api.build(campus.author, campus.p, [("video", "notes"), ("pdf", "quiz")])
+    course = await api.build(campus.author, campus.p, [("video", "notes"), ("pdf", "lab")])
     draft = ok(await api.request("GET", f"/courses/{course.id}/draft", campus.author, campus.p))
 
     assert draft["course"]["is_owner"] is True
     assert draft["course"]["current_version"] is None
     assert [m["position"] for m in draft["modules"]] == [1, 2]
     lessons = [lesson for m in draft["modules"] for lesson in m["lessons"]]
-    assert [lesson["lesson_type"] for lesson in lessons] == ["video", "notes", "pdf", "quiz"]
+    assert [lesson["lesson_type"] for lesson in lessons] == ["video", "notes", "pdf", "lab"]
     assert [lesson["position"] for lesson in lessons] == [1, 2, 1, 2]
     # Placeholders never count toward progress until their phase lands.
     assert [lesson["is_required"] for lesson in lessons] == [True, True, True, False]
@@ -159,10 +159,10 @@ async def test_lesson_content_is_validated_per_type(api: CourseApi, campus: Camp
         json={"title": "V", "lesson_type": "video",
               "content": {"video_asset_id": str(other_orgs_video.id)}},
     )  # fmt: skip
-    quiz = ok(
+    lab = ok(
         await api.request(
             "POST", path, campus.author, campus.p,
-            json={"title": "Q", "lesson_type": "quiz", "is_required": True,
+            json={"title": "L", "lesson_type": "lab", "is_required": True,
                   "completion_threshold": "0.5"},
         ),
         201,
@@ -170,8 +170,8 @@ async def test_lesson_content_is_validated_per_type(api: CourseApi, campus: Camp
 
     assert wrong_shape.json()["error"]["code"] == "invalid_lesson_content"
     assert foreign_video.json()["error"]["code"] == "invalid_video"
-    assert quiz["is_required"] is False
-    assert quiz["completion_threshold"] is None
+    assert lab["is_required"] is False
+    assert lab["completion_threshold"] is None
 
 
 async def test_lesson_skill_tags(api: CourseApi, campus: Campus) -> None:

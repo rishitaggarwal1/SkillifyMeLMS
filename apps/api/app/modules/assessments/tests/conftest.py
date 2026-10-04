@@ -19,9 +19,15 @@ from app.modules.assessments.models import (
     QuizVersionKey,
     QuizVersionQuestion,
 )
+from app.modules.assessments.tests.authoring_helpers import AuthoredQuiz, build_quiz
 from app.modules.enrollments.models import Enrollment
-from tests.course_api import Campus
+from tests.course_api import Campus, CourseApi
 from tests.factories import Factory
+
+
+@pytest.fixture
+async def authored(api: CourseApi, campus: Campus) -> AuthoredQuiz:
+    return await build_quiz(api, campus)
 
 
 @dataclass

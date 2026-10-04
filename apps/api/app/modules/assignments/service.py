@@ -67,6 +67,7 @@ from app.modules.assignments.schemas import (
 from app.modules.audit import service as audit
 from app.modules.courses import service as courses
 from app.modules.courses.models import LessonType
+from app.modules.courses.schemas import StructuralChange
 from app.modules.enrollments import service as enrollments
 from app.modules.identity import service as identity
 from app.modules.identity.authz import Permission, require_org_permission
@@ -94,6 +95,24 @@ def published_content(row: Assignment) -> dict[str, Any]:
 
 class AssignmentContentSource:
     """Publishes assignment lessons; a lesson without a definition isn't ready."""
+
+    async def lock(self, session: AsyncSession, lesson_ids: Sequence[UUID]) -> None:
+        pass
+
+    async def structural(
+        self, session: AsyncSession, lesson_ids: Sequence[UUID]
+    ) -> dict[UUID, dict[str, Any]]:
+        return {}
+
+    async def changes(
+        self, session: AsyncSession, previous_version_id: UUID, lesson_ids: Sequence[UUID]
+    ) -> list[StructuralChange]:
+        return []
+
+    async def publish(
+        self, session: AsyncSession, version_id: UUID, major: int, lesson_ids: Sequence[UUID]
+    ) -> None:
+        pass
 
     async def published(
         self, session: AsyncSession, lesson_ids: Sequence[UUID]

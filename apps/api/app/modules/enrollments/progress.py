@@ -6,7 +6,8 @@
 - pdf: the file must have been opened (a signed URL issued), then the student marks it complete
 - assignment: completes when a grade is recorded (the assignments module calls
   `complete_graded_lesson`)
-- quiz, lab: placeholders; they can't be completed and never count toward progress
+- quiz: required lessons count toward progress; passing completion arrives in Phase 3 step 3
+- lab: placeholder; can't be completed and never counts toward progress
 """
 
 from decimal import Decimal
@@ -33,6 +34,8 @@ def completion_rule(lesson_type: LessonType) -> CompletionRule:
         LessonType.NOTES: CompletionRule.MANUAL,
         LessonType.PDF: CompletionRule.MANUAL_AFTER_OPENING,
         LessonType.ASSIGNMENT: CompletionRule.GRADED,
+        # Runtime and automatic passing completion arrive in Phase 3 step 3.
+        LessonType.QUIZ: CompletionRule.NOT_COMPLETABLE,
     }[lesson_type]
 
 

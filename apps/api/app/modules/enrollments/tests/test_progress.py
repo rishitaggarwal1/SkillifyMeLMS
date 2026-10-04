@@ -78,19 +78,19 @@ async def _open_pdf(
 async def test_student_completes_course_with_correct_progress(
     api: CourseApi, campus: Campus, owner_sessionmaker: async_sessionmaker[AsyncSession]
 ) -> None:
-    course = await published_for_cse(api, campus, modules=[("notes", "pdf", "quiz"), ("notes",)])
-    notes1, pdf, quiz, notes2 = course.lesson_ids
+    course = await published_for_cse(api, campus, modules=[("notes", "pdf", "lab"), ("notes",)])
+    notes1, pdf, lab, notes2 = course.lesson_ids
     enrollment = (await api.enrollments(campus.cse, campus.c))[0]["id"]
 
     first = ok(await _complete(api, campus.cse, campus.c, enrollment, notes1))
-    assert first["enrollment"]["progress_percent"] == 33  # 1 of 3 required (quiz excluded)
+    assert first["enrollment"]["progress_percent"] == 33  # 1 of 3 required (lab excluded)
     assert first["lesson"]["status"] == "completed"
     again = ok(await _complete(api, campus.cse, campus.c, enrollment, notes1))
     assert again["enrollment"]["progress_percent"] == 33  # idempotent
 
     unopened = await _complete(api, campus.cse, campus.c, enrollment, pdf)
     assert (unopened.status_code, unopened.json()["error"]["code"]) == (409, "pdf_not_opened")
-    placeholder = await _complete(api, campus.cse, campus.c, enrollment, quiz)
+    placeholder = await _complete(api, campus.cse, campus.c, enrollment, lab)
     assert placeholder.json()["error"]["code"] == "not_completable"
 
     await _open_pdf(owner_sessionmaker, enrollment, pdf, campus.cse, campus.c)

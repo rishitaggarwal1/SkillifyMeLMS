@@ -79,6 +79,11 @@ async def test_student_never_directly_reads_draft_or_published_keys(
             assert (await s.execute(text(f"SELECT * FROM {table}"))).all() == []
         assert (
             await s.execute(
+                text("SELECT k.* FROM question_keys k JOIN questions q ON q.id=k.question_id")
+            )
+        ).all() == []
+        assert (
+            await s.execute(
                 text(
                     "SELECT k.* FROM quiz_version_keys k "
                     "JOIN quiz_version_questions q ON q.id=k.question_id"
@@ -109,7 +114,8 @@ async def test_student_never_directly_reads_draft_or_published_keys(
             == 3
         )
     async with tenant_session(org=w.campus.c.id, user=w.campus.c_instructor.id) as s:
-        assert (await s.scalars(select(QuizVersionKey))).all() == []
+        for table in ("question_keys", "quiz_version_keys"):
+            assert (await s.execute(text(f"SELECT * FROM {table}"))).all() == []
 
 
 async def test_only_selected_prompts_and_own_work_are_visible(
@@ -329,7 +335,14 @@ async def test_existing_and_new_learning_outbox_payloads_are_student_isolated(
         (w.campus.o, w.campus.o_admin, False),
     ):
         async with tenant_session(org=org.id, user=user.id) as s:
-            assert (await s.get(OutboxEvent, event.id) is not None) == visible
+            rows = (
+                await s.execute(
+                    text("SELECT payload FROM outbox_events WHERE id=:id"), {"id": event.id}
+                )
+            ).all()
+            assert bool(rows) == visible
+            if visible:
+                assert rows[0].payload == event.payload
     async with tenant_session(
         org=w.campus.c.id, user=w.campus.platform_admin.id, platform_admin=True
     ) as s:

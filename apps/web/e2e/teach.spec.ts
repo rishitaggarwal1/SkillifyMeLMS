@@ -28,14 +28,14 @@ test("an instructor builds, orders, writes, publishes and grants a course", asyn
   await expect(page.getByText("Not published yet")).toBeVisible();
   const courseUrl = page.url();
 
-  // Outline: one module with notes, PDF and a placeholder quiz.
+  // Outline: one module with notes, PDF and a placeholder lab.
   await page.getByLabel("New module").fill("Basics");
   await page.getByRole("button", { name: "Add module" }).click();
   await expect(page.getByRole("heading", { level: 3, name: "1. Basics" })).toBeVisible();
   await addLesson(page, "Basics", "Intro notes", "notes");
   await addLesson(page, "Basics", "Handout", "pdf");
-  await addLesson(page, "Basics", "Practice quiz", "quiz");
-  await expect(lessonsIn(page, "Basics").filter({ hasText: "Practice quiz" })).toContainText(
+  await addLesson(page, "Basics", "Practice lab", "lab");
+  await expect(lessonsIn(page, "Basics").filter({ hasText: "Practice lab" })).toContainText(
     "Coming soon",
   );
 

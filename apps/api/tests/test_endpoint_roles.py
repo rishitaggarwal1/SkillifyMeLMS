@@ -19,6 +19,15 @@ from fastapi import FastAPI
 from httpx import AsyncClient
 from uuid_utils.compat import uuid7
 
+from app.db.base import new_id
+from app.modules.assessments.models import (
+    Question,
+    QuestionBank,
+    QuestionKey,
+    Quiz,
+    QuizVersion,
+    QuizVersionQuestion,
+)
 from app.modules.identity.models import Organization, User
 from tests.factories import Factory
 from tests.fakes import EnqueueRecorder, FakeKeycloakAdmin
@@ -57,7 +66,7 @@ async def _static(path: str, **kwargs: Any) -> Request:
 
 def at(path: str, **kwargs: Any) -> Builder:
     async def build(_: World) -> Request:
-        return path, kwargs
+        return path, dict(kwargs)
 
     return build
 
@@ -881,6 +890,186 @@ async def _video_action(w: World, action: str) -> Request:
 async def _with_json(request: Awaitable[Request], body: dict[str, Any]) -> Request:
     path, kwargs = await request
     return path, {**kwargs, "json": body}
+
+
+async def _assessment(w: World, resource: str, suffix: str = "", **kwargs: Any) -> Request:
+    bank = QuestionBank(id=new_id(), organization_id=w.org.id, name="Bank")
+    await w.factory._save(bank)
+    question = Question(
+        id=new_id(),
+        organization_id=w.org.id,
+        bank_id=bank.id,
+        question_type="mcq_single",
+        prompt="Pick",
+        options=[{"id": "a", "text": "A"}, {"id": "b", "text": "B"}],
+    )
+    await w.factory._save(question)
+    await w.factory._save(
+        QuestionKey(
+            question_id=question.id,
+            organization_id=w.org.id,
+            answer_key={"correct_option_ids": ["a"]},
+        )
+    )
+    headers = {"If-Match": "1"}
+    if resource == "bank":
+        return f"/api/v1/question-banks/{bank.id}{suffix}", {"headers": headers, **kwargs}
+    if resource == "question":
+        return f"/api/v1/questions/{question.id}{suffix}", {"headers": headers, **kwargs}
+    course = await w.factory.course(w.org)
+    module = await w.factory.module(course)
+    lesson = await w.factory.lesson(module, lesson_type="quiz")
+    values = {
+        "selection_mode": "manual",
+        "selection": {
+            "mode": "manual",
+            "questions": [{"question_id": str(question.id), "marks": "2"}],
+        },
+        "max_marks": 2,
+        "pass_marks": 1,
+        "time_limit_seconds": 60,
+        "attempts_allowed": 2,
+        "title": "Quiz",
+    }
+    quiz = Quiz(
+        id=new_id(), organization_id=w.org.id, course_id=course.id, lesson_id=lesson.id, **values
+    )
+    await w.factory._save(quiz)
+    if resource == "published":
+        version = await w.factory.version(course, lesson)
+        published = QuizVersion(
+            id=new_id(),
+            organization_id=w.org.id,
+            course_id=course.id,
+            lesson_id=lesson.id,
+            quiz_id=quiz.id,
+            course_version_id=version.id,
+            major_version=1,
+            **values,
+        )
+        await w.factory._save(published)
+        await w.factory._save(
+            QuizVersionQuestion(
+                id=new_id(),
+                organization_id=w.org.id,
+                quiz_version_id=published.id,
+                question_id=question.id,
+                question_type=question.question_type,
+                prompt=question.prompt,
+                options=question.options,
+                marks=2,
+                position=0,
+            )
+        )
+        return f"/api/v1/courses/{course.id}/versions/{version.id}/lessons/{lesson.id}/quiz", {}
+    if "json" in kwargs:
+        kwargs["json"] = {
+            k: v for k, v in values.items() if k not in {"selection_mode", "max_marks"}
+        }
+    return f"/api/v1/courses/{course.id}/lessons/{lesson.id}/quiz", {"headers": headers, **kwargs}
+
+
+_QUESTION_BODY = {
+    "question_type": "mcq_single",
+    "prompt": "Pick",
+    "options": [{"id": "a", "text": "A"}, {"id": "b", "text": "B"}],
+    "answer_key": {"correct_option_ids": ["a"]},
+}
+MATRIX.extend(
+    [
+        Route("GET", "/api/v1/question-banks", STAFF_READ, at("/api/v1/question-banks")),
+        Route(
+            "POST",
+            "/api/v1/question-banks",
+            STAFF_READ,
+            at("/api/v1/question-banks", json={"name": "Bank"}, headers={"If-Match": "0"}),
+        ),
+        Route(
+            "GET",
+            "/api/v1/question-banks/{bank_id}",
+            STAFF_READ,
+            lambda w: _assessment(w, "bank"),
+            names_resource=True,
+        ),
+        Route(
+            "PATCH",
+            "/api/v1/question-banks/{bank_id}",
+            STAFF_READ,
+            lambda w: _assessment(w, "bank", json={"name": "Changed"}),
+            names_resource=True,
+        ),
+        Route(
+            "DELETE",
+            "/api/v1/question-banks/{bank_id}",
+            STAFF_READ,
+            lambda w: _assessment(w, "bank"),
+            names_resource=True,
+        ),
+        Route(
+            "GET",
+            "/api/v1/question-banks/{bank_id}/questions",
+            STAFF_READ,
+            lambda w: _assessment(w, "bank", "/questions"),
+            names_resource=True,
+        ),
+        Route(
+            "POST",
+            "/api/v1/question-banks/{bank_id}/questions",
+            STAFF_READ,
+            lambda w: _assessment(w, "bank", "/questions", json=_QUESTION_BODY),
+            names_resource=True,
+        ),
+        Route(
+            "GET",
+            "/api/v1/questions/{question_id}",
+            STAFF_READ,
+            lambda w: _assessment(w, "question"),
+            names_resource=True,
+        ),
+        Route(
+            "PATCH",
+            "/api/v1/questions/{question_id}",
+            STAFF_READ,
+            lambda w: _assessment(w, "question", json={"prompt": "Changed"}),
+            names_resource=True,
+        ),
+        Route(
+            "DELETE",
+            "/api/v1/questions/{question_id}",
+            STAFF_READ,
+            lambda w: _assessment(w, "question"),
+            names_resource=True,
+        ),
+        Route(
+            "PUT",
+            "/api/v1/questions/{question_id}/skills",
+            STAFF_READ,
+            lambda w: _assessment(w, "question", "/skills", json={"skill_ids": []}),
+            names_resource=True,
+        ),
+        Route(
+            "GET",
+            "/api/v1/courses/{course_id}/lessons/{lesson_id}/quiz",
+            STAFF_READ,
+            lambda w: _assessment(w, "quiz"),
+            names_resource=True,
+        ),
+        Route(
+            "PUT",
+            "/api/v1/courses/{course_id}/lessons/{lesson_id}/quiz",
+            STAFF_READ,
+            lambda w: _assessment(w, "quiz", json={}),
+            names_resource=True,
+        ),
+        Route(
+            "GET",
+            "/api/v1/courses/{course_id}/versions/{version_id}/lessons/{lesson_id}/quiz",
+            STAFF_READ,
+            lambda w: _assessment(w, "published"),
+            names_resource=True,
+        ),
+    ]
+)
 
 
 def expected_status(route: Route, role: str) -> str:

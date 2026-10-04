@@ -11,6 +11,12 @@ async function api(
 ) {
   return page.evaluate(
     async ({ method, route, body, headers }) => {
+      const course = /^\/courses\/([^/]+)\/versions$/.exec(route);
+      if (method === "POST" && course && !("If-Match" in headers)) {
+        const current = await fetch(`/backend/api/v1/courses/${course[1]}`);
+        if (!current.ok) throw new Error(`Course revision: ${current.status}`);
+        headers["If-Match"] = String((await current.json()).revision);
+      }
       const response = await fetch(`/backend/api/v1${route}`, {
         method,
         headers: { "Content-Type": "application/json", ...headers },

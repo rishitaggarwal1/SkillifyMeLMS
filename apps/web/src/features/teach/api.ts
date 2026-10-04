@@ -280,13 +280,17 @@ export function useCreateCourse() {
 export function usePublish(courseId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { release_type: "major" | "minor"; release_notes: string }) =>
-      unwrap(
+    mutationFn: async (body: { release_type: "major" | "minor"; release_notes: string }) => {
+      const draft =
+        qc.getQueryData<Draft>(keys.draft(courseId)) ?? (await qc.fetchQuery(draftQuery(courseId)));
+      return unwrap(
         api.POST("/api/v1/courses/{course_id}/versions", {
-          params: { path: path(courseId) },
+          params: { path: path(courseId), header: { "If-Match": String(draft.course.revision) } },
           body,
         }),
-      ),
+      );
+    },
+    onError: () => qc.invalidateQueries({ queryKey: keys.course(courseId) }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: keys.course(courseId) });
       void qc.invalidateQueries({ queryKey: keys.courses });

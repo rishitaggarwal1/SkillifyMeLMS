@@ -94,6 +94,7 @@ class Question(UUIDPrimaryKeyMixin, TimestampMixin, OwnerMixin, Base):
         CheckConstraint("revision >= 1", name="revision"),
         Index("ix_questions_bank_org", "bank_id", "organization_id"),
         Index("ix_questions_bank_type_id", "bank_id", "question_type", "id"),
+        Index("ix_questions_bank_archived_id", "bank_id", "archived_at", "id"),
     )
 
     bank_id: Mapped[UUID] = mapped_column(Uuid)
@@ -295,3 +296,18 @@ class QuizAnswer(UUIDPrimaryKeyMixin, TimestampMixin, OwnerMixin, Base):
     answer: Mapped[dict[str, Any]] = mapped_column(JSONB)
     revision: Mapped[int] = mapped_column(Integer, server_default="1")
     awarded_marks: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+
+
+# Case-insensitive substring searches use the pg_trgm extension installed by 0002.
+Index(
+    "ix_question_banks_name_search",
+    func.lower(QuestionBank.name).label("name_search"),
+    postgresql_using="gin",
+    postgresql_ops={"name_search": "gin_trgm_ops"},
+)
+Index(
+    "ix_questions_prompt_search",
+    func.lower(Question.prompt).label("prompt_search"),
+    postgresql_using="gin",
+    postgresql_ops={"prompt_search": "gin_trgm_ops"},
+)

@@ -496,7 +496,12 @@ async def build_course(s: Seeder) -> UUID:
                     ),
                     draft.course_revision,
                 )
-        await courses.publish(ctx, course.id, PublishRequest(release_type=ReleaseType.MAJOR))
+        await courses.publish(
+            ctx,
+            course.id,
+            PublishRequest(release_type=ReleaseType.MAJOR),
+            (await courses.get_course(ctx, course.id)).revision,
+        )
     return course.id
 
 

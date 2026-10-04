@@ -25,11 +25,15 @@ const BLOCKERS: Record<PublishPreview["blockers"][number]["code"], string> = {
   empty_course: "Add at least one lesson.",
   video_not_ready: "These video lessons need a processed video:",
   pdf_not_ready: "These PDF lessons need an uploaded PDF:",
+  quiz_not_ready: "These quiz lessons need a complete definition and active questions:",
   assignment_not_ready: "These assignment lessons need their details saved:",
   course_archived: "Archived courses can't be published.",
 };
 
 const CHANGES: Record<PublishPreview["structural_changes"][number]["code"], string> = {
+  quiz_structure_changed: "Quiz questions, marks or attempt rules changed",
+  quiz_grading_changed: "Quiz grading rules changed",
+  assignment_structure_changed: "Assignment marks, submission kinds or rubric criteria changed",
   modules_changed: "Modules were added, removed or reordered",
   lessons_added: "Lessons were added",
   lessons_removed: "Lessons were removed",

@@ -74,11 +74,16 @@ class AssignmentContent(BaseModel):
     assignment_id: UUID | None = None
 
 
+class QuizContent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    quiz_id: UUID | None = None
+
+
 CONTENT_MODELS: dict[LessonType, type[BaseModel]] = {
     LessonType.VIDEO: VideoContent,
     LessonType.NOTES: NotesContent,
     LessonType.PDF: PdfContent,
-    LessonType.QUIZ: PlaceholderContent,
+    LessonType.QUIZ: QuizContent,
     LessonType.LAB: PlaceholderContent,
     LessonType.ASSIGNMENT: AssignmentContent,
 }
@@ -258,6 +263,9 @@ class StructuralChange(BaseModel):
         "lessons_removed",
         "lessons_reordered",
         "lesson_settings_changed",
+        "quiz_structure_changed",
+        "quiz_grading_changed",
+        "assignment_structure_changed",
     ]
     lesson_ids: list[UUID] = Field(default_factory=list)
 
@@ -268,6 +276,7 @@ class PublishBlocker(BaseModel):
         "video_not_ready",
         "pdf_not_ready",
         "assignment_not_ready",
+        "quiz_not_ready",
         "course_archived",
     ]
     lesson_ids: list[UUID] = Field(default_factory=list)

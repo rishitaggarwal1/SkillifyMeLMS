@@ -11,6 +11,7 @@ imports this module the first time it needs a source (API, Celery workers, CLI s
 at the first publish. `wire()` is idempotent.
 """
 
+from app.modules.assessments.service import QuizContentSource
 from app.modules.assignments.service import AssignmentContentSource
 from app.modules.courses import content_sources
 from app.modules.courses.models import LessonType
@@ -18,3 +19,4 @@ from app.modules.courses.models import LessonType
 
 def wire() -> None:
     content_sources.register(LessonType.ASSIGNMENT, AssignmentContentSource())
+    content_sources.register(LessonType.QUIZ, QuizContentSource())

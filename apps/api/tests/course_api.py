@@ -82,7 +82,7 @@ class BuiltCourse:
     lessons_by_module: dict[UUID, list[UUID]] = field(default_factory=dict)
 
 
-_OUTLINE_EDIT = re.compile(r"^/courses/(?P<course>[0-9a-f-]{36})/(modules|lessons)(/|$)")
+_OUTLINE_EDIT = re.compile(r"^/courses/(?P<course>[0-9a-f-]{36})/(modules|lessons|versions)(/|$)")
 
 
 def ok(response: Response, status: int = 200) -> Any:
@@ -104,8 +104,8 @@ class CourseApi:
         self, method: str, path: str, user: User, org: Organization, **kwargs: Any
     ) -> Response:
         extra: dict[str, str] = kwargs.pop("headers", {})
-        # Outline and lesson edits require If-Match. Send the current revision unless the test
-        # sets the header itself (tests of the 428/409 behaviour call the client directly).
+        # Outline/lesson edits and publishing require If-Match. Send the current revision unless
+        # the test sets it itself (428/409 checks call the client directly).
         outline = _OUTLINE_EDIT.match(path)
         if outline and method != "GET" and "If-Match" not in extra:
             extra["If-Match"] = str(await self.factory.course_revision(UUID(outline["course"])))
@@ -196,6 +196,7 @@ class CourseApi:
         return await self.request(
             "POST", f"/courses/{course_id}/versions", user, org,
             json={"release_type": release_type},
+            headers={"If-Match": str(await self.factory.course_revision(course_id))},
         )  # fmt: skip
 
     async def assign(

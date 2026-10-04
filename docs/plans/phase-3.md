@@ -1,6 +1,6 @@
 # Phase 3 — Quizzes and full assignments
 
-**Status: approved (2026-10-04); step 1 locally verified, awaiting pushed CI.** Decisions D1–D7 and
+**Status: approved (2026-10-04); step 1 complete, step 2 locally verified, awaiting pushed CI.** Decisions D1–D7 and
 the security repair below include the user's approved revisions.
 
 **Baseline:** `4f7d00826e368b9dbd7ce1635332a8b1d93dedb7`, the peeled
@@ -739,31 +739,59 @@ approval before coding that step; steps 6 and 7 use its guidelines/components.
 
 ## 14. Implementation record
 
-No build steps completed. After each green pushed step, report its full SHA and
+Step 1 completed with green pushed CI. After each green pushed step, report its full SHA and
 CI URL in the step summary; carry known commit/run records into this table in
 the next plan update. Do not invent a self-referential commit SHA or a CI URL
 before the commit/run exists. The close-out summary records its own final run.
 
-| Step | Status                                            | Commit | CI run |
-| ---- | ------------------------------------------------- | ------ | ------ |
-| 1    | Local gates passed; completion requires pushed CI | —      | —      |
-| 2    | Not started                                       | —      | —      |
-| 3    | Not started                                       | —      | —      |
-| 4    | Not started                                       | —      | —      |
-| 5    | Not started                                       | —      | —      |
-| 6    | Not started                                       | —      | —      |
-| 7    | Not started                                       | —      | —      |
-| 8    | Not started                                       | —      | —      |
-| 9    | Not started                                       | —      | —      |
+| Step | Status      | Commit                                     | CI run                                                                                   |
+| ---- | ----------- | ------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| 1    | Complete    | `99b59e7b3e8d284fafce9fb40ef9533d20b503a9` | [37220970826](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37220970826) |
+| 2    | In progress | —                                          | —                                                                                        |
+| 3    | Not started | —                                          | —                                                                                        |
+| 4    | Not started | —                                          | —                                                                                        |
+| 5    | Not started | —                                          | —                                                                                        |
+| 6    | Not started | —                                          | —                                                                                        |
+| 7    | Not started | —                                          | —                                                                                        |
+| 8    | Not started | —                                          | —                                                                                        |
+| 9    | Not started | —                                          | —                                                                                        |
 
 ### Deviations
 
 D1–D7 are approved as recorded above. Record implementation deviations as they occur.
 
+Step 1: none outside the approved decisions and security repair.
+
+Step 2: no product or architecture deviations. Existing placeholder-only builder
+and progress test setup now uses `lab`, preserving its assertions and timeouts:
+quiz is required by default and an unsaved definition must block publication.
+The step adds explicit raw-SQL draft joins and payload assertions, plus an
+upgrade regression that inserts a real v1 grade event on 0011, reproduces its
+cross-student leak and proves 0012 hides it while preserving the owner's access.
+The CourseApi revision helper now includes publishing, retaining the foreign-org
+404 assertion with a valid conditional header. The MATRIX static builder now
+returns a fresh request dictionary so its role
+loop cannot consume another role's If-Match header. No assertion is weakened.
+No answer Redis cache or response version parameter has been introduced.
+
+Step 2 also adds migration 0013 for lower(name)/lower(prompt) trigram GIN
+search indexes and the bank/archive/id cursor index; the pg_trgm extension is
+already installed by 0002. This implements the binding indexing rule for the
+new authoring filters and introduces no new table, event or product behavior.
+
+Publication supplies a database timestamp to immutable quiz-version INSERTs:
+the STABLE readability helper cannot see the new row during implicit INSERT
+RETURNING. This avoids that lookup without broadening SELECT policies. Batched
+content-source hooks resolve and copy question/key data within assessments;
+the course is locked before the referenced banks. Manual sets are bounded at
+100 questions, draws at 100 and each eligible frozen pool at 1,000; author lists
+remain cursor endpoints. Larger eligible pools require narrower skill filters.
+
 ### Security repairs
 
 - Step 1: approved sensitive-learning-event outbox SELECT repair, including existing
-  `assignment_graded` v1 rows. Commit SHA and CI run will be recorded after they exist.
+  `assignment_graded` v1 rows. Shipped in `99b59e7b3e8d284fafce9fb40ef9533d20b503a9`,
+  [green CI 37220970826](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37220970826).
 
 ### Step 1 implementation
 
@@ -790,6 +818,41 @@ D1–D7 are approved as recorded above. Record implementation deviations as they
   do not complete this step. No implementation deviation outside the approved
   changes was needed.
 
+### Step 2 implementation
+
+- Added 14 endpoint methods for cursor-paginated bank/question authoring,
+  skill tagging, course quiz definitions and safe published-question preview.
+  Each has a MATRIX row and an access-control entry. All nine write methods,
+  including course publication, have separate-connection visibility tests and
+  missing/stale If-Match rollback tests. Bank/question writes use bank revisions;
+  quiz edits and publication use course revisions. First-party publish callers
+  now send the required header.
+- Quiz lessons default to required and store exactly `{quiz_id}`. Publication
+  blocks unfinished definitions, locks the course before its referenced banks,
+  and freezes immutable prompts, options, marks, tags and private grading keys.
+  Public preview/snapshots/audits exclude keys and explanations. Structural and
+  private grading changes appear in publish preview and require a major release;
+  cosmetic edits remain minor-safe. Modules interact through service hooks.
+- Migration `0013` adds the authoring filter/search indexes recorded above.
+  Security coverage now explicitly tests draft-key joins and an actual historical
+  v1 outbox row inserted before the security migration. The tests exercise raw
+  SQL with the app role independently of HTTP and response schemas.
+- Checks run personally: `make gen-api`, `make lint` (lint, format and strict
+  type-checks), `make migrate`, `uv run alembic check` and the production web
+  build **passed**. Final full `make test` **passed**: API **1,465 passed**,
+  Vitest **157 passed**, Playwright **41 passed / 7 existing intentional skips /
+  0 failures**. Playwright used the host production web server against the real
+  compose services. Focused MATRIX coverage and route completeness also passed.
+- Verification repairs: placeholder fixtures use `lab`, and conditional-header
+  helpers retain the original assertions, as recorded under Deviations. An
+  earlier Playwright run encountered login rate limiting because the host launch
+  omitted the existing configured auth limit; exporting that setting restored
+  the intended local configuration. No application rate limit, assertion or
+  timeout was changed for this issue.
+- Local gates do not complete the step. The exact commit, push result and green
+  CI URL are reported in the step summary and carried into the table at the next
+  authorized plan update. No later step has started.
+
 ### Open follow-ups / carried forward
 
 - Plagiarism detection, AI feedback and coding labs remain outside this brief;
@@ -814,5 +877,6 @@ formatting), `git diff --check` and the untracked plan's
 The tracked check exited 0; the no-index comparison exited 1 for the new-file
 difference and emitted no whitespace warnings.
 At the initial planning gate only this plan was added; implementation checks,
-commit, push and CI had not run. The approved step 1 is now in progress; its
-checks and CI result will be reported after the per-step gates run.
+commit, push and CI had not run. Step 1 subsequently passed its local and pushed-CI gates (recorded above).
+Step 2 is authorized and its final gate results are recorded in its implementation
+entry and step summary; later steps remain gated on the user's "continue".

@@ -382,6 +382,24 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/courses/{course_id}/lessons/{lesson_id}/quiz": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Quiz */
+    get: operations["get_draft_quiz"];
+    /** Put Quiz */
+    put: operations["put_draft_quiz"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/courses/{course_id}/lessons/{lesson_id}/skills": {
     parameters: {
       query?: never;
@@ -661,6 +679,23 @@ export interface paths {
      *     course (owner-org editors; org admins and instructors of an assigned org).
      */
     get: operations["get_version_video"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/courses/{course_id}/versions/{version_id}/lessons/{lesson_id}/quiz": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Published Quiz */
+    get: operations["preview_published_quiz"];
     put?: never;
     post?: never;
     delete?: never;
@@ -1404,6 +1439,97 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/question-banks": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Banks */
+    get: operations["list_question_banks"];
+    put?: never;
+    /** Create Bank */
+    post: operations["create_question_bank"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/question-banks/{bank_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Bank */
+    get: operations["get_question_bank"];
+    put?: never;
+    post?: never;
+    /** Archive Bank */
+    delete: operations["archive_question_bank"];
+    options?: never;
+    head?: never;
+    /** Update Bank */
+    patch: operations["update_question_bank"];
+    trace?: never;
+  };
+  "/api/v1/question-banks/{bank_id}/questions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Questions */
+    get: operations["list_bank_questions"];
+    put?: never;
+    /** Create Question */
+    post: operations["create_bank_question"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/questions/{question_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Question */
+    get: operations["get_author_question"];
+    put?: never;
+    post?: never;
+    /** Archive Question */
+    delete: operations["archive_author_question"];
+    options?: never;
+    head?: never;
+    /** Update Question */
+    patch: operations["update_author_question"];
+    trace?: never;
+  };
+  "/api/v1/questions/{question_id}/skills": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Set Skills */
+    put: operations["replace_question_skills"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/skills": {
     parameters: {
       query?: never;
@@ -1562,6 +1688,21 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /**
+     * AnswerKey
+     * @description Private author/grading data. Never an active-question field.
+     */
+    AnswerKey: {
+      /** Accepted Answers */
+      accepted_answers?: string[];
+      /**
+       * Case Sensitive
+       * @default false
+       */
+      case_sensitive: boolean;
+      /** Correct Option Ids */
+      correct_option_ids?: string[];
+    };
     /** AssignmentCell */
     AssignmentCell: {
       /** Max Marks */
@@ -1721,6 +1862,90 @@ export interface components {
       target_id: string | null;
       /** Target Type */
       target_type: string;
+    };
+    /** BankCreate */
+    BankCreate: {
+      /**
+       * Description
+       * @default
+       */
+      description: string;
+      /** Name */
+      name: string;
+    };
+    /** BankOut */
+    BankOut: {
+      /** Archived At */
+      archived_at: string | null;
+      /**
+       * Description
+       * @default
+       */
+      description: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /**
+       * Organization Id
+       * Format: uuid
+       */
+      organization_id: string;
+      /** Revision */
+      revision: number;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
+    };
+    /** BankPatch */
+    BankPatch: {
+      /** Description */
+      description?: string | null;
+      /** Name */
+      name?: string | null;
+    };
+    /** BankSelection */
+    "BankSelection-Input": {
+      /**
+       * Bank Id
+       * Format: uuid
+       */
+      bank_id: string;
+      /** Draw Count */
+      draw_count: number;
+      /** Marks Per Question */
+      marks_per_question: number | string;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      mode: "bank";
+      /** Skill Ids */
+      skill_ids?: string[];
+    };
+    /** BankSelection */
+    "BankSelection-Output": {
+      /**
+       * Bank Id
+       * Format: uuid
+       */
+      bank_id: string;
+      /** Draw Count */
+      draw_count: number;
+      /** Marks Per Question */
+      marks_per_question: string;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      mode: "bank";
+      /** Skill Ids */
+      skill_ids?: string[];
     };
     /** BatchCourseSummary */
     BatchCourseSummary: {
@@ -1980,6 +2205,16 @@ export interface components {
        */
       next_cursor: string | null;
     };
+    /** CursorPage[BankOut] */
+    CursorPage_BankOut_: {
+      /** Items */
+      items: components["schemas"]["BankOut"][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for the next page; null when there are no more items.
+       */
+      next_cursor: string | null;
+    };
     /** CursorPage[BatchCourseSummary] */
     CursorPage_BatchCourseSummary_: {
       /** Items */
@@ -2114,6 +2349,16 @@ export interface components {
     CursorPage_PlatformUserOut_: {
       /** Items */
       items: components["schemas"]["PlatformUserOut"][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for the next page; null when there are no more items.
+       */
+      next_cursor: string | null;
+    };
+    /** CursorPage[QuestionOut] */
+    CursorPage_QuestionOut_: {
+      /** Items */
+      items: components["schemas"]["QuestionOut"][];
       /**
        * Next Cursor
        * @description Opaque cursor for the next page; null when there are no more items.
@@ -2668,6 +2913,26 @@ export interface components {
        */
       status: "ok";
     };
+    /** ManualSelection */
+    "ManualSelection-Input": {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      mode: "manual";
+      /** Questions */
+      questions: components["schemas"]["QuestionMarks-Input"][];
+    };
+    /** ManualSelection */
+    "ManualSelection-Output": {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      mode: "manual";
+      /** Questions */
+      questions: components["schemas"]["QuestionMarks-Output"][];
+    };
     /** MeResponse */
     MeResponse: {
       /** Active Organization Id */
@@ -3068,6 +3333,7 @@ export interface components {
         | "video_not_ready"
         | "pdf_not_ready"
         | "assignment_not_ready"
+        | "quiz_not_ready"
         | "course_archived";
       /** Lesson Ids */
       lesson_ids?: string[];
@@ -3114,6 +3380,260 @@ export interface components {
       max_marks: number;
       /** Submission Kinds */
       submission_kinds: ("file" | "text")[];
+      /** Title */
+      title: string;
+    };
+    /** PublishedQuiz */
+    PublishedQuiz: {
+      /** Attempts Allowed */
+      attempts_allowed: number;
+      /**
+       * Course Version Id
+       * Format: uuid
+       */
+      course_version_id: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Lesson Id
+       * Format: uuid
+       */
+      lesson_id: string;
+      /** Max Marks */
+      max_marks: string;
+      /** Pass Marks */
+      pass_marks: string;
+      /** Questions */
+      questions: components["schemas"]["QuestionPrompt"][];
+      /**
+       * Quiz Id
+       * Format: uuid
+       */
+      quiz_id: string;
+      /** Randomize Order */
+      randomize_order: boolean;
+      /**
+       * Reveal Mode
+       * @enum {string}
+       */
+      reveal_mode: "score_only" | "correct_answers" | "explanations";
+      /**
+       * Reveal Timing
+       * @enum {string}
+       */
+      reveal_timing: "immediately" | "after_attempts_exhausted";
+      /**
+       * Selection Mode
+       * @enum {string}
+       */
+      selection_mode: "manual" | "bank";
+      /** Time Limit Seconds */
+      time_limit_seconds: number;
+      /** Title */
+      title: string;
+    };
+    /** QuestionBody */
+    QuestionBody: {
+      answer_key: components["schemas"]["AnswerKey"];
+      /**
+       * Explanation
+       * @default
+       */
+      explanation: string;
+      /** Options */
+      options?: components["schemas"]["QuestionOption"][];
+      /** Prompt */
+      prompt: string;
+      /**
+       * Question Type
+       * @enum {string}
+       */
+      question_type: "mcq_single" | "mcq_multi" | "fill_blank";
+    };
+    /** QuestionMarks */
+    "QuestionMarks-Input": {
+      /** Marks */
+      marks: number | string;
+      /**
+       * Question Id
+       * Format: uuid
+       */
+      question_id: string;
+    };
+    /** QuestionMarks */
+    "QuestionMarks-Output": {
+      /** Marks */
+      marks: string;
+      /**
+       * Question Id
+       * Format: uuid
+       */
+      question_id: string;
+    };
+    /** QuestionOption */
+    QuestionOption: {
+      /** Id */
+      id: string;
+      /** Text */
+      text: string;
+    };
+    /** QuestionOut */
+    QuestionOut: {
+      answer_key: components["schemas"]["AnswerKey"];
+      /** Archived At */
+      archived_at: string | null;
+      /**
+       * Bank Id
+       * Format: uuid
+       */
+      bank_id: string;
+      /** Bank Revision */
+      bank_revision: number;
+      /**
+       * Explanation
+       * @default
+       */
+      explanation: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Options */
+      options?: components["schemas"]["QuestionOption"][];
+      /** Prompt */
+      prompt: string;
+      /**
+       * Question Type
+       * @enum {string}
+       */
+      question_type: "mcq_single" | "mcq_multi" | "fill_blank";
+      /** Revision */
+      revision: number;
+      /** Skill Ids */
+      skill_ids: string[];
+    };
+    /** QuestionPatch */
+    QuestionPatch: {
+      answer_key?: components["schemas"]["AnswerKey"] | null;
+      /** Explanation */
+      explanation?: string | null;
+      /** Options */
+      options?: components["schemas"]["QuestionOption"][] | null;
+      /** Prompt */
+      prompt?: string | null;
+      /** Question Type */
+      question_type?: ("mcq_single" | "mcq_multi" | "fill_blank") | null;
+    };
+    /** QuestionPrompt */
+    QuestionPrompt: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Marks */
+      marks: string;
+      /** Options */
+      options?: components["schemas"]["QuestionOption"][];
+      /** Prompt */
+      prompt: string;
+      /**
+       * Question Type
+       * @enum {string}
+       */
+      question_type: "mcq_single" | "mcq_multi" | "fill_blank";
+      /** Skill Ids */
+      skill_ids?: string[];
+    };
+    /** QuestionSkills */
+    QuestionSkills: {
+      /** Skill Ids */
+      skill_ids: string[];
+    };
+    /** QuizBody */
+    QuizBody: {
+      /** Attempts Allowed */
+      attempts_allowed: number;
+      /** Pass Marks */
+      pass_marks: number | string;
+      /**
+       * Randomize Order
+       * @default false
+       */
+      randomize_order: boolean;
+      /**
+       * Reveal Mode
+       * @default score_only
+       * @enum {string}
+       */
+      reveal_mode: "score_only" | "correct_answers" | "explanations";
+      /**
+       * Reveal Timing
+       * @default immediately
+       * @enum {string}
+       */
+      reveal_timing: "immediately" | "after_attempts_exhausted";
+      /** Selection */
+      selection:
+        | components["schemas"]["ManualSelection-Input"]
+        | components["schemas"]["BankSelection-Input"];
+      /** Time Limit Seconds */
+      time_limit_seconds: number;
+      /** Title */
+      title: string;
+    };
+    /** QuizOut */
+    QuizOut: {
+      /** Attempts Allowed */
+      attempts_allowed: number;
+      /**
+       * Course Id
+       * Format: uuid
+       */
+      course_id: string;
+      /** Course Revision */
+      course_revision: number;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Lesson Id
+       * Format: uuid
+       */
+      lesson_id: string;
+      /** Max Marks */
+      max_marks: string;
+      /** Pass Marks */
+      pass_marks: string;
+      /**
+       * Randomize Order
+       * @default false
+       */
+      randomize_order: boolean;
+      /**
+       * Reveal Mode
+       * @default score_only
+       * @enum {string}
+       */
+      reveal_mode: "score_only" | "correct_answers" | "explanations";
+      /**
+       * Reveal Timing
+       * @default immediately
+       * @enum {string}
+       */
+      reveal_timing: "immediately" | "after_attempts_exhausted";
+      /** Selection */
+      selection:
+        | components["schemas"]["ManualSelection-Output"]
+        | components["schemas"]["BankSelection-Output"];
+      /** Time Limit Seconds */
+      time_limit_seconds: number;
       /** Title */
       title: string;
     };
@@ -3192,7 +3712,10 @@ export interface components {
         | "lessons_added"
         | "lessons_removed"
         | "lessons_reordered"
-        | "lesson_settings_changed";
+        | "lesson_settings_changed"
+        | "quiz_structure_changed"
+        | "quiz_grading_changed"
+        | "assignment_structure_changed";
       /** Lesson Ids */
       lesson_ids?: string[];
     };
@@ -4956,6 +5479,99 @@ export interface operations {
       };
     };
   };
+  get_draft_quiz: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        course_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["QuizOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  put_draft_quiz: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        "If-Match"?: string | null;
+      };
+      path: {
+        course_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["QuizBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["QuizOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
   set_lesson_skills: {
     parameters: {
       query?: never;
@@ -5538,6 +6154,8 @@ export interface operations {
       header?: {
         /** @description Active organization for this request (from the org switcher). */
         "x-organization-id"?: string | null;
+        /** @description The course revision this edit is based on */
+        "If-Match"?: string | null;
       };
       path: {
         course_id: string;
@@ -5736,6 +6354,51 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["PlaybackOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  preview_published_quiz: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        course_id: string;
+        version_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublishedQuiz"];
         };
       };
       /** @description Client error */
@@ -7743,6 +8406,508 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  list_question_banks: {
+    parameters: {
+      query?: {
+        q?: string | null;
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_BankOut_"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  create_question_bank: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        "If-Match"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BankCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BankOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_question_bank: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        bank_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BankOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  archive_question_bank: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        "If-Match"?: string | null;
+      };
+      path: {
+        bank_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  update_question_bank: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        "If-Match"?: string | null;
+      };
+      path: {
+        bank_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BankPatch"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BankOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  list_bank_questions: {
+    parameters: {
+      query?: {
+        q?: string | null;
+        question_type?: ("mcq_single" | "mcq_multi" | "fill_blank") | null;
+        skill_ids?: string[] | null;
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        bank_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_QuestionOut_"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  create_bank_question: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        "If-Match"?: string | null;
+      };
+      path: {
+        bank_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["QuestionBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["QuestionOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_author_question: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        question_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["QuestionOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  archive_author_question: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        "If-Match"?: string | null;
+      };
+      path: {
+        question_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  update_author_question: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        "If-Match"?: string | null;
+      };
+      path: {
+        question_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["QuestionPatch"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["QuestionOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  replace_question_skills: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        "If-Match"?: string | null;
+      };
+      path: {
+        question_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["QuestionSkills"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["QuestionOut"];
+        };
       };
       /** @description Client error */
       "4XX": {

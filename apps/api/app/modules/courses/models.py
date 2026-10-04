@@ -46,7 +46,7 @@ class LessonType(StrEnum):
     ASSIGNMENT = "assignment"
 
 
-PLACEHOLDER_LESSON_TYPES = frozenset({LessonType.QUIZ, LessonType.LAB})
+PLACEHOLDER_LESSON_TYPES = frozenset({LessonType.LAB})
 
 lesson_type_enum = Enum(
     LessonType,

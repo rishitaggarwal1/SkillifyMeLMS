@@ -1,10 +1,11 @@
-"""Lesson content that lives in another module (assignments): how publishing gets it.
+"""Publishing hooks for lesson content owned by assignments and assessments.
 
 The courses module owns the draft outline and publishing; the assignments module owns assignment
 definitions and depends on courses. So that courses never imports assignments, a module provides
 a `LessonContentSource` for its lesson type and `app.wiring` registers it. Publishing asks the
 source for each lesson's published content; a lesson missing from the answer isn't ready and
-blocks publishing.
+blocks publishing. Sources also lock dependencies, supply safe structural metadata,
+compare private grading rules, and persist immutable copies in the publication transaction.
 
 **Fail closed:** if a course has lessons of a sourced type and no source is registered (even after
 loading `app.wiring`), `required_source` raises `ContentSourceMissingError` (500). Publishing
@@ -21,9 +22,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import AppError
 from app.core.logging import get_logger
 from app.modules.courses.models import LessonType
+from app.modules.courses.schemas import StructuralChange
 
 
 class LessonContentSource(Protocol):
+    async def lock(self, session: AsyncSession, lesson_ids: Sequence[UUID]) -> None: ...
+
+    async def structural(
+        self, session: AsyncSession, lesson_ids: Sequence[UUID]
+    ) -> dict[UUID, dict[str, Any]]: ...
+
+    async def changes(
+        self, session: AsyncSession, previous_version_id: UUID, lesson_ids: Sequence[UUID]
+    ) -> list[StructuralChange]: ...
+
+    async def publish(
+        self, session: AsyncSession, version_id: UUID, major: int, lesson_ids: Sequence[UUID]
+    ) -> None: ...
+
     async def published(
         self, session: AsyncSession, lesson_ids: Sequence[UUID]
     ) -> dict[UUID, dict[str, Any]]:
@@ -39,7 +55,7 @@ class ContentSourceMissingError(AppError):
 
 
 # Lesson types whose content another module provides.
-SOURCED_TYPES = frozenset({LessonType.ASSIGNMENT})
+SOURCED_TYPES = frozenset({LessonType.ASSIGNMENT, LessonType.QUIZ})
 
 logger = get_logger(__name__)
 _SOURCES: dict[LessonType, LessonContentSource] = {}

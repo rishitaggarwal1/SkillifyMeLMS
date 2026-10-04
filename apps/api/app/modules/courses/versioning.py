@@ -68,6 +68,7 @@ def build_snapshot(
     video_durations: Mapping[UUID, int | None],
     *,
     sourced_content: Mapping[UUID, dict[str, Any]] | None = None,
+    assessment_structure: Mapping[UUID, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """`sourced_content` replaces the published content of lessons whose content lives in another
     module (assignments; see `content_sources`)."""
@@ -91,6 +92,11 @@ def build_snapshot(
             else published_content(lesson.lesson_type, lesson.content),
             "skill_ids": [str(s) for s in skill_ids.get(lesson.id, [])],
             "video_duration_seconds": video_durations.get(UUID(video_id)) if video_id else None,
+            **(
+                {"assessment_structure": assessment_structure[lesson.id]}
+                if assessment_structure and lesson.id in assessment_structure
+                else {}
+            ),
         }
 
     return {
@@ -164,4 +170,33 @@ def structural_changes(
     changed = [UUID(i) for i in common if settings(old[i][1]) != settings(new[i][1])]
     if changed:
         changes.append(StructuralChange(code="lesson_settings_changed", lesson_ids=changed))
+    quiz_changes = [
+        UUID(i)
+        for i in common
+        if new[i][1]["lesson_type"] == LessonType.QUIZ.value
+        and old[i][1].get("assessment_structure") != new[i][1].get("assessment_structure")
+    ]
+    if quiz_changes:
+        changes.append(StructuralChange(code="quiz_structure_changed", lesson_ids=quiz_changes))
+
+    def assignment_structure(lesson: Mapping[str, Any]) -> tuple[Any, ...]:
+        content = lesson.get("content") or {}
+        rubric = content.get("rubric") or []
+        criteria = rubric.get("criteria", []) if isinstance(rubric, dict) else rubric
+        return (
+            content.get("max_marks"),
+            tuple(sorted(content.get("submission_kinds") or ())),
+            tuple(sorted((c["id"], str(c["max_marks"])) for c in criteria)),
+        )
+
+    assignment_changes = [
+        UUID(i)
+        for i in common
+        if new[i][1]["lesson_type"] == LessonType.ASSIGNMENT.value
+        and assignment_structure(old[i][1]) != assignment_structure(new[i][1])
+    ]
+    if assignment_changes:
+        changes.append(
+            StructuralChange(code="assignment_structure_changed", lesson_ids=assignment_changes)
+        )
     return changes

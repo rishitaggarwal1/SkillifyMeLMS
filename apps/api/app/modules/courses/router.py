@@ -231,9 +231,11 @@ async def publish_preview(ctx: RequestCtx, course_id: UUID) -> PublishPreview:
 @courses.post(
     "/{course_id}/versions", status_code=status.HTTP_201_CREATED, operation_id="publish_course"
 )
-async def publish(ctx: RequestCtx, course_id: UUID, body: PublishRequest) -> VersionOut:
+async def publish(
+    ctx: RequestCtx, course_id: UUID, body: PublishRequest, if_match: RequiredIfMatch
+) -> VersionOut:
     """Publish the draft as a new immutable version (minor or major)."""
-    return await service.publish(ctx, course_id, body)
+    return await service.publish(ctx, course_id, body, if_match)
 
 
 @courses.get("/{course_id}/versions", operation_id="list_course_versions")

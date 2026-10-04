@@ -76,6 +76,7 @@ from app.modules.courses.schemas import (
     PublishPreview,
     PublishRequest,
     RevisionOut,
+    StructuralChange,
     VersionDetail,
     VersionOut,
     VersionSummary,
@@ -680,6 +681,11 @@ async def _validate_content(
             "Set an assignment's details with PUT .../lessons/{lesson_id}/assignment.",
             code="assignment_content_managed_separately",
         )
+    if lesson_type == LessonType.QUIZ and clean:
+        raise UnprocessableError(
+            "Set a quiz's details with PUT .../lessons/{lesson_id}/quiz.",
+            code="quiz_content_managed_separately",
+        )
     if len(json.dumps(clean)) > MAX_NOTES_BYTES:
         raise UnprocessableError("The lesson content is too large.", code="content_too_large")
     if video_id := clean.get("video_asset_id"):
@@ -826,8 +832,9 @@ async def set_lesson_skills(
 
 
 # Publish blocker for a sourced lesson type whose content isn't ready.
-_NOT_READY: dict[LessonType, Literal["assignment_not_ready"]] = {
-    LessonType.ASSIGNMENT: "assignment_not_ready"
+_NOT_READY: dict[LessonType, Literal["assignment_not_ready", "quiz_not_ready"]] = {
+    LessonType.ASSIGNMENT: "assignment_not_ready",
+    LessonType.QUIZ: "quiz_not_ready",
 }
 
 
@@ -881,6 +888,7 @@ async def _draft(ctx: Ctx, course: Course) -> _Draft:
     # Lessons whose content another module holds (assignments) publish what it returns. No
     # registered source fails closed (ContentSourceMissingError), never skips the check.
     sourced: dict[UUID, dict[str, Any]] = {}
+    assessment_structure: dict[UUID, dict[str, Any]] = {}
     for lesson_type in content_sources.SOURCED_TYPES:
         ids = [x.id for x in lessons if x.lesson_type == lesson_type]
         if not ids:
@@ -888,13 +896,22 @@ async def _draft(ctx: Ctx, course: Course) -> _Draft:
         source = content_sources.required_source(lesson_type)
         found = await source.published(ctx.session, ids)
         sourced.update(found)
+        assessment_structure.update(await source.structural(ctx.session, ids))
         missing = [lesson_id for lesson_id in ids if lesson_id not in found]
         if missing:
             blockers.append(PublishBlocker(code=_NOT_READY[lesson_type], lesson_ids=missing))
 
     durations = {vid: info.duration_seconds for vid, info in videos.items()}
     return _Draft(
-        snapshot=build_snapshot(course, modules, lessons, tags, durations, sourced_content=sourced),
+        snapshot=build_snapshot(
+            course,
+            modules,
+            lessons,
+            tags,
+            durations,
+            sourced_content=sourced,
+            assessment_structure=assessment_structure,
+        ),
         lessons=lessons,
         module_positions={m.id: m.position for m in modules},
         video_durations=durations,
@@ -913,6 +930,7 @@ async def publish_preview(ctx: Ctx, course_id: UUID) -> PublishPreview:
             structural_changes=[], blockers=draft.blockers,
         )  # fmt: skip
     changes = structural_changes(latest.snapshot, draft.snapshot)
+    changes.extend(await _private_changes(ctx, latest.id, draft.lessons))
     return PublishPreview(
         is_first_release=False,
         next_major=version_label(latest.major + 1, 0),
@@ -923,11 +941,31 @@ async def publish_preview(ctx: Ctx, course_id: UUID) -> PublishPreview:
     )
 
 
-async def publish(ctx: Ctx, course_id: UUID, data: PublishRequest) -> VersionOut:
+async def _private_changes(
+    ctx: Ctx, previous_version_id: UUID, lessons: Sequence[Lesson]
+) -> list[StructuralChange]:
+    changes: list[StructuralChange] = []
+    for kind in content_sources.SOURCED_TYPES:
+        ids = [lesson.id for lesson in lessons if lesson.lesson_type == kind]
+        if ids:
+            changes.extend(
+                await content_sources.required_source(kind).changes(
+                    ctx.session, previous_version_id, ids
+                )
+            )
+    return changes
+
+
+async def publish(ctx: Ctx, course_id: UUID, data: PublishRequest, if_match: int) -> VersionOut:
     """Snapshot the draft as an immutable version. The first release is always 1.0; after that a
     minor (content corrections only) is rejected if anything structural changed."""
     course = await _editable(ctx, course_id)
-    await _bump(ctx, course, None)  # locks the course: concurrent publishes serialize
+    await _bump(ctx, course, if_match)  # course lock before assessment bank locks
+    lessons = await DraftRepository(ctx.session).lessons(course.id)
+    for kind in content_sources.SOURCED_TYPES:
+        ids = [lesson.id for lesson in lessons if lesson.lesson_type == kind]
+        if ids:
+            await content_sources.required_source(kind).lock(ctx.session, ids)
     draft = await _draft(ctx, course)
     if draft.blockers:
         raise ConflictError(
@@ -943,6 +981,7 @@ async def publish(ctx: Ctx, course_id: UUID, data: PublishRequest) -> VersionOut
         major, minor, release_type = latest.major + 1, 0, ReleaseType.MAJOR
     else:
         changes = structural_changes(latest.snapshot, draft.snapshot)
+        changes.extend(await _private_changes(ctx, latest.id, draft.lessons))
         if changes:
             raise ConflictError(
                 "Structural changes need a major version.",
@@ -982,6 +1021,10 @@ async def publish(ctx: Ctx, course_id: UUID, data: PublishRequest) -> VersionOut
         for lesson in draft.lessons
     ]
     version = await versions.create(version, rows)
+    for kind in content_sources.SOURCED_TYPES:
+        ids = [lesson.id for lesson in draft.lessons if lesson.lesson_type == kind]
+        if ids:
+            await content_sources.required_source(kind).publish(ctx.session, version.id, major, ids)
     await CourseRepository(ctx.session).update(course.id, {"current_version_id": version.id})
     await _update_catalog(ctx, course, version, draft)
     events.course_published(ctx.session, version, is_public_catalog=course.is_public_catalog)
