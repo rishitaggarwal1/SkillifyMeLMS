@@ -43,6 +43,8 @@ async function findDemoCourse(scope: Page | Locator, list: Locator): Promise<Loc
   const course = list.getByText("Python Foundations").first();
   const loadMore = scope.getByRole("button", { name: "Load more" });
   const items = list.getByRole("listitem");
+  // The list container appears before its first query finishes; wait before checking pagination.
+  await expect(items.first()).toBeVisible();
   for (let pages = 0; pages < 20 && !(await course.isVisible()); pages++) {
     if (!(await loadMore.isVisible())) break;
     const before = await items.count();

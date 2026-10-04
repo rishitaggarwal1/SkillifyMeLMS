@@ -38,7 +38,7 @@ def create_sessionmaker(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]
 
 
 async def get_db_session(request: Request) -> AsyncIterator[AsyncSession]:
-    """One transaction per request: commit on success, roll back on any exception.
+    """One transaction per request: commit before the response, roll back on any exception.
 
     Tenant context (app.current_org / app.current_user) is transaction-scoped, so it must be set
     inside this transaction via `app.db.tenancy.set_tenant_context`.
@@ -52,7 +52,9 @@ async def get_db_session(request: Request) -> AsyncIterator[AsyncSession]:
             await callback()
 
 
-DbSession = Annotated[AsyncSession, Depends(get_db_session)]
+# Request-scoped yield cleanup runs after the response has been sent. Function scope makes
+# writes durable before success headers and lets commit errors reach the error middleware.
+DbSession = Annotated[AsyncSession, Depends(get_db_session, scope="function")]
 
 
 # ---------------------------------------------------------------------------- after-commit hooks
