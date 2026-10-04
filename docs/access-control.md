@@ -158,7 +158,7 @@ org.
 | batch_members | Staff; students see only their own rows | org_admin, and only for members of that org (the batch must belong to it: composite FK) |
 | invitations, import_jobs, import_job_errors | org_admin | org_admin |
 | audit_log | org_admin of the active org; platform admins | Any member, only as themselves; **no UPDATE or DELETE** (append-only) |
-| outbox_events | The active org's events | Insert for the active org; only the relay role (`skillify_relay`) can mark events published |
+| outbox_events                                                                | Active org; sensitive learning events additionally require the owning student or the student's org's instructor/org_admin (platform override). Covers historical assignment_graded v1 rows           | Insert for the active org; legitimate student INSERT/RETURNING remains allowed; only the relay role (`skillify_relay`) can mark events published                                                                                                                                     |
 | skills | Everyone (global taxonomy) | Platform admins, and org_admin / instructor / lab_author of a **content-publisher** org |
 | courses | Owner-org editors*; readers through an assignment** | Owner-org editors* |
 | course_modules, lessons, lesson_skills (the draft) | Owner-org editors* only | Owner-org editors* |
@@ -170,6 +170,12 @@ org.
 | assignments (draft definitions, owner org) | Owner-org editors* only; students and graders read the published copy in the version | Owner-org editors* |
 | assignment_submissions, assignment_grades (the student's org) | The student (own); the org's instructors and org_admins; platform admins | Submissions: the student (own, only while `submitted`, only into their own active enrollment); graders mark them graded. Grades: graders only. No DELETE except platform admins |
 | catalog_entries | Everyone | Owner-org editors* |
+| question_banks, questions, question_skills, question_keys (draft, owner org) | Owner-org instructors/org_admins and platform admins only; students never read draft keys or explanations                                                                                            | Same editors; skill links are replace-by-delete/insert                                                                                                                                                                                                                               |
+| quizzes (draft, owner org)                                                   | Owner-org editors only                                                                                                                                                                               | Same editors                                                                                                                                                                                                                                                                         |
+| quiz_versions (published, owner org)                                         | Owner editors, assigned-org reader staff, or an active enrolled student with the matching major and current batch access                                                                             | Owner editors INSERT; no app-role UPDATE/DELETE                                                                                                                                                                                                                                      |
+| quiz_version_questions (published public prompts)                            | Reader staff; students only the questions selected for an accessible own attempt                                                                                                                     | Owner editors INSERT; no app-role UPDATE/DELETE                                                                                                                                                                                                                                      |
+| quiz_version_keys (published private keys/explanations)                      | Owner-org editors only, including after submission; controlled solutions require the narrow reveal function                                                                                          | Owner editors INSERT; no app-role UPDATE/DELETE                                                                                                                                                                                                                                      |
+| quiz_attempts, quiz_answers (student org)                                    | Owning active student with current batch access; student's org instructor/org_admin; platform admins. Publisher staff cannot read another org's work                                                 | Direct app-role INSERT/UPDATE/DELETE revoked; guarded runtime mutation functions ship in step 3                                                                                                                                                                                      |
 
 \* **Editors**: `instructor` or `org_admin` of the course's owner org, acting in that org, or platform
 admins.
@@ -182,6 +188,33 @@ admins.
 Helper functions for courses: `app.course_readable(course)` (the reader rule above) and
 `app.is_org_grant(grant, course, org)` (used by the narrowing policy). Both are `SECURITY DEFINER`,
 so policies on `courses` and `course_assignments` don't recurse into each other.
+
+**Assessment SQL interfaces (migration 0012, Phase 3 step 1):**
+
+- Enrollment ownership interface `app.learning_event_owned(enrollment, org)` checks
+  the enrollment's actual org/user plus active membership, rather than trusting an
+  outbox payload's user_id. The outbox app-role SELECT policy restricts all enrollment
+  and video-progress aggregates and named learning events, independent of event version.
+  Staff require instructor/org_admin in the student's org. The relay's separate policies
+  and grants remain intact; other nonlearning events retain their previous org scope.
+- `app.quiz_version_readable(version)` checks the course-version/lesson identity and
+  permits reader staff or the student's active enrollment, pinned major and current
+  batch grant. `app.quiz_attempt_readable(attempt)` also verifies enrollment/student/org,
+  course/lesson/version identity. `app.quiz_question_readable(question)` restricts
+  students to the stored selected question manifest, avoiding disclosure of a bank's pool.
+- `app.quiz_reveal_allowed(attempt)` and `app.quiz_attempt_solutions(attempt)` require
+  the owning currently authorized student and a submitted attempt. score_only returns
+  no keys; correct_answers returns no explanations; explanations permits both. With
+  after_attempts_exhausted, the same enrollment/lesson/major must have used its full
+  allowance and have no active attempt. Defaults are score_only / immediately.
+  Both functions read immutable per-attempt publication rules. Response models
+  independently enforce the same mode/timing rules and reject nested secret fields.
+
+Every helper has fixed `search_path = pg_catalog, public`, SECURITY DEFINER,
+PUBLIC execution revoked and execution granted only to `skillify_app`. These are
+documented cross-module policy interfaces; application modules still communicate only
+through service interfaces. No HTTP endpoints are introduced by the foundation step;
+the existing endpoint MATRIX remains complete.
 
 `app.video_readable(asset)` additionally checks the current student's active enrollment, pinned
 major, latest minor and current assignment. Playback services first authorize the enrollment and

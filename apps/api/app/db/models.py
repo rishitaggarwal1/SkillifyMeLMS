@@ -2,6 +2,18 @@
 
 from app.db.base import Base
 from app.db.outbox import OutboxEvent
+from app.modules.assessments.models import (
+    Question,
+    QuestionBank,
+    QuestionKey,
+    QuestionSkill,
+    Quiz,
+    QuizAnswer,
+    QuizAttempt,
+    QuizVersion,
+    QuizVersionKey,
+    QuizVersionQuestion,
+)
 from app.modules.assignments.models import Assignment, AssignmentGrade, AssignmentSubmission
 from app.modules.audit.models import AuditLog
 from app.modules.courses.models import (
@@ -52,6 +64,16 @@ __all__ = [
     "Membership",
     "Organization",
     "OutboxEvent",
+    "Question",
+    "QuestionBank",
+    "QuestionKey",
+    "QuestionSkill",
+    "Quiz",
+    "QuizAnswer",
+    "QuizAttempt",
+    "QuizVersion",
+    "QuizVersionKey",
+    "QuizVersionQuestion",
     "Skill",
     "StoredFile",
     "User",
