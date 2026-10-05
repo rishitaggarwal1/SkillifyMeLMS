@@ -26,6 +26,7 @@ from app.modules.assessments.models import (
     QuestionKey,
     Quiz,
     QuizVersion,
+    QuizVersionKey,
     QuizVersionQuestion,
 )
 from app.modules.identity.models import Organization, User
@@ -1067,6 +1068,131 @@ MATRIX.extend(
             STAFF_READ,
             lambda w: _assessment(w, "published"),
             names_resource=True,
+        ),
+    ]
+)
+
+
+async def _quiz_runtime(w: World, action: str) -> Request:
+    from app.modules.assessments.tests.conftest import save_attempt  # noqa: PLC0415
+
+    course = await w.factory.course(w.org)
+    module = await w.factory.module(course)
+    lesson = await w.factory.lesson(module, lesson_type="quiz")
+    version = await w.factory.version(course, lesson)
+    batch = await w.factory.batch(w.org)
+    await w.factory.add_to_batch(batch, w.users["student"])
+    await w.factory.assignment(course, w.org, batch=batch)
+    enrollment = await w.factory.enrollment(course, w.users["student"], w.org)
+    published = QuizVersion(
+        id=new_id(),
+        organization_id=w.org.id,
+        course_id=course.id,
+        lesson_id=lesson.id,
+        quiz_id=new_id(),
+        course_version_id=version.id,
+        major_version=1,
+        selection_mode="manual",
+        selection={},
+        max_marks=1,
+        pass_marks=1,
+        time_limit_seconds=120,
+        attempts_allowed=2,
+        title="Quiz",
+    )
+    await w.factory._save(published)
+    question = QuizVersionQuestion(
+        id=new_id(),
+        organization_id=w.org.id,
+        quiz_version_id=published.id,
+        question_id=new_id(),
+        question_type="mcq_single",
+        prompt="Pick",
+        options=[{"id": "a", "text": "A"}, {"id": "b", "text": "B"}],
+        marks=1,
+        position=0,
+    )
+    await w.factory._save(question)
+    await w.factory._save(
+        QuizVersionKey(
+            question_id=question.id,
+            organization_id=w.org.id,
+            answer_key={"correct_option_ids": ["a"]},
+        )
+    )
+    path = f"/api/v1/enrollments/{enrollment.id}/lessons/{lesson.id}"
+    if action == "quiz":
+        return path + "/quiz", {}
+    if action == "start":
+        return path + "/quiz-attempts", {"headers": {"If-Match": "0"}}
+    if action == "history":
+        return path + "/quiz-attempts", {}
+    a = await save_attempt(
+        w.factory,
+        published,
+        enrollment,
+        [question],
+        state="submitted" if action == "results" else "in_progress",
+    )
+    suffix = {"get": "", "save": "/answers", "submit": "/submit", "results": "/results"}[action]
+    kwargs: dict[str, Any] = (
+        {"headers": {"If-Match": "1"}, "json": {"answers": []}}
+        if action in {"save", "submit"}
+        else {}
+    )
+    return f"/api/v1/quiz-attempts/{a.id}{suffix}", kwargs
+
+
+MATRIX.extend(
+    [
+        Route(
+            "GET",
+            "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/quiz",
+            {"student"},
+            lambda w: _quiz_runtime(w, "quiz"),
+            denied="404",
+        ),
+        Route(
+            "GET",
+            "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/quiz-attempts",
+            {"student"},
+            lambda w: _quiz_runtime(w, "history"),
+            denied="404",
+        ),
+        Route(
+            "POST",
+            "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/quiz-attempts",
+            {"student"},
+            lambda w: _quiz_runtime(w, "start"),
+            denied="404",
+        ),
+        Route(
+            "GET",
+            "/api/v1/quiz-attempts/{attempt_id}",
+            {"student"},
+            lambda w: _quiz_runtime(w, "get"),
+            denied="404",
+        ),
+        Route(
+            "PUT",
+            "/api/v1/quiz-attempts/{attempt_id}/answers",
+            {"student"},
+            lambda w: _quiz_runtime(w, "save"),
+            denied="404",
+        ),
+        Route(
+            "POST",
+            "/api/v1/quiz-attempts/{attempt_id}/submit",
+            {"student"},
+            lambda w: _quiz_runtime(w, "submit"),
+            denied="404",
+        ),
+        Route(
+            "GET",
+            "/api/v1/quiz-attempts/{attempt_id}/results",
+            {"student"},
+            lambda w: _quiz_runtime(w, "results"),
+            denied="404",
         ),
     ]
 )

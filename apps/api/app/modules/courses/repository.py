@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Integer, Uuid, column, delete, func, or_, select, update, values
+from sqlalchemy import Integer, Uuid, column, delete, func, or_, select, text, update, values
 from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -509,3 +509,14 @@ class CatalogRepository:
 
     async def by_slug(self, slug: str) -> CatalogEntry | None:
         return await self.session.scalar(select(CatalogEntry).where(CatalogEntry.slug == slug))
+
+
+async def student_course_assigned(
+    session: AsyncSession, student: UUID, org: UUID, course: UUID
+) -> bool:
+    return bool(
+        await session.scalar(
+            text("SELECT app.student_course_assigned(:student,:org,:course)"),
+            {"student": student, "org": org, "course": course},
+        )
+    )

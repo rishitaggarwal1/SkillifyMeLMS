@@ -4,33 +4,46 @@ SQL reveal and response validation independently enforce answer secrecy. Only
 this module's repository touches assessment tables; other modules call services.
 """
 
+import json
 import unicodedata
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.errors import ConflictError, NotFoundError, UnprocessableError
+from app.core.errors import ConflictError, NotFoundError, PermissionDeniedError, UnprocessableError
 from app.core.pagination import CursorParams
 from app.db.base import new_id
+from app.db.outbox import add_outbox_event
+from app.db.session import run_after_commit
 from app.modules.assessments.models import (
     Question,
     QuestionBank,
     QuestionKey,
     Quiz,
+    QuizAttempt,
     QuizVersion,
     QuizVersionKey,
     QuizVersionQuestion,
 )
-from app.modules.assessments.repository import MAX_PUBLICATION_POOL, AuthorRepository, QuestionData
+from app.modules.assessments.repository import (
+    MAX_PUBLICATION_POOL,
+    AuthorRepository,
+    QuestionData,
+    RuntimeRepository,
+    permitted_solutions,
+)
 from app.modules.assessments.schemas import (
     ActiveQuestion,
+    AnswerBatch,
     AnswersResult,
+    AttemptDetail,
+    AttemptSummary,
     BankCreate,
     BankOut,
     BankPatch,
@@ -46,12 +59,16 @@ from app.modules.assessments.schemas import (
     QuizBody,
     QuizOut,
     ResultContext,
+    RevealMode,
+    RevealTiming,
     SavedAnswer,
     ScoreResult,
+    StudentQuiz,
 )
 from app.modules.audit import service as audit
 from app.modules.courses import service as courses
 from app.modules.courses.schemas import StructuralChange
+from app.modules.enrollments import service as enrollments
 from app.modules.identity.authz import Permission, require_org_permission
 from app.modules.identity.dependencies import RequestContext
 from app.modules.skills import service as skills
@@ -677,3 +694,240 @@ async def get_published_quiz(
             ],
         }
     )
+
+
+# Runtime APIs use only typed public prompts and student-owned work.
+def _student(ctx: RequestContext) -> None:
+    if "student" not in ctx.principal.roles:
+        raise PermissionDeniedError("Quiz execution requires the student role.")
+
+
+def _runtime_error(result: Mapping[str, Any]) -> None:
+    code = result.get("error")
+    if not code:
+        return
+    if code == "not_found":
+        raise NotFoundError("Quiz attempt not found.")
+    if code in {"invalid_answers", "quiz_not_ready"}:
+        raise UnprocessableError("Invalid quiz answer batch or definition.", code=code)
+    raise ConflictError("The quiz attempt changed or cannot accept this operation.", code=code)
+
+
+def _summary(a: QuizAttempt) -> AttemptSummary:
+    return AttemptSummary.model_validate({k: getattr(a, k) for k in AttemptSummary.model_fields})
+
+
+async def _own_attempt(ctx: RequestContext, attempt_id: UUID) -> QuizAttempt:
+    a = await RuntimeRepository(ctx.session).attempt(attempt_id)
+    if a is None or a.user_id != ctx.principal.user_id:
+        raise NotFoundError("Quiz attempt not found.")
+    _student(ctx)
+    current = await enrollments.student_lesson(ctx, a.enrollment_id, a.lesson_id)
+    if current.version.major != a.major_version or current.lesson.lesson_type != "quiz":
+        raise NotFoundError("Quiz attempt not found.")
+    return a
+
+
+async def get_student_quiz(
+    ctx: RequestContext, enrollment_id: UUID, lesson_id: UUID
+) -> StudentQuiz:
+    current = await enrollments.student_lesson(ctx, enrollment_id, lesson_id)
+    _student(ctx)
+    if current.lesson.lesson_type != "quiz":
+        raise NotFoundError("Quiz not found.")
+    repo = RuntimeRepository(ctx.session)
+    q = await repo.version(current.version.id, lesson_id)
+    if q is None:
+        raise NotFoundError("Quiz not found.")
+    used, active = await repo.counts(enrollment_id, lesson_id, current.version.major)
+    return StudentQuiz(
+        quiz_id=q.quiz_id,
+        quiz_version_id=q.id,
+        title=q.title,
+        time_limit_seconds=q.time_limit_seconds,
+        max_marks=q.max_marks,
+        pass_marks=q.pass_marks,
+        attempts_allowed=q.attempts_allowed,
+        attempts_used=used,
+        attempts_remaining=max(0, q.attempts_allowed - used),
+        revision=used,
+        active_attempt_id=active,
+        reveal_mode=cast(RevealMode, q.reveal_mode),
+        reveal_timing=cast(RevealTiming, q.reveal_timing),
+        server_now=await repo.now(),
+    )
+
+
+async def get_attempt(ctx: RequestContext, attempt_id: UUID) -> AttemptDetail:
+    a = await _own_attempt(ctx, attempt_id)
+    repo = RuntimeRepository(ctx.session)
+    answers = await repo.answers(a.id)
+    questions = await repo.questions(a)
+    return AttemptDetail(
+        **_summary(a).model_dump(),
+        server_now=await repo.now(),
+        questions=[
+            active_question(
+                {
+                    k: getattr(q, k)
+                    for k in ("id", "question_type", "prompt", "options", "marks", "skill_ids")
+                },
+                saved_answer=SavedAnswer.model_validate(answers[q.id]) if q.id in answers else None,
+            )
+            for q in questions
+        ],
+    )
+
+
+async def list_attempts(
+    ctx: RequestContext, enrollment_id: UUID, lesson_id: UUID, params: CursorParams
+) -> tuple[list[AttemptSummary], str | None]:
+    rules = await get_student_quiz(ctx, enrollment_id, lesson_id)
+    current = await enrollments.student_lesson(ctx, enrollment_id, lesson_id)
+    rows, cursor = await RuntimeRepository(ctx.session).history(
+        enrollment_id, lesson_id, current.version.major, params
+    )
+    del rules
+    return [_summary(a) for a in rows], cursor
+
+
+async def start_attempt(
+    ctx: RequestContext, enrollment_id: UUID, lesson_id: UUID, revision: int
+) -> AttemptDetail:
+    q = await get_student_quiz(ctx, enrollment_id, lesson_id)
+    attempt_id = new_id()
+    result = await RuntimeRepository(ctx.session).start(
+        enrollment_id, lesson_id, q.quiz_version_id, revision, attempt_id
+    )
+    _runtime_error(result)
+    # The immediate expiry task schedules itself for the database deadline. Beat recovers lost jobs.
+    org = ctx.principal.organization_id
+    run_after_commit(
+        ctx.session, lambda: ctx.jobs.send("assessments.expire_attempt", str(attempt_id), str(org))
+    )
+    return await get_attempt(ctx, attempt_id)
+
+
+def _answer_payload(body: AnswerBatch) -> str:
+    return json.dumps([{**a.model_dump(mode="json"), "id": str(new_id())} for a in body.answers])
+
+
+async def save_answers(
+    ctx: RequestContext, attempt_id: UUID, body: AnswerBatch, revision: int
+) -> AttemptDetail:
+    await _own_attempt(ctx, attempt_id)
+    result = await RuntimeRepository(ctx.session).mutate(
+        attempt_id, revision, _answer_payload(body), submit=False
+    )
+    _runtime_error(result)
+    return await get_attempt(ctx, attempt_id)
+
+
+async def _record_submission(session: AsyncSession, a: QuizAttempt, reason: str) -> None:
+    q = await RuntimeRepository(session).rules(a)
+    assert a.score is not None  # noqa: S101 - submitted constraint
+    add_outbox_event(
+        session,
+        organization_id=a.organization_id,
+        aggregate_type="enrollment",
+        aggregate_id=a.enrollment_id,
+        event_type="quiz_attempt_submitted",
+        payload={
+            "attempt_id": str(a.id),
+            "quiz_id": str(q.quiz_id),
+            "quiz_version_id": str(q.id),
+            "enrollment_id": str(a.enrollment_id),
+            "user_id": str(a.user_id),
+            "course_id": str(a.course_id),
+            "lesson_id": str(a.lesson_id),
+            "version_id": str(q.course_version_id),
+            "attempt_number": a.attempt_number,
+            "score": format(a.score, ".2f"),
+            "max_marks": format(a.max_marks, ".2f"),
+            "pass_marks": format(q.pass_marks, ".2f"),
+            "passed": a.passed,
+            "reason": reason,
+            "started_at": a.started_at.isoformat(),
+            "expires_at": a.expires_at.isoformat(),
+            "submitted_at": a.submitted_at.isoformat() if a.submitted_at else None,
+        },
+        headers={"version": 1},
+    )
+    if a.passed:
+        await enrollments.complete_passed_quiz(
+            session, a.enrollment_id, a.lesson_id, a.major_version
+        )
+
+
+async def submit_attempt(
+    ctx: RequestContext, attempt_id: UUID, body: AnswerBatch, revision: int
+) -> ScoreResult | AnswersResult | ExplanationsResult:
+    await _own_attempt(ctx, attempt_id)
+    repo = RuntimeRepository(ctx.session)
+    result = await repo.mutate(attempt_id, revision, _answer_payload(body), submit=True)
+    _runtime_error(result)
+    if result["newly"]:
+        a = await repo.attempt(attempt_id)
+        assert a is not None  # noqa: S101 - function returned a durable attempt id
+        await _record_submission(ctx.session, a, str(result["reason"]))
+    return await get_result(ctx, attempt_id)
+
+
+async def get_result(
+    ctx: RequestContext, attempt_id: UUID
+) -> ScoreResult | AnswersResult | ExplanationsResult:
+    a = await _own_attempt(ctx, attempt_id)
+    if a.state != "submitted":
+        raise ConflictError("The attempt has not been submitted.", code="attempt_not_submitted")
+    repo = RuntimeRepository(ctx.session)
+    q = await repo.rules(a)
+    used, active = await repo.counts(a.enrollment_id, a.lesson_id, a.major_version)
+    context = ResultContext(
+        state="submitted",
+        configured_reveal_mode=cast(RevealMode, q.reveal_mode),
+        reveal_timing=cast(RevealTiming, q.reveal_timing),
+        attempts_allowed=q.attempts_allowed,
+        attempts_used=used,
+        has_active_attempt=active is not None,
+    )
+    solutions = await permitted_solutions(ctx.session, a.id)
+    assert a.score is not None  # noqa: S101 - submitted constraint
+    return student_result(
+        attempt_id=a.id,
+        context=context,
+        score=a.score,
+        max_marks=a.max_marks,
+        pass_marks=q.pass_marks,
+        solutions=solutions,
+    )
+
+
+async def finalize_due(session: AsyncSession, attempt_id: UUID) -> datetime | None:
+    repo = RuntimeRepository(session)
+    result = await repo.finalize_due(attempt_id)
+    if result.get("error"):
+        return None  # stale/revoked/busy is retried by the sweeper, never grants access
+    if result["newly"]:
+        a = await repo.attempt(attempt_id)
+        assert a is not None  # noqa: S101
+        await _record_submission(session, a, str(result["reason"]))
+    if result.get("expires_at"):
+        return datetime.fromisoformat(result["expires_at"])
+    return None
+
+
+class QuizCompletionSource:
+    async def evidence(
+        self,
+        session: AsyncSession,
+        enrollment_ids: Sequence[UUID],
+        lesson_ids: Sequence[UUID],
+        *,
+        major: int,
+    ) -> set[tuple[UUID, UUID]]:
+        return await RuntimeRepository(session).passed_lessons(enrollment_ids, lesson_ids, major)
+
+    async def close_major(
+        self, session: AsyncSession, enrollment_ids: Sequence[UUID], major: int
+    ) -> None:
+        await RuntimeRepository(session).close_major(enrollment_ids, major)

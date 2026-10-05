@@ -33,13 +33,23 @@ celery_app.conf.beat_schedule = {
         "task": "enrollments.flush_video_progress",
         "schedule": settings.progress_flush_interval_seconds,
     },
+    "quiz-expiry-sweep": {
+        "task": "assessments.sweep_expired",
+        "schedule": settings.quiz_expiry_sweep_interval_seconds,
+    },
     "identity-expire-invitations": {
         "task": "identity.expire_invitations",
         "schedule": 3600.0,  # hourly
     },
 }
 celery_app.autodiscover_tasks(
-    ["app.modules.identity", "app.modules.courses", "app.modules.enrollments", "app.modules.media"],
+    [
+        "app.modules.identity",
+        "app.modules.courses",
+        "app.modules.enrollments",
+        "app.modules.media",
+        "app.modules.assessments",
+    ],
     related_name="tasks",
 )
 

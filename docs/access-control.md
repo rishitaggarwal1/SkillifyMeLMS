@@ -355,3 +355,42 @@ structure plus private grading rules through the assessments service interface;
 private rules or their hashes never enter snapshots, previews, catalog or audits.
 Manual sets contain at most 100 questions; draws take up to 100 from a frozen
 skill-filtered pool of at most 1,000. Author lists remain cursor-paginated.
+
+
+## Phase 3 quiz runtime (step 3)
+
+Every route requires the owning enrolled student and current batch entitlement.
+Another student, org or staff member receives 404 for someone else's work.
+Student role checks also run in services and guarded SQL functions. All list
+routes use cursors. Quiz prompts and answers are read from Postgres; no answer
+Redis cache exists. Mutations require If-Match (428 missing, 409 stale).
+
+| Method | Endpoint under /api/v1 | Revision / response |
+| --- | --- | --- |
+| GET | `/enrollments/{enrollment_id}/lessons/{lesson_id}/quiz` | Rules, attempt counters/set revision, active ID and database server time; no prompts/keys |
+| GET | `/enrollments/{enrollment_id}/lessons/{lesson_id}/quiz-attempts` | Cursor history of this major's attempts; aggregate scores only |
+| POST | `/enrollments/{enrollment_id}/lessons/{lesson_id}/quiz-attempts` | Started-attempt count (0 initially); select once and freeze database start/deadline |
+| GET | `/quiz-attempts/{attempt_id}` | Resume selected prompts and saved answers; never keys, explanations or awarded marks |
+| PUT | `/quiz-attempts/{attempt_id}/answers` | Attempt revision; atomic validated batch, durable before acknowledgement |
+| POST | `/quiz-attempts/{attempt_id}/submit` | Attempt revision; optional final batch before deadline, ignored at/after expiry; replay emits nothing |
+| GET | `/quiz-attempts/{attempt_id}/results` | Submitted only; frozen reveal mode/timing independently enforced by SQL and schemas |
+
+SQL interfaces in migration 0014 keep direct app-role attempt/answer writes
+revoked. `app.quiz_start`, `app.quiz_save_answers`, `app.quiz_submit` validate
+identity, enrollment, selected questions, revisions and database deadlines.
+Private `app.quiz_mutate` has no app-role or PUBLIC execute grant. Only system
+context without an acting user may call `app.quiz_finalize_due`; the sweeper
+uses bounded samples and skips locked enrollments. `app.quiz_close_old_major`
+is constrained to the current org's authorized upgrade and closes old active
+work. All functions use a fixed search_path; grading never exposes private keys.
+
+The course-owned `app.student_course_assigned(student, org, course)` is a boolean
+SQL access interface, available only for the owning user, permitted staff of
+that org or the system/platform context. It checks live student membership and
+batch assignment without exposing assignment rows. Enrollment completion uses
+it through `courses.service.student_has_course`, then obtains batched passing/
+graded evidence through centrally wired assessment/assignment services.
+Passing completes a quiz; manual completion returns 409 completed_by_quiz.
+Stable completed lesson IDs survive major opt-in; its attempt budget resets and
+old active attempts are abandoned. Revoked work may be sealed by expiry without
+completing its enrollment or restoring access.

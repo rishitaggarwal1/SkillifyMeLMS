@@ -1,6 +1,6 @@
 # Phase 3 — Quizzes and full assignments
 
-**Status: approved (2026-10-04); step 1 complete, step 2 locally verified, awaiting pushed CI.** Decisions D1–D7 and
+**Status: approved (2026-10-04); steps 1 and 2 complete; step 3 local gates passed, pushed CI pending.** Decisions D1–D7 and
 the security repair below include the user's approved revisions.
 
 **Baseline:** `4f7d00826e368b9dbd7ce1635332a8b1d93dedb7`, the peeled
@@ -739,22 +739,22 @@ approval before coding that step; steps 6 and 7 use its guidelines/components.
 
 ## 14. Implementation record
 
-Step 1 completed with green pushed CI. After each green pushed step, report its full SHA and
+Steps 1 and 2 completed with green pushed CI. After each green pushed step, report its full SHA and
 CI URL in the step summary; carry known commit/run records into this table in
 the next plan update. Do not invent a self-referential commit SHA or a CI URL
 before the commit/run exists. The close-out summary records its own final run.
 
-| Step | Status      | Commit                                     | CI run                                                                                   |
-| ---- | ----------- | ------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| 1    | Complete    | `99b59e7b3e8d284fafce9fb40ef9533d20b503a9` | [37220970826](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37220970826) |
-| 2    | In progress | —                                          | —                                                                                        |
-| 3    | Not started | —                                          | —                                                                                        |
-| 4    | Not started | —                                          | —                                                                                        |
-| 5    | Not started | —                                          | —                                                                                        |
-| 6    | Not started | —                                          | —                                                                                        |
-| 7    | Not started | —                                          | —                                                                                        |
-| 8    | Not started | —                                          | —                                                                                        |
-| 9    | Not started | —                                          | —                                                                                        |
+| Step | Status                     | Commit                                     | CI run                                                                                   |
+| ---- | -------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| 1    | Complete                   | `99b59e7b3e8d284fafce9fb40ef9533d20b503a9` | [37220970826](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37220970826) |
+| 2    | Complete                   | `d660c7330e2f520a043cd58745aac4452576816e` | [37231238285](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37231238285) |
+| 3    | Local verified; CI pending | —                                          | —                                                                                        |
+| 4    | Not started                | —                                          | —                                                                                        |
+| 5    | Not started                | —                                          | —                                                                                        |
+| 6    | Not started                | —                                          | —                                                                                        |
+| 7    | Not started                | —                                          | —                                                                                        |
+| 8    | Not started                | —                                          | —                                                                                        |
+| 9    | Not started                | —                                          | —                                                                                        |
 
 ### Deviations
 
@@ -786,6 +786,43 @@ content-source hooks resolve and copy question/key data within assessments;
 the course is locked before the referenced banks. Manual sets are bounded at
 100 questions, draws at 100 and each eligible frozen pool at 1,000; author lists
 remain cursor endpoints. Larger eligible pools require narrower skill filters.
+
+Step 3: no product or architecture deviations. Migration 0014 supplies guarded
+runtime mutation functions while keeping direct app-role attempt/answer writes
+revoked. Its frozen SQL lives in a migration-owned file; full Unicode casefold
+and NFC normalization preserve the approved blank-answer rules. Answers and
+resume remain Postgres-only. The existing pure progress test now requires the
+quiz passing rule and retains the lab placeholder rule.
+
+Verification repairs: ordinary course-assignment SELECT policies hide assignment
+rows from students, so checking batch entitlement through that repository could
+incorrectly suppress completion after a passing quiz. A narrowly scoped,
+course-owned boolean SQL interface now checks live membership/batch assignment;
+enrollments calls it through the courses service. Progress recalculation locks
+enrollments before writing lesson progress and skips already-completed evidence:
+Postgres checks INSERT RLS before resolving an ON CONFLICT, so re-inserting a
+completed quiz from the assignment grader would violate its assignment-only
+write scope. The concurrent quiz/assignment test requires both writes to succeed
+and progress to reach 100%, without broader grader grants. New test setup uses
+the existing assignment-removal route and question-archive 204 contract; no
+assertion or timeout in existing tests was weakened.
+
+Final review reproduced an old-major evidence bug: a revoked passing attempt
+sealed without completing its lesson could create 100% progress during a later
+major opt-in. Completion hooks now receive the displayed major through service
+interfaces, and assessments filters passing evidence to that major. Existing
+completed stable lesson IDs still carry forward; historical scores alone cannot
+create new completion. The regression first failed with 100 instead of 0, then
+retained the zero-progress assertion for the repair. The initial full suite was
+stopped for this repair; the final gate reran all tests against the corrected code.
+
+Local browser verification initially failed the existing catalog visibility
+assertion in both projects: `/catalog` returned 500 with `DYNAMIC_SERVER_USAGE`.
+The host standalone production launch incorrectly retained the development-only
+`CATALOG_DATA_CACHE=off` setting, switching a prerendered route to `no-store` at
+runtime. Correcting the launch to production/CI's default tagged cache resolves
+that configuration mismatch. Catalog code, assertions and timeouts are unchanged;
+the full local gate passed with the corrected production launch.
 
 ### Security repairs
 
@@ -853,6 +890,46 @@ remain cursor endpoints. Larger eligible pools require narrower skill filters.
   CI URL are reported in the step summary and carried into the table at the next
   authorized plan update. No later step has started.
 
+### Step 3 implementation
+
+- Added seven endpoint methods for student quiz rules, cursor attempt history,
+  start, durable resume/autosave, submit and results. Each has a MATRIX row and
+  access-control entry. All three write methods require If-Match and have
+  separate-connection visibility checks at success-header delivery, missing/
+  stale revision checks and real deferred-constraint commit-failure rollback
+  checks, including dropped expiry hooks.
+- Migration 0014 adds narrowly granted runtime/normalization/entitlement SQL
+  functions, with no new tables. It validates an entire answer batch before
+  writing, reads the database clock after enrollment/attempt locks, freezes
+  selected questions/order and deadlines once, serializes quotas and rejects
+  post-deadline answer changes. Scoring uses exact decimal half-up arithmetic;
+  keys stay inside trusted grading, and frozen reveal mode/timing are enforced
+  independently by the DB and response schemas.
+- Expiry starts only after a successful commit, reschedules to the original
+  database deadline and is recovered by a bounded five-second sweeper. Locked
+  work is skipped and retried. Finalization is idempotent; accepted answers,
+  score, progress and the registered `quiz_attempt_submitted` v1 enrollment-topic
+  event commit together. Revoked attempts can be sealed without restoring access
+  or completing the enrollment.
+- Centrally wired assessments/assignments completion interfaces supply batched
+  evidence to enrollments. Quiz evidence is scoped to the displayed major; an old
+  score cannot create a new completion. A passing quiz completes its lesson; manual completion
+  is rejected. Minor updates preserve active frozen rules; major opt-in abandons
+  old active work and resets the attempt budget, retaining stable completed lesson
+  IDs. Query-count measurements confirm that increasing an autosave from one
+  answer to three adds no SQL round trips; validation/grading and answer writes
+  are batched. No Redis answer layer was added.
+- Checks run personally: `make gen-api`, `make lint` (lint, format and strict
+  type-checks), `make migrate`, `uv run alembic check`, production web build and
+  quiet Compose configuration validation **passed**. Final full `make test`
+  **passed**: API **1,558 passed**, Vitest **157 passed**, Playwright **41 passed /
+  7 existing intentional skips / 0 failures**. Playwright used the host production
+  web server against real Compose services. The unchanged catalog spec also
+  passed separately in both projects after the launch correction.
+- Local gates do not complete the step. The exact commit, push result and green
+  CI URL are reported in the step summary and carried into the table at the next
+  authorized plan update. No later step has started.
+
 ### Open follow-ups / carried forward
 
 - Plagiarism detection, AI feedback and coding labs remain outside this brief;
@@ -878,5 +955,6 @@ The tracked check exited 0; the no-index comparison exited 1 for the new-file
 difference and emitted no whitespace warnings.
 At the initial planning gate only this plan was added; implementation checks,
 commit, push and CI had not run. Step 1 subsequently passed its local and pushed-CI gates (recorded above).
-Step 2 is authorized and its final gate results are recorded in its implementation
-entry and step summary; later steps remain gated on the user's "continue".
+Step 2 passed its local and pushed-CI gates (recorded above). Step 3 is authorized
+and its verification is recorded in its implementation entry and step summary;
+later steps remain gated on the user's "continue".

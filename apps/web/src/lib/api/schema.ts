@@ -842,6 +842,41 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/quiz": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Student Quiz */
+    get: operations["get_student_quiz"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/quiz-attempts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** History */
+    get: operations["list_quiz_attempts"];
+    put?: never;
+    /** Start */
+    post: operations["start_quiz_attempt"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/resume": {
     parameters: {
       query?: never;
@@ -1530,6 +1565,74 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/quiz-attempts/{attempt_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Attempt */
+    get: operations["get_quiz_attempt"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/quiz-attempts/{attempt_id}/answers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Autosave */
+    put: operations["save_quiz_answers"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/quiz-attempts/{attempt_id}/results": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Results */
+    get: operations["get_quiz_results"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/quiz-attempts/{attempt_id}/submit": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Submit */
+    post: operations["submit_quiz_attempt"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/skills": {
     parameters: {
       query?: never;
@@ -1688,6 +1791,42 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** ActiveQuestion */
+    ActiveQuestion: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Marks */
+      marks: string;
+      /** Options */
+      options?: components["schemas"]["QuestionOption"][];
+      /** Prompt */
+      prompt: string;
+      /**
+       * Question Type
+       * @enum {string}
+       */
+      question_type: "mcq_single" | "mcq_multi" | "fill_blank";
+      saved_answer?: components["schemas"]["SavedAnswer"] | null;
+      /** Skill Ids */
+      skill_ids?: string[];
+    };
+    /** AnswerBatch */
+    AnswerBatch: {
+      /** Answers */
+      answers?: components["schemas"]["AnswerInput"][];
+    };
+    /** AnswerInput */
+    AnswerInput: {
+      answer: components["schemas"]["SavedAnswer"];
+      /**
+       * Question Id
+       * Format: uuid
+       */
+      question_id: string;
+    };
     /**
      * AnswerKey
      * @description Private author/grading data. Never an active-question field.
@@ -1702,6 +1841,30 @@ export interface components {
       case_sensitive: boolean;
       /** Correct Option Ids */
       correct_option_ids?: string[];
+    };
+    /** AnswersResult */
+    AnswersResult: {
+      /**
+       * Attempt Id
+       * Format: uuid
+       */
+      attempt_id: string;
+      context: components["schemas"]["ResultContext"];
+      /** Max Marks */
+      max_marks: string;
+      /** Pass Marks */
+      pass_marks: string;
+      /** Passed */
+      passed: boolean;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      reveal_mode: "correct_answers";
+      /** Score */
+      score: string;
+      /** Solutions */
+      solutions: components["schemas"]["CorrectAnswer"][];
     };
     /** AssignmentCell */
     AssignmentCell: {
@@ -1829,6 +1992,97 @@ export interface components {
       submission_kinds: ("file" | "text")[];
       /** Title */
       title: string;
+    };
+    /** AttemptDetail */
+    AttemptDetail: {
+      /** Attempt Number */
+      attempt_number: number;
+      /**
+       * Expires At
+       * Format: date-time
+       */
+      expires_at: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Major Version */
+      major_version: number;
+      /** Max Marks */
+      max_marks: string;
+      /** Passed */
+      passed: boolean | null;
+      /** Questions */
+      questions: components["schemas"]["ActiveQuestion"][];
+      /**
+       * Quiz Version Id
+       * Format: uuid
+       */
+      quiz_version_id: string;
+      /** Revision */
+      revision: number;
+      /** Score */
+      score: string | null;
+      /**
+       * Server Now
+       * Format: date-time
+       */
+      server_now: string;
+      /**
+       * Started At
+       * Format: date-time
+       */
+      started_at: string;
+      /**
+       * State
+       * @enum {string}
+       */
+      state: "in_progress" | "submitted" | "abandoned";
+      /** Submitted At */
+      submitted_at: string | null;
+    };
+    /** AttemptSummary */
+    AttemptSummary: {
+      /** Attempt Number */
+      attempt_number: number;
+      /**
+       * Expires At
+       * Format: date-time
+       */
+      expires_at: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Major Version */
+      major_version: number;
+      /** Max Marks */
+      max_marks: string;
+      /** Passed */
+      passed: boolean | null;
+      /**
+       * Quiz Version Id
+       * Format: uuid
+       */
+      quiz_version_id: string;
+      /** Revision */
+      revision: number;
+      /** Score */
+      score: string | null;
+      /**
+       * Started At
+       * Format: date-time
+       */
+      started_at: string;
+      /**
+       * State
+       * @enum {string}
+       */
+      state: "in_progress" | "submitted" | "abandoned";
+      /** Submitted At */
+      submitted_at: string | null;
     };
     /** AuditEntryOut */
     AuditEntryOut: {
@@ -2073,6 +2327,15 @@ export interface components {
        */
       status: "ok" | "error";
     };
+    /** CorrectAnswer */
+    CorrectAnswer: {
+      answer_key: components["schemas"]["AnswerKey"];
+      /**
+       * Question Id
+       * Format: uuid
+       */
+      question_id: string;
+    };
     /** CourseCreate */
     CourseCreate: {
       /**
@@ -2189,6 +2452,16 @@ export interface components {
     CursorPage_AssignmentOut_: {
       /** Items */
       items: components["schemas"]["AssignmentOut"][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for the next page; null when there are no more items.
+       */
+      next_cursor: string | null;
+    };
+    /** CursorPage[AttemptSummary] */
+    CursorPage_AttemptSummary_: {
+      /** Items */
+      items: components["schemas"]["AttemptSummary"][];
       /**
        * Next Cursor
        * @description Opaque cursor for the next page; null when there are no more items.
@@ -2513,6 +2786,41 @@ export interface components {
     /** ErrorResponse */
     ErrorResponse: {
       error: components["schemas"]["ErrorBody"];
+    };
+    /** ExplainedAnswer */
+    ExplainedAnswer: {
+      answer_key: components["schemas"]["AnswerKey"];
+      /** Explanation */
+      explanation: string;
+      /**
+       * Question Id
+       * Format: uuid
+       */
+      question_id: string;
+    };
+    /** ExplanationsResult */
+    ExplanationsResult: {
+      /**
+       * Attempt Id
+       * Format: uuid
+       */
+      attempt_id: string;
+      context: components["schemas"]["ResultContext"];
+      /** Max Marks */
+      max_marks: string;
+      /** Pass Marks */
+      pass_marks: string;
+      /** Passed */
+      passed: boolean;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      reveal_mode: "explanations";
+      /** Score */
+      score: string;
+      /** Solutions */
+      solutions: components["schemas"]["ExplainedAnswer"][];
     };
     /** FileCreate */
     FileCreate: {
@@ -3654,10 +3962,66 @@ export interface components {
      * @enum {string}
      */
     ReleaseType: "major" | "minor";
+    /**
+     * ResultContext
+     * @description Trusted DB facts checked again by result schemas, independently of SQL reveal.
+     */
+    ResultContext: {
+      /** Attempts Allowed */
+      attempts_allowed: number;
+      /** Attempts Used */
+      attempts_used: number;
+      /**
+       * Configured Reveal Mode
+       * @enum {string}
+       */
+      configured_reveal_mode: "score_only" | "correct_answers" | "explanations";
+      /** Has Active Attempt */
+      has_active_attempt: boolean;
+      /**
+       * Reveal Timing
+       * @enum {string}
+       */
+      reveal_timing: "immediately" | "after_attempts_exhausted";
+      /**
+       * State
+       * @constant
+       */
+      state: "submitted";
+    };
     /** RevisionOut */
     RevisionOut: {
       /** Course Revision */
       course_revision: number;
+    };
+    /** SavedAnswer */
+    SavedAnswer: {
+      /** Option Ids */
+      option_ids?: string[];
+      /** Text */
+      text?: string | null;
+    };
+    /** ScoreResult */
+    ScoreResult: {
+      /**
+       * Attempt Id
+       * Format: uuid
+       */
+      attempt_id: string;
+      context: components["schemas"]["ResultContext"];
+      /** Max Marks */
+      max_marks: string;
+      /** Pass Marks */
+      pass_marks: string;
+      /** Passed */
+      passed: boolean;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      reveal_mode: "score_only";
+      /** Score */
+      score: string;
     };
     /** SkillCreate */
     SkillCreate: {
@@ -3759,6 +4123,52 @@ export interface components {
        * @description The version the student sees, e.g. "1.2"
        */
       version: string | null;
+    };
+    /** StudentQuiz */
+    StudentQuiz: {
+      /** Active Attempt Id */
+      active_attempt_id: string | null;
+      /** Attempts Allowed */
+      attempts_allowed: number;
+      /** Attempts Remaining */
+      attempts_remaining: number;
+      /** Attempts Used */
+      attempts_used: number;
+      /** Max Marks */
+      max_marks: string;
+      /** Pass Marks */
+      pass_marks: string;
+      /**
+       * Quiz Id
+       * Format: uuid
+       */
+      quiz_id: string;
+      /**
+       * Quiz Version Id
+       * Format: uuid
+       */
+      quiz_version_id: string;
+      /**
+       * Reveal Mode
+       * @enum {string}
+       */
+      reveal_mode: "score_only" | "correct_answers" | "explanations";
+      /**
+       * Reveal Timing
+       * @enum {string}
+       */
+      reveal_timing: "immediately" | "after_attempts_exhausted";
+      /** Revision */
+      revision: number;
+      /**
+       * Server Now
+       * Format: date-time
+       */
+      server_now: string;
+      /** Time Limit Seconds */
+      time_limit_seconds: number;
+      /** Title */
+      title: string;
     };
     /** StudentRef */
     StudentRef: {
@@ -6730,6 +7140,142 @@ export interface operations {
       };
     };
   };
+  get_student_quiz: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        enrollment_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StudentQuiz"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  list_quiz_attempts: {
+    parameters: {
+      query?: {
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        enrollment_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_AttemptSummary_"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  start_quiz_attempt: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        "If-Match"?: string | null;
+      };
+      path: {
+        enrollment_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AttemptDetail"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
   video_resume: {
     parameters: {
       query?: never;
@@ -8907,6 +9453,194 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["QuestionOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_quiz_attempt: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        attempt_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AttemptDetail"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  save_quiz_answers: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        "If-Match"?: string | null;
+      };
+      path: {
+        attempt_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AnswerBatch"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AttemptDetail"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_quiz_results: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        attempt_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json":
+            | components["schemas"]["ScoreResult"]
+            | components["schemas"]["AnswersResult"]
+            | components["schemas"]["ExplanationsResult"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  submit_quiz_attempt: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+        "If-Match"?: string | null;
+      };
+      path: {
+        attempt_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["AnswerBatch"] | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json":
+            | components["schemas"]["ScoreResult"]
+            | components["schemas"]["AnswersResult"]
+            | components["schemas"]["ExplanationsResult"];
         };
       };
       /** @description Client error */

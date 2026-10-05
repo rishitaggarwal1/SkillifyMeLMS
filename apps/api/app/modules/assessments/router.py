@@ -9,6 +9,9 @@ from app.core.errors import PreconditionRequiredError, UnprocessableError
 from app.core.pagination import CursorPage, PageParams
 from app.modules.assessments import service
 from app.modules.assessments.schemas import (
+    AnswerBatch,
+    AttemptDetail,
+    AttemptSummary,
     BankCreate,
     BankOut,
     BankPatch,
@@ -20,6 +23,8 @@ from app.modules.assessments.schemas import (
     QuestionType,
     QuizBody,
     QuizOut,
+    QuizResult,
+    StudentQuiz,
 )
 from app.modules.identity.dependencies import RequestCtx
 
@@ -140,3 +145,56 @@ async def published_quiz(
     ctx: RequestCtx, course_id: UUID, version_id: UUID, lesson_id: UUID
 ) -> PublishedQuiz:
     return await service.get_published_quiz(ctx, course_id, version_id, lesson_id)
+
+
+@router.get(
+    "/enrollments/{enrollment_id}/lessons/{lesson_id}/quiz", operation_id="get_student_quiz"
+)
+async def student_quiz(ctx: RequestCtx, enrollment_id: UUID, lesson_id: UUID) -> StudentQuiz:
+    return await service.get_student_quiz(ctx, enrollment_id, lesson_id)
+
+
+@router.get(
+    "/enrollments/{enrollment_id}/lessons/{lesson_id}/quiz-attempts",
+    operation_id="list_quiz_attempts",
+)
+async def history(
+    ctx: RequestCtx, enrollment_id: UUID, lesson_id: UUID, params: PageParams
+) -> CursorPage[AttemptSummary]:
+    rows, cursor = await service.list_attempts(ctx, enrollment_id, lesson_id, params)
+    return CursorPage(items=rows, next_cursor=cursor)
+
+
+@router.post(
+    "/enrollments/{enrollment_id}/lessons/{lesson_id}/quiz-attempts",
+    status_code=201,
+    operation_id="start_quiz_attempt",
+)
+async def start(
+    ctx: RequestCtx, enrollment_id: UUID, lesson_id: UUID, revision: Revision
+) -> AttemptDetail:
+    return await service.start_attempt(ctx, enrollment_id, lesson_id, revision)
+
+
+@router.get("/quiz-attempts/{attempt_id}", operation_id="get_quiz_attempt")
+async def attempt(ctx: RequestCtx, attempt_id: UUID) -> AttemptDetail:
+    return await service.get_attempt(ctx, attempt_id)
+
+
+@router.put("/quiz-attempts/{attempt_id}/answers", operation_id="save_quiz_answers")
+async def autosave(
+    ctx: RequestCtx, attempt_id: UUID, body: AnswerBatch, revision: Revision
+) -> AttemptDetail:
+    return await service.save_answers(ctx, attempt_id, body, revision)
+
+
+@router.post("/quiz-attempts/{attempt_id}/submit", operation_id="submit_quiz_attempt")
+async def submit(
+    ctx: RequestCtx, attempt_id: UUID, revision: Revision, body: AnswerBatch | None = None
+) -> QuizResult:
+    return await service.submit_attempt(ctx, attempt_id, body or AnswerBatch(), revision)
+
+
+@router.get("/quiz-attempts/{attempt_id}/results", operation_id="get_quiz_results")
+async def results(ctx: RequestCtx, attempt_id: UUID) -> QuizResult:
+    return await service.get_result(ctx, attempt_id)

@@ -191,3 +191,7 @@ async def assessment_world(factory: Factory, campus: Campus) -> AssessmentWorld:
     return AssessmentWorld(
         campus, bank, version, questions, enrollment, other_enrollment, attempt, other_attempt
     )
+
+
+# Shared runtime fixture uses genuine authoring/publish/enrollment HTTP setup.
+from app.modules.assessments.tests.runtime_helpers import runtime  # noqa: E402, F401

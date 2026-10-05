@@ -2,7 +2,7 @@
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -390,6 +390,57 @@ class LessonProgressRepository:
             ).returning(LessonProgress.lesson_id)
         )  # fmt: skip
         return changed is not None
+
+    async def complete_evidence(self, pairs: set[tuple[UUID, UUID]]) -> list[tuple[UUID, UUID]]:
+        if not pairs:
+            return []
+        # Enrollment-owned rows only; assessment evidence arrives through service interfaces.
+        eids = list({e for e, _ in pairs})
+        completed = {
+            (row.enrollment_id, row.lesson_id)
+            for row in await self.for_enrollments(eids)
+            if row.status == LessonProgressStatus.COMPLETED
+        }
+        # INSERT checks RLS even for an already-completed ON CONFLICT row. Graders
+        # can write the graded assignment, but must not rewrite a student's quiz.
+        pairs = pairs - completed
+        if not pairs:
+            return []
+        owners = {
+            e.id: e
+            for e in await self.session.scalars(select(Enrollment).where(Enrollment.id.in_(eids)))
+        }
+        at = datetime.now(UTC)
+        data = [
+            {
+                "enrollment_id": eid,
+                "lesson_id": lid,
+                "organization_id": owners[eid].organization_id,
+                "user_id": owners[eid].user_id,
+                "status": LessonProgressStatus.COMPLETED,
+                "completed_at": at,
+            }
+            for eid, lid in sorted(pairs)
+            if eid in owners
+        ]
+        if not data:
+            return []
+        changed: list[tuple[UUID, UUID]] = []
+        for start in range(0, len(data), 500):
+            stmt = pg_insert(LessonProgress).values(data[start : start + 500])
+            rows = await self.session.execute(
+                stmt.on_conflict_do_update(
+                    index_elements=[LessonProgress.enrollment_id, LessonProgress.lesson_id],
+                    set_={
+                        "status": LessonProgressStatus.COMPLETED,
+                        "completed_at": at,
+                        "updated_at": func.now(),
+                    },
+                    where=LessonProgress.status != LessonProgressStatus.COMPLETED,
+                ).returning(LessonProgress.enrollment_id, LessonProgress.lesson_id)
+            )
+            changed.extend((r.enrollment_id, r.lesson_id) for r in rows)
+        return changed
 
     async def completed_counts(
         self, enrollment_ids: Sequence[UUID], lesson_ids: Sequence[UUID]

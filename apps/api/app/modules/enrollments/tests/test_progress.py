@@ -35,8 +35,8 @@ def test_completion_rules() -> None:
     assert completion_rule(LessonType.PDF) is CompletionRule.MANUAL_AFTER_OPENING
     # Phase 2.5: assignments complete when graded (no longer placeholders).
     assert completion_rule(LessonType.ASSIGNMENT) is CompletionRule.GRADED
-    for placeholder in (LessonType.QUIZ, LessonType.LAB):
-        assert completion_rule(placeholder) is CompletionRule.NOT_COMPLETABLE
+    assert completion_rule(LessonType.QUIZ) is CompletionRule.PASSED
+    assert completion_rule(LessonType.LAB) is CompletionRule.NOT_COMPLETABLE
 
 
 def test_video_watched_threshold() -> None:

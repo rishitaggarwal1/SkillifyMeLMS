@@ -23,8 +23,9 @@ from app.core.storage import ObjectStorage
 from app.db.tenancy import set_tenant_context
 from app.modules.audit import service as audit
 from app.modules.courses import service as courses
+from app.modules.courses.models import LessonType
 from app.modules.courses.service import VersionLessonRef, VersionRef
-from app.modules.enrollments import events
+from app.modules.enrollments import completion_sources, events
 from app.modules.enrollments import jobs as enrollment_jobs
 from app.modules.enrollments.heartbeat_cache import HeartbeatCache, HeartbeatCheck
 from app.modules.enrollments.models import Enrollment, EnrollmentStatus, LessonProgress
@@ -429,6 +430,8 @@ async def complete_lesson(ctx: Ctx, enrollment_id: UUID, lesson_id: UUID) -> Les
         raise ConflictError(
             "Videos complete automatically once watched.", code="completed_by_watching"
         )
+    if rule is CompletionRule.PASSED:
+        raise ConflictError("Quizzes complete when an attempt passes.", code="completed_by_quiz")
     if rule is CompletionRule.GRADED:
         raise ConflictError(
             "Assignments complete once they are graded.", code="completed_by_grading"
@@ -498,6 +501,7 @@ async def record_completion(
     """Complete a lesson and recompute the course percentage in the same transaction. Emits
     `lesson_completed` once per lesson. Also used by the video heartbeat flush. Returns the
     enrollment's progress percentage."""
+    await EnrollmentRepository(session).lock_many([enrollment.id])
     newly = await LessonProgressRepository(session).complete(
         enrollment, lesson.lesson_id, datetime.now(UTC)
     )
@@ -516,10 +520,42 @@ async def recompute_progress(
     session: AsyncSession, enrollment_ids: Sequence[UUID], version_id: UUID
 ) -> dict[UUID, int]:
     """Recompute and store progress for enrollments that all show `version_id`."""
+    await EnrollmentRepository(session).lock_many(enrollment_ids)
+    version = await courses.version_ref(session, version_id)
+    if version is None:
+        raise NotFoundError("Course version not found.")
     required = await courses.required_lesson_ids(session, version_id)
+    lessons = (await courses.version_lessons_many(session, [version_id]))[version_id]
+    evidence: set[tuple[UUID, UUID]] = set()
+    for kind in (LessonType.QUIZ, LessonType.ASSIGNMENT):
+        ids = [lesson.lesson_id for lesson in lessons if lesson.lesson_type == kind]
+        if ids:
+            evidence |= await completion_sources.get(kind).evidence(
+                session, enrollment_ids, ids, major=version.major
+            )
+    newly = await LessonProgressRepository(session).complete_evidence(evidence)
     done = await LessonProgressRepository(session).completed_counts(enrollment_ids, required)
     percent = {eid: course_percent(done[eid], len(required)) for eid in enrollment_ids}
     await EnrollmentRepository(session).set_progress(percent)
+    if newly:
+        owners = {
+            e.id: e
+            for e in await EnrollmentRepository(session).lock_many(list({eid for eid, _ in newly}))
+        }
+        by_lesson = {lesson.lesson_id: lesson for lesson in lessons}
+        for eid, lid in newly:
+            e = owners[eid]
+            events.lesson_completed(
+                session,
+                enrollment_id=eid,
+                organization_id=e.organization_id,
+                user_id=e.user_id,
+                course_id=e.course_id,
+                lesson_id=lid,
+                lesson_type=by_lesson[lid].lesson_type.value,
+                version_id=version_id,
+                progress_percent=percent[eid],
+            )
     return percent
 
 
@@ -694,6 +730,8 @@ async def run_upgrade(
                 break
             ids = [c.id for c in batch]
             await repo.set_major(ids, to_major)
+            await completion_sources.get(LessonType.QUIZ).close_major(session, ids, to_major)
+            await completion_sources.get(LessonType.ASSIGNMENT).close_major(session, ids, to_major)
             percent = await recompute_progress(session, ids, version.id)
             for c in batch:
                 events.enrollment_version_changed(
@@ -708,3 +746,30 @@ async def run_upgrade(
         to_major=to_major, moved=moved,
     )  # fmt: skip
     return moved
+
+
+async def complete_passed_quiz(
+    session: AsyncSession, enrollment_id: UUID, lesson_id: UUID, major: int
+) -> int | None:
+    """Called only through assessments; require durable pass evidence and current batch access."""
+    enrollment = await EnrollmentRepository(session).get(enrollment_id)
+    if (
+        enrollment is None
+        or enrollment.status != EnrollmentStatus.ACTIVE
+        or enrollment.major_version != major
+    ):
+        return None
+    if not await courses.student_has_course(
+        session, enrollment.user_id, enrollment.organization_id, enrollment.course_id
+    ):
+        return None
+    source = completion_sources.get(LessonType.QUIZ)
+    if (enrollment_id, lesson_id) not in await source.evidence(
+        session, [enrollment_id], [lesson_id], major=major
+    ):
+        return None
+    version = await courses.resolve_version(session, enrollment.course_id, major)
+    lesson = await courses.version_lesson(session, version.id, lesson_id) if version else None
+    if version is None or lesson is None or lesson.lesson_type != LessonType.QUIZ:
+        return None
+    return await record_completion(session, enrollment, version, lesson)

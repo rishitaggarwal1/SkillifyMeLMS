@@ -560,3 +560,23 @@ async def grade(
         ctx.session, submission.enrollment_id, submission.lesson_id, redis=ctx.redis
     )
     return await _detail(ctx, storage, settings, updated)
+
+
+class AssignmentCompletionSource:
+    async def evidence(
+        self,
+        session: AsyncSession,
+        enrollment_ids: Sequence[UUID],
+        lesson_ids: Sequence[UUID],
+        *,
+        major: int,
+    ) -> set[tuple[UUID, UUID]]:
+        rows = await SubmissionRepository(session).for_enrollments(enrollment_ids, lesson_ids)
+        grades = await GradeRepository(session).for_submissions([s.id for s in rows])
+        return {(s.enrollment_id, s.lesson_id) for s in rows if s.id in grades}
+
+    async def close_major(
+        self, session: AsyncSession, enrollment_ids: Sequence[UUID], major: int
+    ) -> None:
+        # Assignment aggregates retain their established behavior; history arrives in step 4.
+        return None

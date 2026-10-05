@@ -15,6 +15,8 @@ from app.modules.assessments.models import (
     QuestionKey,
     QuestionSkill,
     Quiz,
+    QuizAnswer,
+    QuizAttempt,
     QuizVersion,
     QuizVersionKey,
     QuizVersionQuestion,
@@ -239,3 +241,139 @@ async def permitted_solutions(
         text("SELECT * FROM app.quiz_attempt_solutions(:attempt)"), {"attempt": attempt_id}
     )
     return [dict(row) for row in rows.mappings()]
+
+
+class RuntimeRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def now(self) -> datetime:
+        return (await self.session.execute(select(func.clock_timestamp()))).scalar_one()
+
+    async def version(self, version_id: UUID, lesson_id: UUID) -> QuizVersion | None:
+        return await self.session.scalar(
+            select(QuizVersion).where(
+                QuizVersion.course_version_id == version_id, QuizVersion.lesson_id == lesson_id
+            )
+        )
+
+    async def attempt(self, attempt_id: UUID) -> QuizAttempt | None:
+        return await self.session.get(QuizAttempt, attempt_id, populate_existing=True)
+
+    async def rules(self, attempt: QuizAttempt) -> QuizVersion:
+        row = await self.session.get(QuizVersion, attempt.quiz_version_id)
+        assert row is not None  # noqa: S101 - readable attempt requires its version
+        return row
+
+    async def counts(
+        self, enrollment_id: UUID, lesson_id: UUID, major: int
+    ) -> tuple[int, UUID | None]:
+        rows = list(
+            await self.session.execute(
+                select(QuizAttempt.id, QuizAttempt.state).where(
+                    QuizAttempt.enrollment_id == enrollment_id,
+                    QuizAttempt.lesson_id == lesson_id,
+                    QuizAttempt.major_version == major,
+                )
+            )
+        )
+        return len(rows), next((r.id for r in rows if r.state == "in_progress"), None)
+
+    async def history(
+        self, enrollment_id: UUID, lesson_id: UUID, major: int, params: CursorParams
+    ) -> tuple[list[QuizAttempt], str | None]:
+        return await paginate_by_id(
+            self.session,
+            select(QuizAttempt).where(
+                QuizAttempt.enrollment_id == enrollment_id,
+                QuizAttempt.lesson_id == lesson_id,
+                QuizAttempt.major_version == major,
+            ),
+            QuizAttempt.id,
+            params,
+        )
+
+    async def questions(self, attempt: QuizAttempt) -> list[QuizVersionQuestion]:
+        rows = {
+            q.id: q
+            for q in await self.session.scalars(
+                select(QuizVersionQuestion).where(QuizVersionQuestion.id.in_(attempt.question_ids))
+            )
+        }
+        return [rows[qid] for qid in attempt.question_ids]
+
+    async def answers(self, attempt_id: UUID) -> dict[UUID, dict[str, Any]]:
+        return {
+            a.question_id: a.answer
+            for a in await self.session.scalars(
+                select(QuizAnswer).where(QuizAnswer.attempt_id == attempt_id)
+            )
+        }
+
+    async def start(
+        self, enrollment: UUID, lesson: UUID, version: UUID, expected: int, attempt: UUID
+    ) -> dict[str, Any]:
+        row = await self.session.scalar(
+            text("SELECT app.quiz_start(:enrollment,:lesson,:version,:expected,:attempt)"),
+            {
+                "enrollment": enrollment,
+                "lesson": lesson,
+                "version": version,
+                "expected": expected,
+                "attempt": attempt,
+            },
+        )
+        return dict(row)
+
+    async def mutate(
+        self, attempt: UUID, expected: int, answers: str, *, submit: bool
+    ) -> dict[str, Any]:
+        stmt = (
+            "SELECT app.quiz_submit(:id,:expected,CAST(:answers AS jsonb))"
+            if submit
+            else "SELECT app.quiz_save_answers(:id,:expected,CAST(:answers AS jsonb))"
+        )
+        row = await self.session.scalar(
+            text(stmt), {"id": attempt, "expected": expected, "answers": answers}
+        )
+        return dict(row)
+
+    async def finalize_due(self, attempt: UUID) -> dict[str, Any]:
+        return dict(
+            await self.session.scalar(text("SELECT app.quiz_finalize_due(:id)"), {"id": attempt})
+        )
+
+    async def due(self, limit: int) -> list[tuple[UUID, UUID]]:
+        rows = await self.session.execute(
+            select(QuizAttempt.id, QuizAttempt.organization_id)
+            .where(
+                QuizAttempt.state == "in_progress", QuizAttempt.expires_at <= func.clock_timestamp()
+            )
+            .order_by(QuizAttempt.expires_at, QuizAttempt.id)
+            .limit(limit)
+        )
+        return [(r.id, r.organization_id) for r in rows]
+
+    async def passed_lessons(
+        self, enrollments: Sequence[UUID], lessons: Sequence[UUID], major: int
+    ) -> set[tuple[UUID, UUID]]:
+        if not enrollments or not lessons:
+            return set()
+        rows = await self.session.execute(
+            select(QuizAttempt.enrollment_id, QuizAttempt.lesson_id)
+            .where(
+                QuizAttempt.enrollment_id.in_(enrollments),
+                QuizAttempt.lesson_id.in_(lessons),
+                QuizAttempt.major_version == major,
+                QuizAttempt.state == "submitted",
+                QuizAttempt.passed.is_(True),
+            )
+            .distinct()
+        )
+        return {(r.enrollment_id, r.lesson_id) for r in rows}
+
+    async def close_major(self, enrollments: Sequence[UUID], major: int) -> None:
+        await self.session.execute(
+            text("SELECT app.quiz_close_old_major(:ids,:major)"),
+            {"ids": list(enrollments), "major": major},
+        )

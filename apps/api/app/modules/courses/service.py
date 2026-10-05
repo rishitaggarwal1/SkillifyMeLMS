@@ -1333,3 +1333,10 @@ async def delete_assignment(ctx: Ctx, assignment_id: UUID) -> None:
         ctx.session, ctx.actor, action="course.unassigned", target_type="course",
         target_id=assignment.course_id, before=before,
     )  # fmt: skip
+
+
+async def student_has_course(session: AsyncSession, student: UUID, org: UUID, course: UUID) -> bool:
+    """Current batch entitlement, including for system expiry; never exposes assignment rows."""
+    from app.modules.courses.repository import student_course_assigned  # noqa: PLC0415
+
+    return await student_course_assigned(session, student, org, course)

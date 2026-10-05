@@ -122,6 +122,9 @@ class Settings(BaseSettings):
     heartbeat_interval_seconds: int = Field(default=15, ge=5)
     progress_flush_interval_seconds: float = Field(default=30.0, gt=0)
 
+    # Quiz answers live only in Postgres; beat recovers missed deadline tasks.
+    quiz_expiry_sweep_interval_seconds: float = Field(default=5.0, gt=0)
+
     # ---- Rate limits (Redis sliding windows).
     rl_auth_failures_per_minute: int = Field(default=30, ge=1)  # per client IP
     rl_invites_per_hour: int = Field(default=60, ge=1)  # per acting user

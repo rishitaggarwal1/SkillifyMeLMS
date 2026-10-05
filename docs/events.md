@@ -85,6 +85,7 @@ The mapping lives in `apps/api/app/events/envelope.py`. Add a row here whenever 
 | `enrollment_version_changed` | `learning.enrollments.v1` | An org_admin opted an enrollment into a newer major version |
 | `video_progress` | `learning.progress.v1` | A buffered lesson's video progress is flushed to Postgres |
 | `assignment_submitted` | `learning.enrollments.v1` | A student submits an assignment, or replaces a submission that isn't graded yet |
+| `quiz_attempt_submitted` | `learning.enrollments.v1` | A quiz is finalized manually or by expiry; keyed by enrollment ID, before any first passing completion |
 | `assignment_graded` | `learning.enrollments.v1` | A grader records or corrects a grade. The lesson's `lesson_completed` follows in the same transaction, the first time only |
 
 Both events are keyed by `batch_id`, so all changes to one batch arrive in order. Phase 2
@@ -312,6 +313,44 @@ can't change. `regrade` is true when the grader corrected an existing grade.
     "max_marks": { "type": "integer", "minimum": 1, "maximum": 1000 },
     "graded_by": { "type": "string", "format": "uuid" },
     "regrade": { "type": "boolean" }
+  }
+}
+```
+
+### `quiz_attempt_submitted` (version 1)
+
+The registered enrollment topic keeps this event ordered with `lesson_completed`.
+Finalization, accepted answers, score, progress and outbox commit together.
+Exactly one event is written per finalized attempt; replay is a no-op. Scores
+are exact two-place decimal strings. No raw answers, keys or explanations appear.
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "quiz_attempt_submitted.v1 data",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["attempt_id", "quiz_id", "quiz_version_id", "enrollment_id", "user_id",
+    "course_id", "lesson_id", "version_id", "attempt_number", "score", "max_marks",
+    "pass_marks", "passed", "reason", "started_at", "expires_at", "submitted_at"],
+  "properties": {
+    "attempt_id": {"type": "string", "format": "uuid"},
+    "quiz_id": {"type": "string", "format": "uuid"},
+    "quiz_version_id": {"type": "string", "format": "uuid"},
+    "enrollment_id": {"type": "string", "format": "uuid"},
+    "user_id": {"type": "string", "format": "uuid"},
+    "course_id": {"type": "string", "format": "uuid"},
+    "lesson_id": {"type": "string", "format": "uuid"},
+    "version_id": {"type": "string", "format": "uuid"},
+    "attempt_number": {"type": "integer", "minimum": 1, "maximum": 100},
+    "score": {"type": "string", "pattern": "^[0-9]{1,8}[.][0-9]{2}$"},
+    "max_marks": {"type": "string", "pattern": "^[0-9]{1,8}[.][0-9]{2}$"},
+    "pass_marks": {"type": "string", "pattern": "^[0-9]{1,8}[.][0-9]{2}$"},
+    "passed": {"type": "boolean"},
+    "reason": {"enum": ["manual", "expiry"]},
+    "started_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "submitted_at": {"type": "string", "format": "date-time"}
   }
 }
 ```

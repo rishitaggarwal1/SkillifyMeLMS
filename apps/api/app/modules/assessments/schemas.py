@@ -308,3 +308,55 @@ class PublishedQuiz(SafeModel):
     reveal_mode: RevealMode
     reveal_timing: RevealTiming
     questions: list[QuestionPrompt]
+
+
+class AnswerInput(SafeModel):
+    question_id: UUID
+    answer: SavedAnswer
+
+
+class AnswerBatch(SafeModel):
+    answers: list[AnswerInput] = Field(default_factory=list, max_length=100)
+
+    @model_validator(mode="after")
+    def _unique(self) -> Self:
+        if len({a.question_id for a in self.answers}) != len(self.answers):
+            raise ValueError("A question may occur only once in an answer batch")
+        return self
+
+
+class AttemptSummary(SafeModel):
+    id: UUID
+    quiz_version_id: UUID
+    attempt_number: int
+    major_version: int
+    state: Literal["in_progress", "submitted", "abandoned"]
+    revision: int
+    started_at: datetime
+    expires_at: datetime
+    submitted_at: datetime | None
+    score: Decimal | None
+    max_marks: Decimal
+    passed: bool | None
+
+
+class AttemptDetail(AttemptSummary):
+    server_now: datetime
+    questions: list[ActiveQuestion]
+
+
+class StudentQuiz(SafeModel):
+    quiz_id: UUID
+    quiz_version_id: UUID
+    title: str
+    time_limit_seconds: int
+    max_marks: Decimal
+    pass_marks: Decimal
+    attempts_allowed: int
+    attempts_used: int
+    attempts_remaining: int
+    revision: int
+    active_attempt_id: UUID | None
+    reveal_mode: RevealMode
+    reveal_timing: RevealTiming
+    server_now: datetime

@@ -10,6 +10,8 @@ from sqlalchemy import select
 
 from app.db.outbox import OutboxEvent
 from app.events.envelope import DEFAULT_TOPIC, TOPICS, topic_for
+from app.modules.assessments.tests.authoring_helpers import build_quiz
+from app.modules.assessments.tests.runtime_helpers import correct, publish_for_student
 from app.modules.enrollments.video_flush import flush_video_progress
 from tests.course_api import Campus, CourseApi, ok, published_for_cse
 
@@ -81,6 +83,19 @@ async def test_every_event_validates_against_its_documented_schema(
             campus.c, json={"score": "7.5", "feedback": "ok"}, headers={"If-Match": "1"},
         )
     )  # fmt: skip
+    # A real passing quiz emits the new strict v1 contract on the registered enrollment topic.
+    quiz = await build_quiz(api, campus)
+    player = await publish_for_student(quiz)
+    attempt = await player.start()
+    result = ok(
+        await player.request(
+            "POST",
+            f"/quiz-attempts/{attempt['id']}/submit",
+            json=correct(attempt),
+            headers={"If-Match": "1"},
+        )
+    )
+    assert result["passed"] is True
     # Opting into a new major emits the version change.
     ok(await api.publish(campus.author, campus.p, course.id, "major"), 201)
     ok(await api.request("POST", f"/courses/{course.id}/enrollment-upgrades", campus.c_admin,
