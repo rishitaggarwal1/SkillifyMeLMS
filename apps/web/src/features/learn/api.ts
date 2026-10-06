@@ -146,7 +146,7 @@ export function useSubmitAssignment(enrollmentId: string, lessonId: string) {
       }
       const created = await unwrap(
         api.POST("/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/submission-upload", {
-          params: { path },
+          params: { path, header },
           body: { file_name: safeFileName(input.file.name, "submission"), content_type: type },
         }),
       );

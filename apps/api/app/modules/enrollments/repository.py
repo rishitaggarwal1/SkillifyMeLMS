@@ -17,6 +17,7 @@ from sqlalchemy import (
     func,
     literal_column,
     select,
+    text,
     update,
     values,
 )
@@ -116,6 +117,13 @@ class EnrollmentRepository:
                 .where(Enrollment.id.in_(ids))
                 .order_by(Enrollment.id)
                 .with_for_update()
+            )
+        )
+
+    async def lock_assessment(self, enrollment_id: UUID) -> bool:
+        return bool(
+            await self.session.scalar(
+                text("SELECT app.lock_assessment_enrollment(:id)"), {"id": enrollment_id}
             )
         )
 

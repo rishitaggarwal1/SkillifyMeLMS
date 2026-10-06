@@ -26,36 +26,37 @@ Every message value is JSON:
   "occurred_at": "2026-09-26T06:16:32.795657+00:00",
   "organization_id": "0192…",
   "aggregate": { "type": "batch_member", "id": "0192…" },
-  "data": { }
+  "data": {}
 }
 ```
 
-| Field | Meaning |
-|---|---|
-| `id` | Event ID (UUIDv7). Use it to dedupe. |
-| `type` | Event type (snake_case, past tense). |
-| `version` | Schema version of `data` for this `type`. Additive changes keep the version. Breaking changes bump it; producers then emit the new version, and consumers must handle both during the transition. |
-| `occurred_at` | When the change was committed, in ISO-8601 UTC. |
-| `organization_id` | Tenant the event belongs to. `null` for platform-level events. |
-| `aggregate` | The entity the event is about. Its `id` is also the Kafka message key. |
-| `data` | Event-specific payload (schemas below). |
+| Field             | Meaning                                                                                                                                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`              | Event ID (UUIDv7). Use it to dedupe.                                                                                                                                                              |
+| `type`            | Event type (snake_case, past tense).                                                                                                                                                              |
+| `version`         | Schema version of `data` for this `type`. Additive changes keep the version. Breaking changes bump it; producers then emit the new version, and consumers must handle both during the transition. |
+| `occurred_at`     | When the change was committed, in ISO-8601 UTC.                                                                                                                                                   |
+| `organization_id` | Tenant the event belongs to. `null` for platform-level events.                                                                                                                                    |
+| `aggregate`       | The entity the event is about. Its `id` is also the Kafka message key.                                                                                                                            |
+| `data`            | Event-specific payload (schemas below).                                                                                                                                                           |
 
 Kafka headers: `event_type` and `event_id` (UTF-8), so consumers can route without parsing the
 body.
 
 ## Topics
 
-| Aggregate type | Topic |
-|---|---|
-| `batch_member` | `identity.batch-members.v1` |
-| `course` | `courses.v1` |
-| `enrollment` | `learning.enrollments.v1` |
-| `video_progress` | `learning.progress.v1` |
-| anything else | `platform.events.v1` |
+| Aggregate type   | Topic                       |
+| ---------------- | --------------------------- |
+| `batch_member`   | `identity.batch-members.v1` |
+| `course`         | `courses.v1`                |
+| `enrollment`     | `learning.enrollments.v1`   |
+| `video_progress` | `learning.progress.v1`      |
+| anything else    | `platform.events.v1`        |
 
 The mapping lives in `apps/api/app/events/envelope.py`. Add a row here whenever you add one there.
 
 **Conventions:**
+
 - **The topic follows the aggregate type**, and the message key is the aggregate id. Every event
   about one aggregate is then on one topic and partition, in the order it was written. So
   `lesson_completed` (aggregate `enrollment`) is on `learning.enrollments.v1`, ordered with that
@@ -75,18 +76,18 @@ The mapping lives in `apps/api/app/events/envelope.py`. Add a row here whenever 
 
 ## Event catalogue
 
-| Type | Topic | Emitted when |
-|---|---|---|
-| `batch_member_added` | `identity.batch-members.v1` | A user joins a batch: added by an admin, through an invitation, or through a CSV import |
-| `batch_member_removed` | `identity.batch-members.v1` | A user leaves a batch: removed by an admin, removed from the organization, or their invitation was revoked or expired |
-| `course_published` | `courses.v1` | A course version is published. Drives the outline-cache pointer and the public catalog revalidation |
-| `enrollment_created` | `learning.enrollments.v1` | A student is newly enrolled (a batch assignment covers them) |
-| `lesson_completed` | `learning.enrollments.v1` | A student completes a lesson, once per lesson: marked done, or a video watched past its threshold |
-| `enrollment_version_changed` | `learning.enrollments.v1` | An org_admin opted an enrollment into a newer major version |
-| `video_progress` | `learning.progress.v1` | A buffered lesson's video progress is flushed to Postgres |
-| `assignment_submitted` | `learning.enrollments.v1` | A student submits an assignment, or replaces a submission that isn't graded yet |
-| `quiz_attempt_submitted` | `learning.enrollments.v1` | A quiz is finalized manually or by expiry; keyed by enrollment ID, before any first passing completion |
-| `assignment_graded` | `learning.enrollments.v1` | A grader records or corrects a grade. The lesson's `lesson_completed` follows in the same transaction, the first time only |
+| Type                         | Topic                       | Emitted when                                                                                                               |
+| ---------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `batch_member_added`         | `identity.batch-members.v1` | A user joins a batch: added by an admin, through an invitation, or through a CSV import                                    |
+| `batch_member_removed`       | `identity.batch-members.v1` | A user leaves a batch: removed by an admin, removed from the organization, or their invitation was revoked or expired      |
+| `course_published`           | `courses.v1`                | A course version is published. Drives the outline-cache pointer and the public catalog revalidation                        |
+| `enrollment_created`         | `learning.enrollments.v1`   | A student is newly enrolled (a batch assignment covers them)                                                               |
+| `lesson_completed`           | `learning.enrollments.v1`   | A student completes a lesson, once per lesson: marked done, or a video watched past its threshold                          |
+| `enrollment_version_changed` | `learning.enrollments.v1`   | An org_admin opted an enrollment into a newer major version                                                                |
+| `video_progress`             | `learning.progress.v1`      | A buffered lesson's video progress is flushed to Postgres                                                                  |
+| `assignment_submitted`       | `learning.enrollments.v1`   | A student submits an assignment, or replaces a submission that isn't graded yet                                            |
+| `quiz_attempt_submitted`     | `learning.enrollments.v1`   | A quiz is finalized manually or by expiry; keyed by enrollment ID, before any first passing completion                     |
+| `assignment_graded`          | `learning.enrollments.v1`   | A grader records or corrects a grade. The lesson's `lesson_completed` follows in the same transaction, the first time only |
 
 Both events are keyed by `batch_id`, so all changes to one batch arrive in order. Phase 2
 (enrollments) consumes them to enroll and unenroll students in the courses assigned to the batch.
@@ -98,14 +99,21 @@ Both events are keyed by `batch_id`, so all changes to one batch arrive in order
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "batch_member_added.v1 data",
   "type": "object",
-  "required": ["batch_id", "user_id", "organization_id", "actor_user_id", "reason"],
+  "required": [
+    "batch_id",
+    "user_id",
+    "organization_id",
+    "actor_user_id",
+    "reason"
+  ],
   "additionalProperties": false,
   "properties": {
     "batch_id": { "type": "string", "format": "uuid" },
     "user_id": { "type": "string", "format": "uuid" },
     "organization_id": { "type": "string", "format": "uuid" },
     "actor_user_id": {
-      "type": ["string", "null"], "format": "uuid",
+      "type": ["string", "null"],
+      "format": "uuid",
       "description": "Who made the change; null for system jobs"
     },
     "reason": { "enum": ["added", "invitation", "import"] }
@@ -120,7 +128,13 @@ Both events are keyed by `batch_id`, so all changes to one batch arrive in order
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "batch_member_removed.v1 data",
   "type": "object",
-  "required": ["batch_id", "user_id", "organization_id", "actor_user_id", "reason"],
+  "required": [
+    "batch_id",
+    "user_id",
+    "organization_id",
+    "actor_user_id",
+    "reason"
+  ],
   "additionalProperties": false,
   "properties": {
     "batch_id": { "type": "string", "format": "uuid" },
@@ -147,7 +161,13 @@ is retried after a committed flush. Relay delivery remains at-least-once; consum
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "video_progress.v1 data",
   "type": "object",
-  "required": ["enrollment_id", "lesson_id", "video_asset_id", "position_seconds", "watched_ratio"],
+  "required": [
+    "enrollment_id",
+    "lesson_id",
+    "video_asset_id",
+    "position_seconds",
+    "watched_ratio"
+  ],
   "additionalProperties": false,
   "properties": {
     "enrollment_id": { "type": "string", "format": "uuid" },
@@ -172,8 +192,15 @@ course's owner org.
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "course_published.v1 data",
   "type": "object",
-  "required": ["course_id", "version_id", "major", "minor", "release_type", "is_public_catalog",
-               "published_by"],
+  "required": [
+    "course_id",
+    "version_id",
+    "major",
+    "minor",
+    "release_type",
+    "is_public_catalog",
+    "published_by"
+  ],
   "additionalProperties": false,
   "properties": {
     "course_id": { "type": "string", "format": "uuid" },
@@ -197,7 +224,13 @@ assignment that enrolled them (null when the enrollment was re-created without o
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "enrollment_created.v1 data",
   "type": "object",
-  "required": ["enrollment_id", "user_id", "course_id", "major_version", "assignment_id"],
+  "required": [
+    "enrollment_id",
+    "user_id",
+    "course_id",
+    "major_version",
+    "assignment_id"
+  ],
   "additionalProperties": false,
   "properties": {
     "enrollment_id": { "type": "string", "format": "uuid" },
@@ -219,15 +252,24 @@ Keyed by enrollment ID. `version_id` is the version the student was shown, and
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "lesson_completed.v1 data",
   "type": "object",
-  "required": ["enrollment_id", "user_id", "course_id", "lesson_id", "lesson_type", "version_id",
-               "progress_percent"],
+  "required": [
+    "enrollment_id",
+    "user_id",
+    "course_id",
+    "lesson_id",
+    "lesson_type",
+    "version_id",
+    "progress_percent"
+  ],
   "additionalProperties": false,
   "properties": {
     "enrollment_id": { "type": "string", "format": "uuid" },
     "user_id": { "type": "string", "format": "uuid" },
     "course_id": { "type": "string", "format": "uuid" },
     "lesson_id": { "type": "string", "format": "uuid" },
-    "lesson_type": { "enum": ["video", "notes", "pdf", "quiz", "lab", "assignment"] },
+    "lesson_type": {
+      "enum": ["video", "notes", "pdf", "quiz", "lab", "assignment"]
+    },
     "version_id": { "type": "string", "format": "uuid" },
     "progress_percent": { "type": "integer", "minimum": 0, "maximum": 100 }
   }
@@ -244,8 +286,15 @@ batches, into a newer major version.
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "enrollment_version_changed.v1 data",
   "type": "object",
-  "required": ["enrollment_id", "user_id", "course_id", "from_major", "to_major",
-               "progress_percent", "actor_user_id"],
+  "required": [
+    "enrollment_id",
+    "user_id",
+    "course_id",
+    "from_major",
+    "to_major",
+    "progress_percent",
+    "actor_user_id"
+  ],
   "additionalProperties": false,
   "properties": {
     "enrollment_id": { "type": "string", "format": "uuid" },
@@ -270,8 +319,17 @@ student's org. `version_id` is the course version the student submitted against.
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "assignment_submitted.v1 data",
   "type": "object",
-  "required": ["submission_id", "assignment_id", "enrollment_id", "user_id", "course_id",
-               "lesson_id", "version_id", "kind", "resubmission"],
+  "required": [
+    "submission_id",
+    "assignment_id",
+    "enrollment_id",
+    "user_id",
+    "course_id",
+    "lesson_id",
+    "version_id",
+    "kind",
+    "resubmission"
+  ],
   "additionalProperties": false,
   "properties": {
     "submission_id": { "type": "string", "format": "uuid" },
@@ -298,8 +356,19 @@ can't change. `regrade` is true when the grader corrected an existing grade.
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "assignment_graded.v1 data",
   "type": "object",
-  "required": ["submission_id", "assignment_id", "enrollment_id", "user_id", "course_id",
-               "lesson_id", "version_id", "score", "max_marks", "graded_by", "regrade"],
+  "required": [
+    "submission_id",
+    "assignment_id",
+    "enrollment_id",
+    "user_id",
+    "course_id",
+    "lesson_id",
+    "version_id",
+    "score",
+    "max_marks",
+    "graded_by",
+    "regrade"
+  ],
   "additionalProperties": false,
   "properties": {
     "submission_id": { "type": "string", "format": "uuid" },
@@ -317,6 +386,183 @@ can't change. `regrade` is true when the grader corrected an existing grade.
 }
 ```
 
+### `assignment_graded` (version 2)
+
+New grades/corrections append immutable revisions against the active attempt.
+`score` is the effective earned score after its frozen late penalty; `raw_score`
+is the criterion sum (or legacy total), and `rubric_breakdown` contains criterion
+scores only. No work, feedback or instruction image URLs appear in the event.
+`late` is null for backfilled work whose historical acceptance data was not kept.
+Consumers dispatch by the envelope version: historical v1 rows remain valid.
+Both versions use `learning.enrollments.v1`, keyed by enrollment ID.
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "assignment_graded.v2 data",
+  "type": "object",
+  "required": [
+    "submission_id",
+    "assignment_id",
+    "enrollment_id",
+    "user_id",
+    "course_id",
+    "lesson_id",
+    "version_id",
+    "score",
+    "max_marks",
+    "graded_by",
+    "regrade",
+    "grade_id",
+    "attempt_id",
+    "attempt_number",
+    "grade_sequence",
+    "raw_score",
+    "penalty_percent",
+    "penalty_marks",
+    "rubric_breakdown",
+    "late"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "submission_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "assignment_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "enrollment_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "user_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "course_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "lesson_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "version_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "score": {
+      "type": "string",
+      "pattern": "^[0-9]{1,4}[.][0-9]{2}$"
+    },
+    "max_marks": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000
+    },
+    "graded_by": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "regrade": {
+      "type": "boolean"
+    },
+    "grade_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "attempt_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "attempt_number": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "grade_sequence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "raw_score": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d{2}$"
+    },
+    "penalty_percent": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d{2}$"
+    },
+    "penalty_marks": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d{2}$"
+    },
+    "rubric_breakdown": {
+      "type": ["array", "null"],
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "required": ["criterion_id", "score"],
+        "additionalProperties": false,
+        "properties": {
+          "criterion_id": {
+            "type": "string"
+          },
+          "score": {
+            "type": "string",
+            "pattern": "^\\d+\\.\\d{2}$"
+          }
+        }
+      }
+    },
+    "late": {
+      "type": ["object", "null"],
+      "required": [
+        "due_at",
+        "policy",
+        "is_late",
+        "late_days",
+        "penalty_percent",
+        "closed"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "due_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "policy": {
+          "type": "object",
+          "required": ["mode", "percent_per_day"],
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "enum": ["accept", "reject", "penalty"]
+            },
+            "percent_per_day": {
+              "type": ["string", "null"]
+            }
+          }
+        },
+        "is_late": {
+          "type": "boolean"
+        },
+        "late_days": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "penalty_percent": {
+          "type": "string"
+        },
+        "closed": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
 ### `quiz_attempt_submitted` (version 1)
 
 The registered enrollment topic keeps this event ordered with `lesson_completed`.
@@ -330,27 +576,43 @@ are exact two-place decimal strings. No raw answers, keys or explanations appear
   "title": "quiz_attempt_submitted.v1 data",
   "type": "object",
   "additionalProperties": false,
-  "required": ["attempt_id", "quiz_id", "quiz_version_id", "enrollment_id", "user_id",
-    "course_id", "lesson_id", "version_id", "attempt_number", "score", "max_marks",
-    "pass_marks", "passed", "reason", "started_at", "expires_at", "submitted_at"],
+  "required": [
+    "attempt_id",
+    "quiz_id",
+    "quiz_version_id",
+    "enrollment_id",
+    "user_id",
+    "course_id",
+    "lesson_id",
+    "version_id",
+    "attempt_number",
+    "score",
+    "max_marks",
+    "pass_marks",
+    "passed",
+    "reason",
+    "started_at",
+    "expires_at",
+    "submitted_at"
+  ],
   "properties": {
-    "attempt_id": {"type": "string", "format": "uuid"},
-    "quiz_id": {"type": "string", "format": "uuid"},
-    "quiz_version_id": {"type": "string", "format": "uuid"},
-    "enrollment_id": {"type": "string", "format": "uuid"},
-    "user_id": {"type": "string", "format": "uuid"},
-    "course_id": {"type": "string", "format": "uuid"},
-    "lesson_id": {"type": "string", "format": "uuid"},
-    "version_id": {"type": "string", "format": "uuid"},
-    "attempt_number": {"type": "integer", "minimum": 1, "maximum": 100},
-    "score": {"type": "string", "pattern": "^[0-9]{1,8}[.][0-9]{2}$"},
-    "max_marks": {"type": "string", "pattern": "^[0-9]{1,8}[.][0-9]{2}$"},
-    "pass_marks": {"type": "string", "pattern": "^[0-9]{1,8}[.][0-9]{2}$"},
-    "passed": {"type": "boolean"},
-    "reason": {"enum": ["manual", "expiry"]},
-    "started_at": {"type": "string", "format": "date-time"},
-    "expires_at": {"type": "string", "format": "date-time"},
-    "submitted_at": {"type": "string", "format": "date-time"}
+    "attempt_id": { "type": "string", "format": "uuid" },
+    "quiz_id": { "type": "string", "format": "uuid" },
+    "quiz_version_id": { "type": "string", "format": "uuid" },
+    "enrollment_id": { "type": "string", "format": "uuid" },
+    "user_id": { "type": "string", "format": "uuid" },
+    "course_id": { "type": "string", "format": "uuid" },
+    "lesson_id": { "type": "string", "format": "uuid" },
+    "version_id": { "type": "string", "format": "uuid" },
+    "attempt_number": { "type": "integer", "minimum": 1, "maximum": 100 },
+    "score": { "type": "string", "pattern": "^[0-9]{1,8}[.][0-9]{2}$" },
+    "max_marks": { "type": "string", "pattern": "^[0-9]{1,8}[.][0-9]{2}$" },
+    "pass_marks": { "type": "string", "pattern": "^[0-9]{1,8}[.][0-9]{2}$" },
+    "passed": { "type": "boolean" },
+    "reason": { "enum": ["manual", "expiry"] },
+    "started_at": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": "string", "format": "date-time" },
+    "submitted_at": { "type": "string", "format": "date-time" }
   }
 }
 ```

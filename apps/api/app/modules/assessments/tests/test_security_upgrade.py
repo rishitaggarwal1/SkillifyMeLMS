@@ -30,11 +30,31 @@ async def _legacy_data(url: str) -> tuple[UUID, UUID, UUID, UUID, UUID]:
         lesson = await factory.lesson(module, lesson_type="assignment")
         version, assignment_id = await factory.homework_version(course, lesson)
         enrollment = await factory.enrollment(course, student, org)
-        submission = await factory.submission(enrollment, lesson, version, assignment_id)
+        # Frozen pre-0012 SQL setup must not use today's ORM columns.
+        submission_id = new_id()
+        async with factory.sessionmaker() as session, session.begin():
+            await session.execute(
+                text(
+                    "INSERT INTO assignment_submissions "
+                    "(id,organization_id,assignment_id,course_id,lesson_id,version_id,"
+                    "enrollment_id,user_id,kind,text_body) "
+                    "VALUES(:id,:org,:assignment,:course,:lesson,:version,:enrollment,:user,'text','legacy')"
+                ),
+                {
+                    "id": submission_id,
+                    "org": org.id,
+                    "assignment": assignment_id,
+                    "course": course.id,
+                    "lesson": lesson.id,
+                    "version": version.id,
+                    "enrollment": enrollment.id,
+                    "user": student.id,
+                },
+            )
         grade = AssignmentGrade(
             id=new_id(),
             organization_id=org.id,
-            submission_id=submission.id,
+            submission_id=submission_id,
             user_id=student.id,
             score=Decimal("8"),
             max_marks=10,
@@ -49,7 +69,22 @@ async def _legacy_data(url: str) -> tuple[UUID, UUID, UUID, UUID, UUID]:
             payload={"user_id": str(student.id), "score": "8.00"},
             headers={"version": 1},
         )
-        await factory._save(grade, event)
+        async with factory.sessionmaker() as session, session.begin():
+            await session.execute(
+                text(
+                    "INSERT INTO assignment_grades "
+                    "(id,organization_id,submission_id,user_id,score,max_marks,graded_by) "
+                    "VALUES(:id,:org,:sub,:user,8,10,:grader)"
+                ),
+                {
+                    "id": grade.id,
+                    "org": org.id,
+                    "sub": submission_id,
+                    "user": student.id,
+                    "grader": grader.id,
+                },
+            )
+            session.add(event)
         return org.id, student.id, other.id, event.id, grade.id
     finally:
         await engine.dispose()

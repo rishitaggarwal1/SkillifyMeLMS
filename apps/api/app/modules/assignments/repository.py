@@ -6,7 +6,8 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, case, func, or_, select, update
+from sqlalchemy import and_, case, func, or_, select, text, update
+from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +16,7 @@ from app.modules.assignments.models import (
     Assignment,
     AssignmentGrade,
     AssignmentSubmission,
+    SubmissionAttempt,
     SubmissionStatus,
 )
 
@@ -63,6 +65,32 @@ class SubmissionRepository:
 
     async def get(self, submission_id: UUID) -> AssignmentSubmission | None:
         return await self.session.get(AssignmentSubmission, submission_id, populate_existing=True)
+
+    async def lock(self, submission_id: UUID) -> AssignmentSubmission | None:
+        return await self.session.scalar(
+            select(AssignmentSubmission)
+            .where(AssignmentSubmission.id == submission_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+
+    async def bind_first_attempt(
+        self, submission_id: UUID, attempt_id: UUID
+    ) -> AssignmentSubmission:
+        row = await self.session.scalar(
+            update(AssignmentSubmission)
+            .where(AssignmentSubmission.id == submission_id)
+            .values(active_attempt_id=attempt_id)
+            .returning(AssignmentSubmission)
+            .execution_options(populate_existing=True)
+        )
+        assert row is not None  # noqa: S101
+        return row
+
+    async def database_now(self) -> datetime:
+        value = await self.session.scalar(text("SELECT clock_timestamp()"))
+        assert isinstance(value, datetime)  # noqa: S101
+        return value
 
     async def for_enrollment(
         self, enrollment_id: UUID, assignment_id: UUID
@@ -161,20 +189,88 @@ class GradeRepository:
         if not submission_ids:
             return {}
         rows = await self.session.scalars(
-            select(AssignmentGrade).where(AssignmentGrade.submission_id.in_(submission_ids))
+            select(AssignmentGrade)
+            .join(
+                AssignmentSubmission,
+                AssignmentSubmission.active_attempt_id == AssignmentGrade.attempt_id,
+            )
+            .where(AssignmentGrade.submission_id.in_(submission_ids))
+            .ext(distinct_on(AssignmentGrade.submission_id))
+            .order_by(AssignmentGrade.submission_id, AssignmentGrade.grade_sequence.desc())
         )
         return {g.submission_id: g for g in rows}
 
     async def upsert(self, values: dict[str, Any]) -> AssignmentGrade:
-        stmt = pg_insert(AssignmentGrade).values(id=new_id(), **values)
-        changes = {k: v for k, v in values.items() if k not in {"submission_id", "organization_id"}}
-        row = await self.session.scalar(
-            stmt.on_conflict_do_update(
-                constraint="uq_assignment_grades_submission",
-                set_={**changes, "graded_at": func.now(), "updated_at": func.now()},
-            )
-            .returning(AssignmentGrade)
-            .execution_options(populate_existing=True)
-        )
-        assert row is not None  # noqa: S101 - RETURNING always yields the row
+        """Append a correction; the old public interface retains its name."""
+        row = AssignmentGrade(id=new_id(), **values)
+        self.session.add(row)
+        await self.session.flush()
+        await self.session.refresh(row)
         return row
+
+    async def for_attempts(self, attempt_ids: Sequence[UUID]) -> dict[UUID, AssignmentGrade]:
+        rows = await self.session.scalars(
+            select(AssignmentGrade)
+            .where(AssignmentGrade.attempt_id.in_(attempt_ids))
+            .ext(distinct_on(AssignmentGrade.attempt_id))
+            .order_by(AssignmentGrade.attempt_id, AssignmentGrade.grade_sequence.desc())
+        )
+        return {g.attempt_id: g for g in rows}
+
+    async def history(
+        self, attempt_id: UUID, after: UUID | None, limit: int
+    ) -> list[AssignmentGrade]:
+        stmt = select(AssignmentGrade).where(AssignmentGrade.attempt_id == attempt_id)
+        if after:
+            stmt = stmt.where(AssignmentGrade.id < after)
+        return list(
+            await self.session.scalars(stmt.order_by(AssignmentGrade.id.desc()).limit(limit))
+        )
+
+
+class AttemptRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def get_many(self, ids: Sequence[UUID]) -> dict[UUID, SubmissionAttempt]:
+        rows = await self.session.scalars(
+            select(SubmissionAttempt).where(SubmissionAttempt.id.in_(ids))
+        )
+        return {a.id: a for a in rows}
+
+    async def graded_evidence(
+        self, enrollment_ids: Sequence[UUID], lesson_ids: Sequence[UUID], major: int
+    ) -> set[tuple[UUID, UUID]]:
+        rows = await self.session.execute(
+            select(AssignmentSubmission.enrollment_id, AssignmentSubmission.lesson_id)
+            .join(SubmissionAttempt, SubmissionAttempt.id == AssignmentSubmission.active_attempt_id)
+            .where(
+                AssignmentSubmission.enrollment_id.in_(enrollment_ids),
+                AssignmentSubmission.lesson_id.in_(lesson_ids),
+                SubmissionAttempt.major_version == major,
+                select(AssignmentGrade.id)
+                .where(AssignmentGrade.attempt_id == SubmissionAttempt.id)
+                .exists(),
+            )
+        )
+        return {(eid, lid) for eid, lid in rows}
+
+    async def get(self, attempt_id: UUID | None) -> SubmissionAttempt | None:
+        if attempt_id is None:
+            return None
+        return await self.session.get(SubmissionAttempt, attempt_id)
+
+    async def create(self, attempt: SubmissionAttempt) -> SubmissionAttempt:
+        self.session.add(attempt)
+        await self.session.flush()
+        return attempt
+
+    async def history(
+        self, submission_id: UUID, after: UUID | None, limit: int
+    ) -> list[SubmissionAttempt]:
+        stmt = select(SubmissionAttempt).where(SubmissionAttempt.submission_id == submission_id)
+        if after:
+            stmt = stmt.where(SubmissionAttempt.id < after)
+        return list(
+            await self.session.scalars(stmt.order_by(SubmissionAttempt.id.desc()).limit(limit))
+        )

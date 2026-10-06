@@ -16,12 +16,15 @@ from app.core.pagination import CursorPage, PageParams
 from app.modules.assignments import service
 from app.modules.assignments.schemas import (
     AssignmentDraftOut,
+    AssignmentPreviewOut,
     AssignmentUpsert,
     FileUploadOut,
     GradeBody,
+    GradeOut,
     GraderSubmissionDetail,
     GraderSubmissionRow,
     StudentAssignmentOut,
+    SubmissionAttemptOut,
     SubmissionOut,
     SubmissionUploadCreate,
     SubmitBody,
@@ -75,6 +78,16 @@ async def put_lesson_assignment(
     return await service.put_draft(ctx, course_id, lesson_id, body, if_match)
 
 
+@router.get(
+    "/courses/{course_id}/lessons/{lesson_id}/assignment/preview", operation_id="preview_assignment"
+)
+async def preview_assignment(
+    ctx: RequestCtx, request: Request, course_id: UUID, lesson_id: UUID
+) -> AssignmentPreviewOut:
+    state = request.app.state
+    return await service.preview_draft(ctx, state.storage, state.settings, course_id, lesson_id)
+
+
 # ============================================================================ students
 
 
@@ -100,16 +113,45 @@ async def get_my_assignment(
 async def create_submission_upload(
     ctx: RequestCtx,
     request: Request,
+    *,
     enrollment_id: UUID,
     lesson_id: UUID,
     body: SubmissionUploadCreate,
+    if_match: IfMatch,
 ) -> FileUploadOut:
     """A presigned upload for a file submission (PDF, PNG or JPEG). Upload, then submit its id."""
     state = request.app.state
     return await service.create_submission_upload(
         ctx, state.storage, state.settings, enrollment_id=enrollment_id, lesson_id=lesson_id,
-        body=body,
+        body=body, if_match=if_match,
     )  # fmt: skip
+
+
+@router.get(
+    "/enrollments/{enrollment_id}/lessons/{lesson_id}/submission-attempts",
+    operation_id="my_submission_attempts",
+)
+async def my_submission_attempts(
+    ctx: RequestCtx, request: Request, enrollment_id: UUID, lesson_id: UUID, page: PageParams
+) -> CursorPage[SubmissionAttemptOut]:
+    state = request.app.state
+    items, cursor = await service.student_attempt_history(
+        ctx, state.storage, state.settings, enrollment_id, lesson_id, params=page
+    )
+    return CursorPage(items=items, next_cursor=cursor)
+
+
+@router.get(
+    "/enrollments/{enrollment_id}/lessons/{lesson_id}/submission-attempts/{attempt_id}/grades",
+    operation_id="my_assignment_grade_history",
+)
+async def my_assignment_grade_history(
+    ctx: RequestCtx, enrollment_id: UUID, lesson_id: UUID, attempt_id: UUID, page: PageParams
+) -> CursorPage[GradeOut]:
+    items, cursor = await service.student_grade_history(
+        ctx, enrollment_id, lesson_id, attempt_id, page
+    )
+    return CursorPage(items=items, next_cursor=cursor)
 
 
 @router.put(
@@ -175,6 +217,37 @@ async def grade_submission(
         ctx, state.storage, state.settings, submission_id=submission_id, body=body,
         if_match=if_match,
     )  # fmt: skip
+
+
+@submissions.get("/{submission_id}/attempts", operation_id="submission_attempt_history")
+async def submission_attempt_history(
+    ctx: RequestCtx, request: Request, submission_id: UUID, page: PageParams
+) -> CursorPage[SubmissionAttemptOut]:
+    state = request.app.state
+    items, cursor = await service.grader_attempt_history(
+        ctx, state.storage, state.settings, submission_id, page
+    )
+    return CursorPage(items=items, next_cursor=cursor)
+
+
+@submissions.get("/{submission_id}/attempts/{attempt_id}", operation_id="submission_attempt_detail")
+async def submission_attempt_detail(
+    ctx: RequestCtx, request: Request, submission_id: UUID, attempt_id: UUID
+) -> SubmissionAttemptOut:
+    state = request.app.state
+    return await service.grader_attempt_detail(
+        ctx, state.storage, state.settings, submission_id, attempt_id
+    )
+
+
+@submissions.get(
+    "/{submission_id}/attempts/{attempt_id}/grades", operation_id="assignment_grade_history"
+)
+async def assignment_grade_history(
+    ctx: RequestCtx, submission_id: UUID, attempt_id: UUID, page: PageParams
+) -> CursorPage[GradeOut]:
+    items, cursor = await service.grader_grade_history(ctx, submission_id, attempt_id, page)
+    return CursorPage(items=items, next_cursor=cursor)
 
 
 router.include_router(submissions)

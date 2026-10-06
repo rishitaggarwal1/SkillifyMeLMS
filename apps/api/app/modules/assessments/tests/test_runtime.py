@@ -7,12 +7,100 @@ from uuid import UUID
 
 import pytest
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.pool import NullPool
 
+from app.db.session import create_sessionmaker
 from app.modules.assessments.tasks import run_expiry, sweep
 from app.modules.assessments.tests.authoring_helpers import AuthoredQuiz
 from app.modules.assessments.tests.runtime_helpers import RuntimeWorld, correct, publish_for_student
 from tests.course_api import ok
 from tests.fixtures import TenantSessionFactory
+
+
+async def test_passing_expiry_sweeper_without_client_survives_restart(
+    runtime: RuntimeWorld,
+) -> None:
+    w = runtime
+    attempt = await w.start()
+    ok(
+        await w.request(
+            "PUT",
+            f"/quiz-attempts/{attempt['id']}/answers",
+            json=correct(attempt),
+            headers={"If-Match": "1"},
+        )
+    )
+    await w.expire(attempt["id"])
+    # No client request after expiry: invoke the production beat handler with
+    # fresh app-role connections, then recreate them to simulate worker restart.
+    settings = w.authored.api.app.state.settings
+    first_state = None
+    for iteration in range(2):
+        engine = create_async_engine(settings.database_url.get_secret_value(), poolclass=NullPool)
+        try:
+            sm = create_sessionmaker(engine)
+            count = await sweep(sm)
+            if iteration == 0:
+                assert count >= 1
+            # A queued expiry task may also be replayed after the beat worker.
+            await run_expiry(sm, UUID(attempt["id"]), w.authored.campus.c.id)
+        finally:
+            await engine.dispose()
+        async with w.authored.api.factory.sessionmaker() as reader:
+            state = (
+                await reader.execute(
+                    text(
+                        "SELECT state, score, passed, revision, submitted_at "
+                        "FROM quiz_attempts WHERE id=:id"
+                    ),
+                    {"id": UUID(attempt["id"])},
+                )
+            ).one()
+            assert tuple(state[:4]) == ("submitted", 6, True, 3)
+            assert state.submitted_at is not None
+            if first_state is None:
+                first_state = state
+            else:
+                assert state == first_state
+            params = {"id": UUID(w.enrollment_id), "aid": attempt["id"]}
+            assert (
+                await reader.scalar(
+                    text("SELECT progress_percent FROM enrollments WHERE id=:id"), params
+                )
+                == 100
+            )
+            assert (
+                await reader.scalar(
+                    text(
+                        "SELECT count(*) FROM lesson_progress "
+                        "WHERE enrollment_id=:id AND completed_at IS NOT NULL"
+                    ),
+                    params,
+                )
+                == 1
+            )
+            assert (
+                await reader.scalar(
+                    text(
+                        "SELECT count(*) FROM outbox_events WHERE aggregate_id=:id "
+                        "AND event_type='lesson_completed'"
+                    ),
+                    params,
+                )
+                == 1
+            )
+            assert (
+                await reader.scalar(
+                    text(
+                        "SELECT count(*) FROM outbox_events WHERE aggregate_id=:id "
+                        "AND event_type='quiz_attempt_submitted' "
+                        "AND payload->>'attempt_id'=:aid AND payload->>'reason'='expiry'"
+                    ),
+                    params,
+                )
+                == 1
+            )
 
 
 async def test_fail_then_pass_and_idempotent_submission(runtime: RuntimeWorld) -> None:

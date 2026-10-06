@@ -13,7 +13,7 @@ from uuid_utils.compat import uuid7
 
 from app.db.base import new_id
 from app.db.types import LTree
-from app.modules.assignments.models import AssignmentSubmission
+from app.modules.assignments.models import AssignmentSubmission, SubmissionAttempt
 from app.modules.audit.models import AuditLog
 from app.modules.courses.models import (
     CatalogEntry,
@@ -293,6 +293,7 @@ class Factory:
                 .where(CourseVersion.id == version.id)
                 .values(snapshot=snapshot)
             )
+        version.snapshot = snapshot
         return version, assignment_id
 
     async def submission(
@@ -318,7 +319,31 @@ class Factory:
             status="submitted",
             revision=1,
         )
-        await self._save(submission)
+        accepted_at = datetime.now(UTC)
+        submission.submitted_at = accepted_at
+        attempt = SubmissionAttempt(
+            id=new_id(),
+            submission_id=submission.id,
+            organization_id=submission.organization_id,
+            user_id=submission.user_id,
+            attempt_number=1,
+            major_version=version.major,
+            version_id=version.id,
+            kind="text",
+            text_body=text,
+            submitted_at=accepted_at,
+            assignment_rules=next(
+                item["content"]
+                for m in version.snapshot["modules"]
+                for item in m["lessons"]
+                if item["id"] == str(lesson.id)
+            ),
+        )
+        submission.active_attempt_id = attempt.id
+        async with self.sessionmaker() as session, session.begin():
+            session.add(submission)
+            await session.flush()
+            session.add(attempt)
         return submission
 
     async def skill(self, *, parent_path: str = "dsa") -> "Skill":

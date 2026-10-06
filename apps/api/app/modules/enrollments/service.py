@@ -398,8 +398,8 @@ async def lesson_images(
     """Signed URLs for the images in a notes lesson's pre-rendered HTML."""
     _, version = await _my_enrollment(ctx, enrollment_id)
     lesson = await _lesson_in_version(ctx, version, lesson_id)
-    if lesson.lesson_type != "notes":
-        raise NotFoundError("Notes lesson not found.")
+    if lesson.lesson_type not in {"notes", "assignment"}:
+        raise NotFoundError("Image lesson not found.")
     found = await media.download_urls(ctx.session, storage, lesson.file_ids, ttl_seconds)
     return LessonImagesOut(
         urls={file_id: d.url for file_id, d in found.items()},
@@ -475,7 +475,12 @@ async def student_lesson(ctx: Ctx, enrollment_id: UUID, lesson_id: UUID) -> Stud
 
 
 async def complete_graded_lesson(
-    session: AsyncSession, enrollment_id: UUID, lesson_id: UUID, *, redis: Redis | None = None
+    session: AsyncSession,
+    enrollment_id: UUID,
+    lesson_id: UUID,
+    *,
+    redis: Redis | None = None,
+    major: int | None = None,
 ) -> int | None:
     """An assignment was graded: complete its lesson and recompute progress, in the grader's
     transaction (RLS lets a grader write progress only where a graded submission exists,
@@ -483,6 +488,8 @@ async def complete_graded_lesson(
     or its current version no longer has the lesson (a later major dropped it)."""
     enrollment = await EnrollmentRepository(session).get(enrollment_id)
     if enrollment is None or enrollment.status != EnrollmentStatus.ACTIVE:
+        return None
+    if major is not None and enrollment.major_version != major:
         return None
     version = await courses.resolve_version(
         session, enrollment.course_id, enrollment.major_version, redis=redis
@@ -514,6 +521,12 @@ async def record_completion(
             version_id=version.id, progress_percent=percent[enrollment.id],
         )  # fmt: skip
     return percent[enrollment.id]
+
+
+async def lock_assessment_enrollment(session: AsyncSession, enrollment_id: UUID) -> None:
+    """Serialize assessment work with quiz finalization/progress/major upgrades."""
+    if not await EnrollmentRepository(session).lock_assessment(enrollment_id):
+        raise NotFoundError("Enrollment not found.")
 
 
 async def recompute_progress(

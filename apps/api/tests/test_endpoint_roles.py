@@ -29,6 +29,7 @@ from app.modules.assessments.models import (
     QuizVersionKey,
     QuizVersionQuestion,
 )
+from app.modules.assignments.models import Assignment
 from app.modules.identity.models import Organization, User
 from tests.factories import Factory
 from tests.fakes import EnqueueRecorder, FakeKeycloakAdmin
@@ -259,6 +260,19 @@ async def _assignment_draft(w: World, method: str) -> Request:
     path = f"/api/v1/courses/{course.id}/lessons/{lesson.id}/assignment"
     if method == "GET":
         return path, {}
+    if method == "preview":
+        await w.factory._save(
+            Assignment(
+                id=new_id(),
+                organization_id=w.org.id,
+                course_id=course.id,
+                lesson_id=lesson.id,
+                title="Homework",
+                max_marks=10,
+                submission_kinds=["text"],
+            )
+        )
+        return path + "/preview", {}
     revision = await w.factory.course_revision(course.id)
     body = {"title": "Homework", "max_marks": 10, "submission_kinds": ["text"]}
     return path, {"json": body, "headers": {"If-Match": str(revision)}}
@@ -281,7 +295,10 @@ def _my_homework(action: str) -> Builder:
         _, lesson, _, enrollment, _ = await _homework(w)
         path = f"/api/v1/enrollments/{enrollment.id}/lessons/{lesson.id}/{action}"
         if action == "submission-upload":
-            return path, {"json": {"file_name": "a.pdf", "content_type": "application/pdf"}}
+            return path, {
+                "json": {"file_name": "a.pdf", "content_type": "application/pdf"},
+                "headers": {"If-Match": "0"},
+            }
         if action == "submission":
             body = {"submission": {"kind": "text", "text": "answer"}}
             return path, {"json": body, "headers": {"If-Match": "0"}}
@@ -300,6 +317,17 @@ def _graded(action: str) -> Builder:
         _, lesson, version, enrollment, assignment_id = await _homework(w)
         submission = await w.factory.submission(enrollment, lesson, version, assignment_id)
         path = f"/api/v1/assignment-submissions/{submission.id}"
+        if action == "attempts":
+            return f"{path}/attempts", {}
+        if action == "attempt-detail":
+            return f"{path}/attempts/{submission.active_attempt_id}", {}
+        if action == "grade-history":
+            return f"{path}/attempts/{submission.active_attempt_id}/grades", {}
+        if action == "my-grades":
+            return (
+                f"/api/v1/enrollments/{enrollment.id}/lessons/{lesson.id}/submission-attempts/{submission.active_attempt_id}/grades",
+                {},
+            )
         if action == "grade":
             return f"{path}/grade", {"json": {"score": "5"}, "headers": {"If-Match": "1"}}
         return path, {}
@@ -604,6 +632,48 @@ MATRIX = [
         "/api/v1/assignment-submissions/{submission_id}/grade",
         STAFF_READ,
         _graded("grade"),
+        names_resource=True,
+    ),
+    Route(
+        "GET",
+        "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/submission-attempts",
+        {"student"},
+        _my_homework("submission-attempts"),
+        denied="404",
+    ),
+    Route(
+        "GET",
+        "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/submission-attempts/{attempt_id}/grades",
+        {"student"},
+        _graded("my-grades"),
+        denied="404",
+    ),
+    Route(
+        "GET",
+        "/api/v1/assignment-submissions/{submission_id}/attempts",
+        STAFF_READ,
+        _graded("attempts"),
+        names_resource=True,
+    ),
+    Route(
+        "GET",
+        "/api/v1/assignment-submissions/{submission_id}/attempts/{attempt_id}",
+        STAFF_READ,
+        _graded("attempt-detail"),
+        names_resource=True,
+    ),
+    Route(
+        "GET",
+        "/api/v1/assignment-submissions/{submission_id}/attempts/{attempt_id}/grades",
+        STAFF_READ,
+        _graded("grade-history"),
+        names_resource=True,
+    ),
+    Route(
+        "GET",
+        "/api/v1/courses/{course_id}/lessons/{lesson_id}/assignment/preview",
+        STAFF_READ,
+        lambda w: _assignment_draft(w, "preview"),
         names_resource=True,
     ),
     # --- skills: everyone reads; org A isn't a content publisher, so only platform admins

@@ -184,6 +184,7 @@ async def test_submission_files_are_private(
             campus.cse,
             campus.c,
             json={"file_name": "a.pdf", "content_type": "application/pdf"},
+            headers={"If-Match": "0"},
         ),
         201,
     )

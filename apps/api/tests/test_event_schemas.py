@@ -8,6 +8,7 @@ from pathlib import Path
 from jsonschema import Draft202012Validator, FormatChecker
 from sqlalchemy import select
 
+from app.db.base import new_id
 from app.db.outbox import OutboxEvent
 from app.events.envelope import DEFAULT_TOPIC, TOPICS, topic_for
 from app.modules.assessments.tests.authoring_helpers import build_quiz
@@ -18,10 +19,10 @@ from tests.course_api import Campus, CourseApi, ok, published_for_cse
 DOC = Path(__file__).resolve().parents[3] / "docs" / "events.md"
 
 
-def documented_schemas() -> dict[str, dict[str, object]]:
+def documented_schemas() -> dict[tuple[str, int], dict[str, object]]:
     text = DOC.read_text(encoding="utf-8")
     found = re.findall(r"### `(\w+)` \(version (\d+)\)\s.*?```json\n(.*?)\n```", text, re.S)
-    schemas = {name: json.loads(body) for name, _version, body in found}
+    schemas = {(name, int(version)): json.loads(body) for name, version, body in found}
     for schema in schemas.values():
         Draft202012Validator.check_schema(schema)
     return schemas
@@ -31,8 +32,12 @@ def documented_topics() -> tuple[dict[str, str], dict[str, str]]:
     """(aggregate type -> topic) from the Topics table, (event type -> topic) from the catalogue."""
     text = DOC.read_text(encoding="utf-8")
     # Topics table rows have two columns; catalogue rows have a third (when it's emitted).
-    by_aggregate = dict(re.findall(r"^\| `(\w+)` \| `([\w.-]+)` \|$", text, re.M))
-    by_event = dict(re.findall(r"^\| `(\w+)` \| `([\w.-]+)` \| [^|\n]+ \|$", text, re.M))
+    by_aggregate = dict(
+        re.findall(r"^\|[ \t]*`(\w+)`[ \t]*\|[ \t]*`([\w.-]+)`[ \t]*\|$", text, re.M)
+    )
+    by_event = dict(
+        re.findall(r"^\|[ \t]*`(\w+)`[ \t]*\|[ \t]*`([\w.-]+)`[ \t]*\|[^|\n]+\|$", text, re.M)
+    )
     return by_aggregate, by_event
 
 
@@ -110,16 +115,36 @@ async def test_every_event_validates_against_its_documented_schema(
                 )
             )
         )
-    seen: set[str] = set()
+    # Historical v1 contracts stay exercised independently of the current producer.
+    current = next(e for e in events if e.event_type == "assignment_graded")
+    old_keys = schemas[("assignment_graded", 1)]["properties"]
+    assert isinstance(old_keys, dict)
+    legacy = OutboxEvent(
+        id=new_id(),
+        organization_id=current.organization_id,
+        aggregate_type=current.aggregate_type,
+        aggregate_id=current.aggregate_id,
+        event_type="assignment_graded",
+        headers={"version": 1},
+        payload={k: current.payload[k] for k in old_keys},
+    )
+    await api.factory._save(legacy)
+    events.append(legacy)
+    seen: set[tuple[str, int]] = set()
     checker = FormatChecker()
     for outbox in events:
-        schema = schemas.get(outbox.event_type)
+        version = outbox.headers.get("version")
+        assert isinstance(version, int)
+        key = (outbox.event_type, version)
+        schema = schemas.get(key)
         assert schema is not None, f"{outbox.event_type} has no schema in docs/events.md"
         errors = list(
             Draft202012Validator(schema, format_checker=checker).iter_errors(outbox.payload)
         )
         assert errors == [], (outbox.event_type, [e.message for e in errors])
         assert topic_for(outbox) == event_topics[outbox.event_type], outbox.event_type
-        assert outbox.headers.get("version") == 1
-        seen.add(outbox.event_type)
+        assert version == (
+            2 if outbox.event_type == "assignment_graded" and outbox.id != legacy.id else 1
+        )
+        seen.add(key)
     assert seen == set(schemas), f"documented but not produced: {set(schemas) - seen}"

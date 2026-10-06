@@ -307,6 +307,21 @@ async def edit_lesson_content(
     return revision
 
 
+async def lock_outline(ctx: Ctx, course_id: UUID, if_match: int) -> None:
+    """Lock before a sourced definition edit; the normal content save bumps once."""
+    course = await _editable(ctx, course_id)
+    _require_active(course)
+    locked = await CourseRepository(ctx.session).lock(course_id)
+    if locked is None:
+        raise NotFoundError("Course not found.")
+    if locked.revision != if_match:
+        raise ConflictError(
+            "The course changed. Reload and try again.",
+            code="revision_conflict",
+            details={"current_revision": locked.revision},
+        )
+
+
 def validate_notes_doc(doc: dict[str, Any]) -> None:
     """The notes allow-list (raises a ValueError naming the offending path)."""
     notes.validate_doc(doc)
@@ -1002,6 +1017,9 @@ async def publish(ctx: Ctx, course_id: UUID, data: PublishRequest, if_match: int
         release_notes=data.release_notes,
         published_by=ctx.principal.user_id,
     )
+    published_by_lesson = {
+        UUID(item["id"]): item["content"] for _, item in snapshot_lessons(draft.snapshot)
+    }
     rows = [
         CourseVersionLesson(
             version_id=version.id,
@@ -1016,7 +1034,12 @@ async def publish(ctx: Ctx, course_id: UUID, data: PublishRequest, if_match: int
             completion_threshold=lesson.completion_threshold,
             video_asset_id=(v := lesson.content.get("video_asset_id")) and UUID(v),
             video_duration_seconds=draft.video_durations.get(UUID(v)) if v else None,
-            file_ids=lesson_file_ids(lesson.lesson_type, lesson.content),
+            file_ids=lesson_file_ids(
+                lesson.lesson_type,
+                published_by_lesson[lesson.id]
+                if lesson.lesson_type == LessonType.ASSIGNMENT
+                else lesson.content,
+            ),
         )
         for lesson in draft.lessons
     ]
@@ -1163,7 +1186,13 @@ async def version_images(
     *,
     ttl_seconds: int,
 ) -> ImageUrlsOut:
-    lesson = await _reader_lesson(ctx, course_id, version_id, lesson_id, LessonType.NOTES)
+    await _readable(ctx, course_id)
+    version = await VersionRepository(ctx.session).get(version_id)
+    if version is None or version.course_id != course_id:
+        raise NotFoundError("Version not found.")
+    lesson = await version_lesson(ctx.session, version_id, lesson_id)
+    if lesson is None or lesson.lesson_type not in {LessonType.NOTES, LessonType.ASSIGNMENT}:
+        raise NotFoundError("Image lesson not found.")
     found = await media.download_urls(ctx.session, storage, lesson.file_ids, ttl_seconds)
     return ImageUrlsOut(
         urls={file_id: d.url for file_id, d in found.items()},

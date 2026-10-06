@@ -14,7 +14,12 @@ from app.modules.assessments.models import (
     QuizVersionKey,
     QuizVersionQuestion,
 )
-from app.modules.assignments.models import Assignment, AssignmentGrade, AssignmentSubmission
+from app.modules.assignments.models import (
+    Assignment,
+    AssignmentGrade,
+    AssignmentSubmission,
+    SubmissionAttempt,
+)
 from app.modules.audit.models import AuditLog
 from app.modules.courses.models import (
     CatalogEntry,
@@ -76,6 +81,7 @@ __all__ = [
     "QuizVersionQuestion",
     "Skill",
     "StoredFile",
+    "SubmissionAttempt",
     "User",
     "VideoAsset",
 ]

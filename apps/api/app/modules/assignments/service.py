@@ -9,15 +9,15 @@
   first; grading records the score and feedback, audits it, and completes the lesson in the same
   transaction.
 
-Deliberately not here yet (later phases): rubrics, late policy (due dates are shown, never
-enforced), attempt history, plagiarism checks, AI feedback.
+Attempts and grades are immutable history; rubric and late rules freeze at acceptance.
+Plagiarism checks and AI feedback remain follow-ups.
 """
 
 import json
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
-from decimal import ROUND_HALF_UP, Decimal
+from datetime import datetime
+from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
@@ -38,32 +38,41 @@ from app.modules.assignments.models import (
     Assignment,
     AssignmentGrade,
     AssignmentSubmission,
+    SubmissionAttempt,
     SubmissionKind,
     SubmissionStatus,
 )
 from app.modules.assignments.repository import (
     AssignmentRepository,
+    AttemptRepository,
     GradeRepository,
     SubmissionRepository,
 )
 from app.modules.assignments.schemas import (
     MAX_INSTRUCTIONS_BYTES,
     AssignmentDraftOut,
+    AssignmentPreviewOut,
     AssignmentUpsert,
+    CriterionScore,
     FileUploadOut,
     GradeBody,
     GradeOut,
     GraderSubmissionDetail,
     GraderSubmissionRow,
+    LateData,
+    LatePolicy,
     PublishedAssignment,
+    Rubric,
     StudentAssignmentOut,
     StudentSummary,
+    SubmissionAttemptOut,
     SubmissionFileOut,
     SubmissionOut,
     SubmissionUploadCreate,
     SubmitBody,
     SubmitText,
 )
+from app.modules.assignments.scoring import grade_values, lateness
 from app.modules.audit import service as audit
 from app.modules.courses import service as courses
 from app.modules.courses.models import LessonType
@@ -90,6 +99,11 @@ def published_content(row: Assignment) -> dict[str, Any]:
         "due_at": row.due_at.isoformat() if row.due_at else None,
         "max_marks": row.max_marks,
         "submission_kinds": sorted(row.submission_kinds),
+        "rubric": row.rubric,
+        "late_policy": row.late_policy or {"mode": "accept", "percent_per_day": None},
+        "image_file_ids": [str(i) for i in courses.notes_image_ids(row.instructions)]
+        if row.instructions
+        else [],
     }
 
 
@@ -138,6 +152,8 @@ def _draft_out(row: Assignment, course_revision: int) -> AssignmentDraftOut:
         instructions=row.instructions, due_at=row.due_at, max_marks=row.max_marks,
         submission_kinds=sorted(row.submission_kinds),  # type: ignore[arg-type]
         course_revision=course_revision, updated_at=row.updated_at,
+        rubric=Rubric.model_validate(row.rubric) if row.rubric else None,
+        late_policy=LatePolicy.model_validate(row.late_policy) if row.late_policy else None,
     )  # fmt: skip
 
 
@@ -158,10 +174,6 @@ def _check_instructions(doc: dict[str, Any] | None) -> None:
             "The instructions aren't a valid document.", code="invalid_instructions",
             details={"reason": str(exc)},
         ) from exc  # fmt: skip
-    if courses.notes_image_ids(doc):
-        raise UnprocessableError(
-            "Assignment instructions can't contain images yet.", code="instructions_images"
-        )
     if len(json.dumps(doc)) > MAX_INSTRUCTIONS_BYTES:
         raise UnprocessableError("The instructions are too long.", code="content_too_large")
 
@@ -176,10 +188,42 @@ async def get_draft(ctx: Ctx, course_id: UUID, lesson_id: UUID) -> AssignmentDra
 async def put_draft(
     ctx: Ctx, course_id: UUID, lesson_id: UUID, body: AssignmentUpsert, if_match: int
 ) -> AssignmentDraftOut:
+    await courses.lock_outline(ctx, course_id, if_match)
     lesson = await _assignment_lesson(ctx, course_id, lesson_id)
     _check_instructions(body.instructions)
     repo = AssignmentRepository(ctx.session)
     before = await repo.by_lesson(lesson_id)
+    before_out = _draft_out(before, lesson.course_revision) if before else None
+    rubric = (
+        body.rubric
+        if "rubric" in body.model_fields_set
+        else (Rubric.model_validate(before.rubric) if before and before.rubric else None)
+    )
+    policy = (
+        body.late_policy
+        if "late_policy" in body.model_fields_set
+        else (
+            LatePolicy.model_validate(before.late_policy) if before and before.late_policy else None
+        )
+    )
+    if rubric and sum((c.max_marks for c in rubric.criteria), Decimal(0)) != body.max_marks:
+        raise UnprocessableError("Criterion maximums must sum to max_marks.", code="invalid_rubric")
+    if policy and policy.mode == "penalty" and body.due_at is None:
+        raise UnprocessableError(
+            "A penalty policy requires a due date.", code="late_policy_due_required"
+        )
+    image_ids = courses.notes_image_ids(body.instructions) if body.instructions else []
+    images = await media.files(ctx.session, image_ids)
+    if any(
+        (image := images.get(i)) is None
+        or image.organization_id != lesson.organization_id
+        or image.kind != "image"
+        or not image.is_ready
+        for i in image_ids
+    ):
+        raise UnprocessableError(
+            "Use confirmed images of the course owner organization.", code="invalid_image"
+        )
     row = await repo.upsert(
         {
             "organization_id": lesson.organization_id,
@@ -191,6 +235,8 @@ async def put_draft(
             "max_marks": body.max_marks,
             "submission_kinds": body.submission_kinds,
             "created_by": ctx.principal.user_id,
+            "rubric": rubric.model_dump(mode="json") if rubric else None,
+            "late_policy": policy.model_dump(mode="json") if policy else None,
         }
     )
     # Bumps the course revision (If-Match; 409 when stale, which rolls the upsert back too).
@@ -201,9 +247,29 @@ async def put_draft(
     await audit.record(
         ctx.session, ctx.actor, action="assignment.saved", target_type="assignment",
         target_id=row.id,
-        before=_draft_out(before, lesson.course_revision) if before else None, after=out,
+        before=before_out, after=out,
     )  # fmt: skip
     return out
+
+
+async def preview_draft(
+    ctx: Ctx, storage: ObjectStorage, settings: Settings, course_id: UUID, lesson_id: UUID
+) -> AssignmentPreviewOut:
+    await _assignment_lesson(ctx, course_id, lesson_id)
+    row = await AssignmentRepository(ctx.session).by_lesson(lesson_id)
+    if row is None:
+        raise NotFoundError("Assignment not found.")
+    urls = await media.download_urls(
+        ctx.session,
+        storage,
+        courses.notes_image_ids(row.instructions) if row.instructions else [],
+        settings.file_download_ttl_seconds,
+    )
+    return AssignmentPreviewOut(
+        html=courses.render_notes(row.instructions) if row.instructions else "",
+        image_urls={i: u.url for i, u in urls.items()},
+        expires_at=min((u.expires_at for u in urls.values()), default=None),
+    )
 
 
 # ============================================================================ students
@@ -249,6 +315,11 @@ async def _submission_out(
         revision=submission.revision,
         submitted_at=submission.submitted_at,
         grade=_grade_out(grade) if grade else None,
+        active_attempt_id=submission.active_attempt_id,
+        attempt_number=attempt.attempt_number
+        if (attempt := await AttemptRepository(ctx.session).get(submission.active_attempt_id))
+        else None,
+        late=LateData.model_validate(attempt.late_data) if attempt and attempt.late_data else None,
     )
 
 
@@ -256,6 +327,11 @@ def _grade_out(grade: AssignmentGrade) -> GradeOut:
     return GradeOut(
         score=grade.score, max_marks=grade.max_marks, feedback=grade.feedback,
         graded_at=grade.graded_at, graded_by=grade.graded_by,
+        id=grade.id, attempt_id=grade.attempt_id, grade_sequence=grade.grade_sequence,
+        rubric_breakdown=(
+            [CriterionScore.model_validate(c) for c in grade.rubric_breakdown]
+            if grade.rubric_breakdown is not None else None), raw_score=grade.raw_score,
+        penalty_percent=grade.penalty_percent, penalty_marks=grade.penalty_marks,
     )  # fmt: skip
 
 
@@ -266,11 +342,16 @@ async def get_student_assignment(
     submission = await SubmissionRepository(ctx.session).for_enrollment(
         enrollment_id, assignment.assignment_id
     )
+    now = await SubmissionRepository(ctx.session).database_now()
     if submission is None:
-        return StudentAssignmentOut(assignment=assignment, submission=None)
+        return StudentAssignmentOut(
+            assignment=assignment, submission=None, server_time=now, late=lateness(assignment, now)
+        )
     grades = await GradeRepository(ctx.session).for_submissions([submission.id])
     return StudentAssignmentOut(
         assignment=assignment,
+        server_time=now,
+        late=lateness(assignment, now),
         submission=await _submission_out(
             ctx, storage, settings, submission, grades.get(submission.id)
         ),
@@ -294,8 +375,10 @@ async def create_submission_upload(
     enrollment_id: UUID,
     lesson_id: UUID,
     body: SubmissionUploadCreate,
+    if_match: int,
 ) -> FileUploadOut:
     """A presigned upload for a file submission (then `PUT .../submission` with its id)."""
+    await enrollments.lock_assessment_enrollment(ctx.session, enrollment_id)
     student, assignment = await _student_assignment(ctx, enrollment_id, lesson_id)
     _require_kind(assignment, SubmissionKind.FILE)
     existing = await SubmissionRepository(ctx.session).for_enrollment(
@@ -303,9 +386,23 @@ async def create_submission_upload(
     )
     if existing is not None and existing.status == SubmissionStatus.GRADED:
         raise ConflictError("This assignment has already been graded.", code="already_graded")
+    _check_revision(existing, if_match)
+    if lateness(assignment, await SubmissionRepository(ctx.session).database_now()).closed:
+        raise ConflictError("This assignment is closed.", code="assignment_closed")
     return await media.create_submission_upload(
         ctx, storage, settings, file_name=body.file_name, content_type=body.content_type
     )
+
+
+def _check_revision(existing: AssignmentSubmission | None, if_match: int) -> int:
+    current = existing.revision if existing else 0
+    if if_match != current:
+        raise ConflictError(
+            "Your submission changed. Reload and try again.",
+            code="revision_conflict",
+            details={"current_revision": current},
+        )
+    return current
 
 
 async def submit(
@@ -318,6 +415,7 @@ async def submit(
     body: SubmitBody,
     if_match: int,
 ) -> SubmissionOut:
+    await enrollments.lock_assessment_enrollment(ctx.session, enrollment_id)
     student, assignment = await _student_assignment(ctx, enrollment_id, lesson_id)
     entry = body.submission
     _require_kind(assignment, entry.kind)
@@ -325,13 +423,9 @@ async def submit(
     existing = await repo.for_enrollment(student.enrollment_id, assignment.assignment_id)
     if existing is not None and existing.status == SubmissionStatus.GRADED:
         raise ConflictError("This assignment has already been graded.", code="already_graded")
-    current = existing.revision if existing else 0
-    if if_match != current:
-        raise ConflictError(
-            "Your submission changed in another tab or device. Reload and try again.",
-            code="revision_conflict",
-            details={"current_revision": current},
-        )
+    if existing:
+        existing = await repo.lock(existing.id)
+    current = _check_revision(existing, if_match)
 
     if isinstance(entry, SubmitText):
         content: dict[str, Any] = {
@@ -343,7 +437,15 @@ async def submit(
         file = await media.confirm_submission_file(ctx, storage, settings, entry.file_id)
         content = {"kind": SubmissionKind.FILE, "text_body": None, "file_id": file.id}
 
-    values = {**content, "version_id": student.version.id, "submitted_at": datetime.now(UTC)}
+    accepted_at = await repo.database_now()
+    late = lateness(assignment, accepted_at)
+    if late.closed:
+        raise ConflictError("This assignment is closed.", code="assignment_closed")
+    aid = new_id()
+    previous_attempt = (
+        await AttemptRepository(ctx.session).get(existing.active_attempt_id) if existing else None
+    )
+    values = {**content, "version_id": student.version.id, "submitted_at": accepted_at}
     if existing is None:
         submission = await repo.create(
             AssignmentSubmission(
@@ -354,12 +456,29 @@ async def submit(
             )
         )  # fmt: skip
     else:
-        updated = await repo.update(existing.id, current, values)
+        updated = await repo.update(existing.id, current, {**values, "active_attempt_id": aid})
         if updated is None:  # another request resubmitted in between
             raise ConflictError(
                 "Your submission changed. Reload and try again.", code="revision_conflict"
             )
         submission = updated
+    await AttemptRepository(ctx.session).create(
+        SubmissionAttempt(
+            id=aid,
+            submission_id=submission.id,
+            organization_id=submission.organization_id,
+            user_id=submission.user_id,
+            attempt_number=previous_attempt.attempt_number + 1 if previous_attempt else 1,
+            version_id=student.version.id,
+            major_version=student.version.major,
+            submitted_at=accepted_at,
+            **content,
+            assignment_rules=assignment.model_dump(mode="json"),
+            late_data=late.model_dump(mode="json"),
+        )
+    )
+    if existing is None:
+        submission = await repo.bind_first_attempt(submission.id, aid)
     events.assignment_submitted(ctx.session, submission, resubmission=existing is not None)
     return await _submission_out(ctx, storage, settings, submission, None)
 
@@ -441,9 +560,10 @@ async def list_submissions(
                 id=r.id,
                 student=_student(users, r.user_id),
                 enrollment_id=r.enrollment_id,
-                kind=r.kind,  # type: ignore[arg-type]
+                kind=r.kind,  # type: ignore[arg-type]  # type: ignore[arg-type]
                 status=r.status,  # type: ignore[arg-type]
                 revision=r.revision,
+                active_attempt_id=r.active_attempt_id,
                 submitted_at=r.submitted_at,
                 score=g.score if g else None,
                 max_marks=g.max_marks if g else None,
@@ -471,6 +591,9 @@ async def _graders_submission(ctx: Ctx, submission_id: UUID) -> AssignmentSubmis
 
 
 async def _version_assignment(ctx: Ctx, submission: AssignmentSubmission) -> PublishedAssignment:
+    attempt = await AttemptRepository(ctx.session).get(submission.active_attempt_id)
+    if attempt:
+        return _published(attempt.assignment_rules)
     version = await courses.version_ref(ctx.session, submission.version_id, redis=ctx.redis)
     snapshot = courses.snapshot_lesson(version, submission.lesson_id) if version else None
     return _published(snapshot.get("content") if snapshot else None)
@@ -510,6 +633,11 @@ async def grade(
 ) -> GraderSubmissionDetail:
     """Record (or correct) the grade, audit it, and complete the lesson, in one transaction."""
     submission = await _graders_submission(ctx, submission_id)
+    await enrollments.lock_assessment_enrollment(ctx.session, submission.enrollment_id)
+    locked = await SubmissionRepository(ctx.session).lock(submission_id)
+    if locked is None:
+        raise NotFoundError("Submission not found.")
+    submission = locked
     if submission.user_id == ctx.principal.user_id:
         raise ConflictError("You can't grade your own submission.", code="cannot_grade_own")
     if if_match != submission.revision:
@@ -519,13 +647,13 @@ async def grade(
             details={"current_revision": submission.revision},
         )
     assignment = await _version_assignment(ctx, submission)
-    score = body.score.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    if score > assignment.max_marks:
-        raise UnprocessableError(
-            f"The score can't be more than {assignment.max_marks}.",
-            code="score_out_of_range",
-            details={"max_marks": assignment.max_marks},
-        )
+    if body.attempt_id is not None and body.attempt_id != submission.active_attempt_id:
+        raise ConflictError("Only the active attempt can be graded.", code="inactive_attempt")
+    attempt = await AttemptRepository(ctx.session).get(submission.active_attempt_id)
+    if attempt is None:
+        raise NotFoundError("Attempt not found.")
+    late = LateData.model_validate(attempt.late_data) if attempt.late_data else None
+    scores = grade_values(assignment, late, body)
     grades = GradeRepository(ctx.session)
     previous = (await grades.for_submissions([submission.id])).get(submission.id)
     before = _grade_out(previous).model_dump(mode="json") if previous else None
@@ -534,7 +662,9 @@ async def grade(
             "organization_id": submission.organization_id,
             "submission_id": submission.id,
             "user_id": submission.user_id,
-            "score": score,
+            **scores,
+            "attempt_id": attempt.id,
+            "grade_sequence": previous.grade_sequence + 1 if previous else 1,
             "max_marks": assignment.max_marks,
             "feedback": body.feedback,
             "graded_by": ctx.principal.user_id,
@@ -552,12 +682,16 @@ async def grade(
         target_id=submission.id, before=before, after=_grade_out(row).model_dump(mode="json"),
     )  # fmt: skip
     events.assignment_graded(
-        ctx.session, updated, score=score, max_marks=assignment.max_marks,
-        graded_by=ctx.principal.user_id, regrade=previous is not None,
+        ctx.session, updated, grade=row, attempt_number=attempt.attempt_number,
+        late=late, regrade=previous is not None,
     )  # fmt: skip
     # Completion needs the grade row first: RLS lets graders write progress only then.
     await enrollments.complete_graded_lesson(
-        ctx.session, submission.enrollment_id, submission.lesson_id, redis=ctx.redis
+        ctx.session,
+        submission.enrollment_id,
+        submission.lesson_id,
+        redis=ctx.redis,
+        major=attempt.major_version,
     )
     return await _detail(ctx, storage, settings, updated)
 
@@ -571,12 +705,162 @@ class AssignmentCompletionSource:
         *,
         major: int,
     ) -> set[tuple[UUID, UUID]]:
-        rows = await SubmissionRepository(session).for_enrollments(enrollment_ids, lesson_ids)
-        grades = await GradeRepository(session).for_submissions([s.id for s in rows])
-        return {(s.enrollment_id, s.lesson_id) for s in rows if s.id in grades}
+        return await AttemptRepository(session).graded_evidence(enrollment_ids, lesson_ids, major)
 
     async def close_major(
         self, session: AsyncSession, enrollment_ids: Sequence[UUID], major: int
     ) -> None:
-        # Assignment aggregates retain their established behavior; history arrives in step 4.
+        # Keep historical work; completion evidence is scoped to the displayed major.
         return None
+
+
+# ============================================================================ immutable history
+
+
+def _history_after(params: CursorParams) -> UUID | None:
+    if not params.cursor:
+        return None
+    try:
+        return UUID(str(decode_cursor(params.cursor)["id"]))
+    except (KeyError, ValueError) as exc:
+        raise InvalidCursorError from exc
+
+
+async def _attempt_rows(
+    ctx: Ctx,
+    storage: ObjectStorage,
+    settings: Settings,
+    submission: AssignmentSubmission,
+    rows: list[SubmissionAttempt],
+) -> list[SubmissionAttemptOut]:
+    grades = await GradeRepository(ctx.session).for_attempts([r.id for r in rows])
+    definitions = {r.id: _published(r.assignment_rules) for r in rows}
+    file_ids = list(
+        {r.file_id for r in rows if r.file_id is not None}
+        | {i for d in definitions.values() for i in d.image_file_ids}
+    )
+    files = await media.files(ctx.session, file_ids)
+    urls = await media.download_urls(
+        ctx.session, storage, file_ids, settings.file_download_ttl_seconds
+    )
+    items = []
+    for r in rows:
+        file = None
+        if r.file_id is not None:
+            info, signed = files.get(r.file_id), urls.get(r.file_id)
+            file = SubmissionFileOut(
+                id=r.file_id,
+                file_name=info.file_name if info else "",
+                content_type=info.content_type if info else "",
+                url=signed.url if signed else None,
+                expires_at=signed.expires_at if signed else None,
+            )
+        definition = definitions[r.id]
+        images = {i: urls[i] for i in definition.image_file_ids if i in urls}
+        items.append(
+            SubmissionAttemptOut(
+                id=r.id,
+                submission_id=r.submission_id,
+                attempt_number=r.attempt_number,
+                version_id=r.version_id,
+                submitted_at=r.submitted_at,
+                is_active=r.id == submission.active_attempt_id,
+                kind=r.kind,  # type: ignore[arg-type]
+                text_body=r.text_body,
+                file=file,
+                assignment=definition,
+                late=LateData.model_validate(r.late_data) if r.late_data else None,
+                grade=_grade_out(grades[r.id]) if r.id in grades else None,
+                image_urls={i: u.url for i, u in images.items()},
+                image_urls_expires_at=min((u.expires_at for u in images.values()), default=None),
+            )
+        )
+    return items
+
+
+async def _attempt_history(
+    ctx: Ctx,
+    storage: ObjectStorage,
+    settings: Settings,
+    submission: AssignmentSubmission,
+    params: CursorParams,
+) -> tuple[list[SubmissionAttemptOut], str | None]:
+    rows = await AttemptRepository(ctx.session).history(
+        submission.id, _history_after(params), params.limit + 1
+    )
+    page = rows[: params.limit]
+    cursor = encode_cursor({"id": str(page[-1].id)}) if len(rows) > params.limit else None
+    return await _attempt_rows(ctx, storage, settings, submission, page), cursor
+
+
+async def student_attempt_history(
+    ctx: Ctx,
+    storage: ObjectStorage,
+    settings: Settings,
+    enrollment_id: UUID,
+    lesson_id: UUID,
+    *,
+    params: CursorParams,
+) -> tuple[list[SubmissionAttemptOut], str | None]:
+    _, assignment = await _student_assignment(ctx, enrollment_id, lesson_id)
+    submission = await SubmissionRepository(ctx.session).for_enrollment(
+        enrollment_id, assignment.assignment_id
+    )
+    if submission is None:
+        return [], None
+    return await _attempt_history(ctx, storage, settings, submission, params)
+
+
+async def grader_attempt_history(
+    ctx: Ctx, storage: ObjectStorage, settings: Settings, submission_id: UUID, params: CursorParams
+) -> tuple[list[SubmissionAttemptOut], str | None]:
+    submission = await _graders_submission(ctx, submission_id)
+    return await _attempt_history(ctx, storage, settings, submission, params)
+
+
+async def _attempt(
+    ctx: Ctx, submission: AssignmentSubmission, attempt_id: UUID
+) -> SubmissionAttempt:
+    row = await AttemptRepository(ctx.session).get(attempt_id)
+    if row is None or row.submission_id != submission.id:
+        raise NotFoundError("Attempt not found.")
+    return row
+
+
+async def grader_attempt_detail(
+    ctx: Ctx, storage: ObjectStorage, settings: Settings, submission_id: UUID, attempt_id: UUID
+) -> SubmissionAttemptOut:
+    submission = await _graders_submission(ctx, submission_id)
+    row = await _attempt(ctx, submission, attempt_id)
+    return (await _attempt_rows(ctx, storage, settings, submission, [row]))[0]
+
+
+async def _grade_history(
+    ctx: Ctx, attempt: SubmissionAttempt, params: CursorParams
+) -> tuple[list[GradeOut], str | None]:
+    rows = await GradeRepository(ctx.session).history(
+        attempt.id, _history_after(params), params.limit + 1
+    )
+    page = rows[: params.limit]
+    cursor = encode_cursor({"id": str(page[-1].id)}) if len(rows) > params.limit else None
+    return [_grade_out(g) for g in page], cursor
+
+
+async def grader_grade_history(
+    ctx: Ctx, submission_id: UUID, attempt_id: UUID, params: CursorParams
+) -> tuple[list[GradeOut], str | None]:
+    return await _grade_history(
+        ctx, await _attempt(ctx, await _graders_submission(ctx, submission_id), attempt_id), params
+    )
+
+
+async def student_grade_history(
+    ctx: Ctx, enrollment_id: UUID, lesson_id: UUID, attempt_id: UUID, params: CursorParams
+) -> tuple[list[GradeOut], str | None]:
+    _, assignment = await _student_assignment(ctx, enrollment_id, lesson_id)
+    submission = await SubmissionRepository(ctx.session).for_enrollment(
+        enrollment_id, assignment.assignment_id
+    )
+    if submission is None:
+        raise NotFoundError("Attempt not found.")
+    return await _grade_history(ctx, await _attempt(ctx, submission, attempt_id), params)

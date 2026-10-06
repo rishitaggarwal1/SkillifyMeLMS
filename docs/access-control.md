@@ -10,13 +10,13 @@ How SkillifyMe decides who can do what. Three layers, each covered by tests:
 
 ## Roles
 
-| Role | Scope | Source |
-|---|---|---|
+| Role             | Scope                                | Source                                           |
+| ---------------- | ------------------------------------ | ------------------------------------------------ |
 | `platform_admin` | Platform-wide (SkillifyMe operators) | Keycloak realm role, carried in the access token |
-| `org_admin` | One organization | `memberships` table |
-| `instructor` | One organization | `memberships` table |
-| `lab_author` | One organization | `memberships` table |
-| `student` | One organization | `memberships` table |
+| `org_admin`      | One organization                     | `memberships` table                              |
+| `instructor`     | One organization                     | `memberships` table                              |
+| `lab_author`     | One organization                     | `memberships` table                              |
+| `student`        | One organization                     | `memberships` table                              |
 
 - Roles are **per organization**: someone can be an instructor in SkillifyMe and a student in Demo
   College. A person can hold several roles in the same org.
@@ -31,61 +31,61 @@ How SkillifyMe decides who can do what. Three layers, each covered by tests:
 
 Defined once, in `apps/api/app/modules/identity/authz.py` (`ROLE_PERMISSIONS`).
 
-| Permission | org_admin | instructor | lab_author | student | Meaning |
-|---|:-:|:-:|:-:|:-:|---|
-| `org.read` | ✓ | ✓ | ✓ | ✓ | Read the active organization |
-| `batch.read` | ✓ | ✓ | | | List and view batches and their members |
-| `batch.manage` | ✓ | | | | Create, update and archive batches; add and remove batch members |
-| `member.read` | ✓ | ✓ | | | Search and view members |
-| `member.manage` | ✓ | | | | Change roles; remove people from the organization |
-| `member.invite` | ✓ | | | | Invite, resend, revoke |
-| `member.import` | ✓ | | | | CSV imports |
-| `audit.read` | ✓ | | | | Read the audit log |
-| `lab.author` | | | ✓ | | Author coding labs (used from Phase 4) |
-| `course.read` | ✓ | ✓ | | | See courses the org owns or was assigned, and their assignments |
-| `course.edit` | ✓ | ✓ | | | Author the org's own courses: drafts, publishing |
-| `course.assign` | ✓ | ✓ | | | Assign the org's own courses (publisher-made assignments) |
-| `course.distribute` | ✓ | | | | Narrow an org grant to the org's own batches |
-| `enrollment.upgrade` | ✓ | | | | Opt the org's enrollments into a newer major version |
-| `skill.manage` | ✓ | ✓ | ✓ | | Edit the skills taxonomy; the active org must also be a content publisher |
-| `assignment.grade` | ✓ | ✓ | | | Grade assignment submissions of the org's own students (Phase 2.5) |
-| `org.manage` | — | — | — | — | Platform only: create, update and archive organizations |
+| Permission           | org_admin | instructor | lab_author | student | Meaning                                                                   |
+| -------------------- | :-------: | :--------: | :--------: | :-----: | ------------------------------------------------------------------------- |
+| `org.read`           |     ✓     |     ✓      |     ✓      |    ✓    | Read the active organization                                              |
+| `batch.read`         |     ✓     |     ✓      |            |         | List and view batches and their members                                   |
+| `batch.manage`       |     ✓     |            |            |         | Create, update and archive batches; add and remove batch members          |
+| `member.read`        |     ✓     |     ✓      |            |         | Search and view members                                                   |
+| `member.manage`      |     ✓     |            |            |         | Change roles; remove people from the organization                         |
+| `member.invite`      |     ✓     |            |            |         | Invite, resend, revoke                                                    |
+| `member.import`      |     ✓     |            |            |         | CSV imports                                                               |
+| `audit.read`         |     ✓     |            |            |         | Read the audit log                                                        |
+| `lab.author`         |           |            |     ✓      |         | Author coding labs (used from Phase 4)                                    |
+| `course.read`        |     ✓     |     ✓      |            |         | See courses the org owns or was assigned, and their assignments           |
+| `course.edit`        |     ✓     |     ✓      |            |         | Author the org's own courses: drafts, publishing                          |
+| `course.assign`      |     ✓     |     ✓      |            |         | Assign the org's own courses (publisher-made assignments)                 |
+| `course.distribute`  |     ✓     |            |            |         | Narrow an org grant to the org's own batches                              |
+| `enrollment.upgrade` |     ✓     |            |            |         | Opt the org's enrollments into a newer major version                      |
+| `skill.manage`       |     ✓     |     ✓      |     ✓      |         | Edit the skills taxonomy; the active org must also be a content publisher |
+| `assignment.grade`   |     ✓     |     ✓      |            |         | Grade assignment submissions of the org's own students (Phase 2.5)        |
+| `org.manage`         |     —     |     —      |     —      |    —    | Platform only: create, update and archive organizations                   |
 
 `platform_admin` has every permission, in any organization.
 
 ## Endpoints
 
-| Endpoint | Who |
-|---|---|
-| `GET /api/v1/me` | Any signed-in user |
-| `POST /organizations`, `GET /organizations`, `GET/PATCH/DELETE /organizations/{id}` | Platform admin |
-| `GET /organizations/current` | Any member of the active org |
-| `GET /batches`, `GET /batches/{id}`, `GET /batches/{id}/members` | org_admin, instructor |
-| `POST /batches`, `PATCH/DELETE /batches/{id}`, `POST /batches/{id}/members`, `DELETE /batches/{id}/members/{user_id}` | org_admin |
-| `GET /members`, `GET /members/{user_id}` | org_admin, instructor |
-| `PATCH /members/{user_id}`, `DELETE /members/{user_id}` | org_admin |
-| `POST /invitations`, `GET /invitations`, `DELETE /invitations/{id}`, `POST /invitations/{id}/resend` | org_admin |
-| `POST /imports`, `GET /imports`, `GET /imports/{id}`, `GET /imports/{id}/errors.csv` | org_admin |
-| `GET /audit-log` | org_admin (platform admins with no active org see all orgs) |
-| `GET /skills` | Any signed-in user |
-| `POST /skills`, `PATCH /skills/{id}` | Staff of a content-publisher org; platform admin |
-| `POST /courses`, `GET /courses` | org_admin, instructor (the list covers owned courses and published courses assigned to the org) |
-| `GET /courses/{id}`, `GET /courses/{id}/versions`, `GET /courses/{id}/versions/{version_id}`, `GET /courses/{id}/assignments` | org_admin, instructor of the owner org, or of an org the course is assigned to (published courses only) |
-| `PATCH/DELETE /courses/{id}`, `GET /courses/{id}/draft`, module and lesson routes, `PUT .../order`, `PUT /courses/{id}/lessons/{lesson_id}/skills`, `GET /courses/{id}/publish-preview`, `POST /courses/{id}/versions` | org_admin, instructor of the **owner** org (others get 404) |
-| `POST /courses/{id}/assignments` | Owner org: org_admin, instructor (`course.assign`). Receiving org: org_admin only (`course.distribute`), narrowing its grant to its own batches |
-| `DELETE /course-assignments/{id}` | The org that created the row: owner-org editors for publisher-made rows, the receiving org_admin for rows their org created |
-| `POST /courses/{id}/enrollment-upgrades` | org_admin of the enrollments' org |
-| `GET /enrollments` | Any signed-in user (their own enrollments) |
-| `GET /enrollments/{id}`, `POST /enrollments/{id}/lessons/{lesson_id}/visit`, `.../complete` | The enrolled student only (everyone else gets 404) |
-| `POST /videos`, `GET /videos`, `GET /videos/{id}`, `POST /videos/{id}/uploaded`, `GET /videos/{id}/playback` | Owner-org course editors (`course.edit`); item routes return 404 across orgs |
-| `GET /enrollments/{id}/lessons/{lesson_id}/playback`, `.../resume`, `POST /progress/heartbeat` | The active enrollment's student, with a current batch assignment; video must be in their pinned major's latest minor |
-| `POST /webhooks/video/bunny/{secret}` | Provider webhook secret (constant-time check); status is fetched from Bunny, never trusted from the body |
-| `POST /files`, `GET /files`, `GET /files/{id}`, `POST /files/{id}/confirm`, `GET /files/{id}/download` | Owner-org course editors (`course.edit`); item routes return 404 across orgs |
-| `GET /courses/{id}/lessons/{lesson_id}/preview` | org_admin, instructor of the **owner** org (draft notes preview; others get 404) |
-| `GET /organizations/directory` | Platform admins, and org_admin or instructor of an active content-publisher org (id and name of active orgs only; enforced by `app.organization_directory`, migration 0009). Cursor-paginated by name, with `q=` (name substring) and `ids=`. Everyone else gets `403 content_publisher_staff_required`. **Caveat:** see below |
-| `GET /catalog`, `GET /catalog/{slug}` | Everyone, signed in or not (public catalog fields only; no ids or organization) |
-| `GET /courses/{id}/versions/{version_id}/lessons/{lesson_id}/playback`, `.../pdf`, `.../images` | Course readers' staff: org_admin, instructor of the owner org or of an org the course is assigned to (any published version). Students get 403 (they use their enrollment routes) |
-| `POST /enrollments/{id}/lessons/{lesson_id}/pdf-access`, `GET .../images` | The active enrollment's student, with a current batch assignment; the file must be used by that lesson in their pinned major's latest minor |
+| Endpoint                                                                                                                                                                                                               | Who                                                                                                                                                                                                                                                                                                                            |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET /api/v1/me`                                                                                                                                                                                                       | Any signed-in user                                                                                                                                                                                                                                                                                                             |
+| `POST /organizations`, `GET /organizations`, `GET/PATCH/DELETE /organizations/{id}`                                                                                                                                    | Platform admin                                                                                                                                                                                                                                                                                                                 |
+| `GET /organizations/current`                                                                                                                                                                                           | Any member of the active org                                                                                                                                                                                                                                                                                                   |
+| `GET /batches`, `GET /batches/{id}`, `GET /batches/{id}/members`                                                                                                                                                       | org_admin, instructor                                                                                                                                                                                                                                                                                                          |
+| `POST /batches`, `PATCH/DELETE /batches/{id}`, `POST /batches/{id}/members`, `DELETE /batches/{id}/members/{user_id}`                                                                                                  | org_admin                                                                                                                                                                                                                                                                                                                      |
+| `GET /members`, `GET /members/{user_id}`                                                                                                                                                                               | org_admin, instructor                                                                                                                                                                                                                                                                                                          |
+| `PATCH /members/{user_id}`, `DELETE /members/{user_id}`                                                                                                                                                                | org_admin                                                                                                                                                                                                                                                                                                                      |
+| `POST /invitations`, `GET /invitations`, `DELETE /invitations/{id}`, `POST /invitations/{id}/resend`                                                                                                                   | org_admin                                                                                                                                                                                                                                                                                                                      |
+| `POST /imports`, `GET /imports`, `GET /imports/{id}`, `GET /imports/{id}/errors.csv`                                                                                                                                   | org_admin                                                                                                                                                                                                                                                                                                                      |
+| `GET /audit-log`                                                                                                                                                                                                       | org_admin (platform admins with no active org see all orgs)                                                                                                                                                                                                                                                                    |
+| `GET /skills`                                                                                                                                                                                                          | Any signed-in user                                                                                                                                                                                                                                                                                                             |
+| `POST /skills`, `PATCH /skills/{id}`                                                                                                                                                                                   | Staff of a content-publisher org; platform admin                                                                                                                                                                                                                                                                               |
+| `POST /courses`, `GET /courses`                                                                                                                                                                                        | org_admin, instructor (the list covers owned courses and published courses assigned to the org)                                                                                                                                                                                                                                |
+| `GET /courses/{id}`, `GET /courses/{id}/versions`, `GET /courses/{id}/versions/{version_id}`, `GET /courses/{id}/assignments`                                                                                          | org_admin, instructor of the owner org, or of an org the course is assigned to (published courses only)                                                                                                                                                                                                                        |
+| `PATCH/DELETE /courses/{id}`, `GET /courses/{id}/draft`, module and lesson routes, `PUT .../order`, `PUT /courses/{id}/lessons/{lesson_id}/skills`, `GET /courses/{id}/publish-preview`, `POST /courses/{id}/versions` | org_admin, instructor of the **owner** org (others get 404)                                                                                                                                                                                                                                                                    |
+| `POST /courses/{id}/assignments`                                                                                                                                                                                       | Owner org: org_admin, instructor (`course.assign`). Receiving org: org_admin only (`course.distribute`), narrowing its grant to its own batches                                                                                                                                                                                |
+| `DELETE /course-assignments/{id}`                                                                                                                                                                                      | The org that created the row: owner-org editors for publisher-made rows, the receiving org_admin for rows their org created                                                                                                                                                                                                    |
+| `POST /courses/{id}/enrollment-upgrades`                                                                                                                                                                               | org_admin of the enrollments' org                                                                                                                                                                                                                                                                                              |
+| `GET /enrollments`                                                                                                                                                                                                     | Any signed-in user (their own enrollments)                                                                                                                                                                                                                                                                                     |
+| `GET /enrollments/{id}`, `POST /enrollments/{id}/lessons/{lesson_id}/visit`, `.../complete`                                                                                                                            | The enrolled student only (everyone else gets 404)                                                                                                                                                                                                                                                                             |
+| `POST /videos`, `GET /videos`, `GET /videos/{id}`, `POST /videos/{id}/uploaded`, `GET /videos/{id}/playback`                                                                                                           | Owner-org course editors (`course.edit`); item routes return 404 across orgs                                                                                                                                                                                                                                                   |
+| `GET /enrollments/{id}/lessons/{lesson_id}/playback`, `.../resume`, `POST /progress/heartbeat`                                                                                                                         | The active enrollment's student, with a current batch assignment; video must be in their pinned major's latest minor                                                                                                                                                                                                           |
+| `POST /webhooks/video/bunny/{secret}`                                                                                                                                                                                  | Provider webhook secret (constant-time check); status is fetched from Bunny, never trusted from the body                                                                                                                                                                                                                       |
+| `POST /files`, `GET /files`, `GET /files/{id}`, `POST /files/{id}/confirm`, `GET /files/{id}/download`                                                                                                                 | Owner-org course editors (`course.edit`); item routes return 404 across orgs                                                                                                                                                                                                                                                   |
+| `GET /courses/{id}/lessons/{lesson_id}/preview`                                                                                                                                                                        | org_admin, instructor of the **owner** org (draft notes preview; others get 404)                                                                                                                                                                                                                                               |
+| `GET /organizations/directory`                                                                                                                                                                                         | Platform admins, and org_admin or instructor of an active content-publisher org (id and name of active orgs only; enforced by `app.organization_directory`, migration 0009). Cursor-paginated by name, with `q=` (name substring) and `ids=`. Everyone else gets `403 content_publisher_staff_required`. **Caveat:** see below |
+| `GET /catalog`, `GET /catalog/{slug}`                                                                                                                                                                                  | Everyone, signed in or not (public catalog fields only; no ids or organization)                                                                                                                                                                                                                                                |
+| `GET /courses/{id}/versions/{version_id}/lessons/{lesson_id}/playback`, `.../pdf`, `.../images`                                                                                                                        | Course readers' staff: org_admin, instructor of the owner org or of an org the course is assigned to (any published version). Students get 403 (they use their enrollment routes)                                                                                                                                              |
+| `POST /enrollments/{id}/lessons/{lesson_id}/pdf-access`, `GET .../images`                                                                                                                                              | The active enrollment's student, with a current batch assignment; the file must be used by that lesson in their pinned major's latest minor                                                                                                                                                                                    |
 
 | `GET /organizations?q=` | Platform admin (name contains `q`) |
 | `GET /platform/summary` | Platform admin. Counts: organizations, users (by status and by role), courses, enrollments, and students active today (a lesson opened since midnight IST; `users.last_login_at` is deliberately not used) |
@@ -95,7 +95,13 @@ Defined once, in `apps/api/app/modules/identity/authz.py` (`ROLE_PERMISSIONS`).
 | `GET /platform/courses` | Platform admin. Every organization's courses, read-only: owner, status, current version, org-grant and batch-assignment counts |
 | `GET /platform/audit-log` | Platform admin. Every organization's entries plus platform-level ones, whatever organization is active; filters `organization_id`, `action`, `actor_user_id`, `target_type`, `target_id`, `since`/`until` (time-zone-aware) |
 | `GET`, `PUT /courses/{id}/lessons/{lesson_id}/assignment` | Owner-org editors (an assignment lesson's definition; others get 404). `PUT` takes the course revision as `If-Match` (428 when missing, 409 when stale), like every outline edit |
-| `GET /enrollments/{id}/lessons/{lesson_id}/assignment`, `POST .../submission-upload`, `PUT .../submission` | The enrolled student only (everyone else gets 404). `PUT` takes the submission revision as `If-Match` (`0` for the first; 428 when missing, 409 when stale); a graded submission can't be replaced (`409 already_graded`). Uploads are `submission` files: PDF, PNG or JPEG, checked by signature, up to `SUBMISSION_UPLOAD_MAX_BYTES` |
+| `GET /enrollments/{id}/lessons/{lesson_id}/assignment`, `POST .../submission-upload`, `PUT .../submission` | The enrolled student only (everyone else gets 404). `PUT` and upload `POST` take the submission revision as `If-Match` (`0` for the first; 428 when missing, 409 when stale); a graded submission can't be replaced (`409 already_graded`). Uploads are `submission` files: PDF, PNG or JPEG, checked by signature, up to `SUBMISSION_UPLOAD_MAX_BYTES` |
+| `GET /courses/{id}/lessons/{lesson_id}/assignment/preview` | Owner-org editors only; sanitized instructions and short-lived image URLs; receiving staff get 404 |
+| `GET /enrollments/{id}/lessons/{lesson_id}/submission-attempts` | Own currently enrolled student with live batch access; cursor work history, frozen instructions/rubric/late data and latest grade |
+| `GET /enrollments/{id}/lessons/{lesson_id}/submission-attempts/{attempt_id}/grades` | Same own-student/current-access rule; cursor immutable grade history, hidden foreign attempt 404 |
+| `GET /assignment-submissions/{id}/attempts` | Student-org instructor/org_admin graders; cursor all attempts, active marker and latest grade |
+| `GET /assignment-submissions/{id}/attempts/{attempt_id}` | Student-org graders; frozen instructions/work/latest grade; foreign attempt 404 |
+| `GET /assignment-submissions/{id}/attempts/{attempt_id}/grades` | Student-org graders; cursor grade revisions; histories are read-only |
 | `GET /courses/{id}/progress?batch_id=`, `GET /courses/{id}/progress.csv?batch_id=`, `GET /batches/{id}/courses` | org_admin, instructor (`course.read`) of the active org, for **their own org's batches** that have a batch assignment for the course (others get 404; the course owner org can't read another org's students). Read-only; CSV cells are neutralized against formula injection. Stopgap until Phase 5 (ClickHouse) |
 | `GET /courses/{id}/lessons/{lesson_id}/submissions`, `GET /assignment-submissions/{id}`, `PUT /assignment-submissions/{id}/grade` | Graders (`assignment.grade`: instructor, org_admin) of the **students' org**. The course owner org sees none of another org's submissions; other orgs get 404. Grading takes the submission revision as `If-Match`, is audited (`assignment.graded`), refuses grading your own work, and completes the lesson in the same transaction |
 
@@ -107,12 +113,14 @@ RLS policies already had; no org-level policy was widened for them, and there is
 impersonation.
 
 **Status codes:**
+
 - **401:** no token or an invalid one (`WWW-Authenticate: Bearer`).
 - **403:** missing permission in your own org, or an org you don't belong to.
 - **404:** a resource belonging to another org. We don't reveal that it exists.
 - **400 `organization_required`:** the endpoint needs an active org and none was selected.
 
 `apps/api/tests/test_endpoint_roles.py` calls **every** endpoint as seven callers:
+
 - anonymous
 - student, lab_author, instructor and org_admin, all in the same org
 - an unrelated org's admin
@@ -135,52 +143,54 @@ has no `BYPASSRLS`, so RLS always applies. Each request sets these per-transacti
 module-boundary rule, applied to SQL). They're `SECURITY DEFINER` with a fixed `search_path`, and
 only the app role can execute them:
 
-| Function | Purpose |
-|---|---|
-| `app.current_org_id()`, `app.current_user_id()` | The per-request settings |
-| `app.current_user_is_platform_admin()` | The verified platform flag |
-| `app.current_user_has_role(org, roles[])` | Role check in a specific org (archived orgs grant nothing) |
-| `app.current_user_is_member(org)` | Any role in the org |
-| `app.current_user_in_batch(batch)` | Batch membership (used for student visibility in Phase 2) |
-| `app.org_is_content_publisher(org)` | Whether the org may share content with other orgs (Phase 2) |
-| `app.user_is_member_of(user, org)`, `app.user_visible_to_current_user(user)` | Roster visibility |
-| `app.provision_user(...)`, `app.ensure_users(...)` | Sign-in provisioning; bulk find-or-create for invitations and imports (the caller must be an org admin) |
+| Function                                                                     | Purpose                                                                                                 |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `app.current_org_id()`, `app.current_user_id()`                              | The per-request settings                                                                                |
+| `app.current_user_is_platform_admin()`                                       | The verified platform flag                                                                              |
+| `app.current_user_has_role(org, roles[])`                                    | Role check in a specific org (archived orgs grant nothing)                                              |
+| `app.current_user_is_member(org)`                                            | Any role in the org                                                                                     |
+| `app.current_user_in_batch(batch)`                                           | Batch membership (used for student visibility in Phase 2)                                               |
+| `app.org_is_content_publisher(org)`                                          | Whether the org may share content with other orgs (Phase 2)                                             |
+| `app.user_is_member_of(user, org)`, `app.user_visible_to_current_user(user)` | Roster visibility                                                                                       |
+| `app.provision_user(...)`, `app.ensure_users(...)`                           | Sign-in provisioning; bulk find-or-create for invitations and imports (the caller must be an org admin) |
 
 **Who can see and change what.** "Staff" means org_admin, instructor or lab_author in the active
 org.
 
-| Table | Read | Write |
-|---|---|---|
-| organizations | Members of the org; platform admins | Platform admins |
-| users | Yourself; staff see members of the active org | Yourself (name only; email and Keycloak id change only through provisioning); platform admins |
-| memberships | Your own memberships in every org; staff see the active org's | org_admin of the active org |
-| batches | Staff: all of the active org's; students: only batches they're in | org_admin |
-| batch_members | Staff; students see only their own rows | org_admin, and only for members of that org (the batch must belong to it: composite FK) |
-| invitations, import_jobs, import_job_errors | org_admin | org_admin |
-| audit_log | org_admin of the active org; platform admins | Any member, only as themselves; **no UPDATE or DELETE** (append-only) |
-| outbox_events                                                                | Active org; sensitive learning events additionally require the owning student or the student's org's instructor/org_admin (platform override). Covers historical assignment_graded v1 rows           | Insert for the active org; legitimate student INSERT/RETURNING remains allowed; only the relay role (`skillify_relay`) can mark events published                                                                                                                                     |
-| skills | Everyone (global taxonomy) | Platform admins, and org_admin / instructor / lab_author of a **content-publisher** org |
-| courses | Owner-org editors*; readers through an assignment** | Owner-org editors* |
-| course_modules, lessons, lesson_skills (the draft) | Owner-org editors* only | Owner-org editors* |
-| course_versions, course_version_lessons | Owner-org editors*; readers** | Owner-org editors* (publish). Immutable: no UPDATE or DELETE |
-| course_assignments | Owner-org editors*; the receiving org's org_admins and instructors | Publisher-made rows: owner-org editors* (to other orgs only if the owner is a content publisher). Narrowing rows: the receiving org's org_admin, batch rows under an existing org grant only. Removal: only the org that created the row. No UPDATE |
-| enrollments, lesson_progress (the student's org) | The student; org_admin and instructors of that org | The student (own progress); org_admin; system jobs; **instructors only where a graded submission exists** (`app.enrollment_graded`, `app.lesson_graded`, migration 0011). A trigger (`app.enrollments_grader_guard`) lets such a grader change only an enrollment's progress columns |
-| video_assets | Owner-org editors*; org_admin and instructors of a reader org** for assets in any published version; enrolled students for assets in their pinned major's latest minor, with current batch access | Owner-org editors* |
-| files | Same as video_assets, for the files published lessons use (a pdf lesson's PDF, a notes lesson's images). `submission` files: the student who uploaded them, and the org's instructors and org_admins | Owner-org editors*; a student writes only their own `submission` files |
-| assignments (draft definitions, owner org) | Owner-org editors* only; students and graders read the published copy in the version | Owner-org editors* |
-| assignment_submissions, assignment_grades (the student's org) | The student (own); the org's instructors and org_admins; platform admins | Submissions: the student (own, only while `submitted`, only into their own active enrollment); graders mark them graded. Grades: graders only. No DELETE except platform admins |
-| catalog_entries | Everyone | Owner-org editors* |
-| question_banks, questions, question_skills, question_keys (draft, owner org) | Owner-org instructors/org_admins and platform admins only; students never read draft keys or explanations                                                                                            | Same editors; skill links are replace-by-delete/insert                                                                                                                                                                                                                               |
-| quizzes (draft, owner org)                                                   | Owner-org editors only                                                                                                                                                                               | Same editors                                                                                                                                                                                                                                                                         |
-| quiz_versions (published, owner org)                                         | Owner editors, assigned-org reader staff, or an active enrolled student with the matching major and current batch access                                                                             | Owner editors INSERT; no app-role UPDATE/DELETE                                                                                                                                                                                                                                      |
-| quiz_version_questions (published public prompts)                            | Reader staff; students only the questions selected for an accessible own attempt                                                                                                                     | Owner editors INSERT; no app-role UPDATE/DELETE                                                                                                                                                                                                                                      |
-| quiz_version_keys (published private keys/explanations)                      | Owner-org editors only, including after submission; controlled solutions require the narrow reveal function                                                                                          | Owner editors INSERT; no app-role UPDATE/DELETE                                                                                                                                                                                                                                      |
-| quiz_attempts, quiz_answers (student org)                                    | Owning active student with current batch access; student's org instructor/org_admin; platform admins. Publisher staff cannot read another org's work                                                 | Direct app-role INSERT/UPDATE/DELETE revoked; guarded runtime mutation functions ship in step 3                                                                                                                                                                                      |
+| Table                                                                        | Read                                                                                                                                                                                                 | Write                                                                                                                                                                                                                                                                                                                   |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| organizations                                                                | Members of the org; platform admins                                                                                                                                                                  | Platform admins                                                                                                                                                                                                                                                                                                         |
+| users                                                                        | Yourself; staff see members of the active org                                                                                                                                                        | Yourself (name only; email and Keycloak id change only through provisioning); platform admins                                                                                                                                                                                                                           |
+| memberships                                                                  | Your own memberships in every org; staff see the active org's                                                                                                                                        | org_admin of the active org                                                                                                                                                                                                                                                                                             |
+| batches                                                                      | Staff: all of the active org's; students: only batches they're in                                                                                                                                    | org_admin                                                                                                                                                                                                                                                                                                               |
+| batch_members                                                                | Staff; students see only their own rows                                                                                                                                                              | org_admin, and only for members of that org (the batch must belong to it: composite FK)                                                                                                                                                                                                                                 |
+| invitations, import_jobs, import_job_errors                                  | org_admin                                                                                                                                                                                            | org_admin                                                                                                                                                                                                                                                                                                               |
+| audit_log                                                                    | org_admin of the active org; platform admins                                                                                                                                                         | Any member, only as themselves; **no UPDATE or DELETE** (append-only)                                                                                                                                                                                                                                                   |
+| outbox_events                                                                | Active org; sensitive learning events additionally require the owning student or the student's org's instructor/org_admin (platform override). Covers historical assignment_graded v1 rows           | Insert for the active org; legitimate student INSERT/RETURNING remains allowed; only the relay role (`skillify_relay`) can mark events published                                                                                                                                                                        |
+| skills                                                                       | Everyone (global taxonomy)                                                                                                                                                                           | Platform admins, and org_admin / instructor / lab_author of a **content-publisher** org                                                                                                                                                                                                                                 |
+| courses                                                                      | Owner-org editors*; readers through an assignment**                                                                                                                                                  | Owner-org editors*                                                                                                                                                                                                                                                                                                      |
+| course_modules, lessons, lesson_skills (the draft)                           | Owner-org editors* only                                                                                                                                                                              | Owner-org editors*                                                                                                                                                                                                                                                                                                      |
+| course_versions, course_version_lessons                                      | Owner-org editors*; readers**                                                                                                                                                                        | Owner-org editors* (publish). Immutable: no UPDATE or DELETE                                                                                                                                                                                                                                                            |
+| course_assignments                                                           | Owner-org editors*; the receiving org's org_admins and instructors                                                                                                                                   | Publisher-made rows: owner-org editors* (to other orgs only if the owner is a content publisher). Narrowing rows: the receiving org's org_admin, batch rows under an existing org grant only. Removal: only the org that created the row. No UPDATE                                                                     |
+| enrollments, lesson_progress (the student's org)                             | The student; org_admin and instructors of that org                                                                                                                                                   | The student (own progress); org_admin; system jobs; **instructors only where a graded submission exists** (`app.enrollment_graded`, `app.lesson_graded`, migration 0011). A trigger (`app.enrollments_grader_guard`) lets such a grader change only an enrollment's progress columns                                    |
+| video_assets                                                                 | Owner-org editors*; org_admin and instructors of a reader org** for assets in any published version; enrolled students for assets in their pinned major's latest minor, with current batch access    | Owner-org editors*                                                                                                                                                                                                                                                                                                      |
+| files                                                                        | Same as video_assets, for the files published lessons use (a pdf lesson's PDF, a notes lesson's images). `submission` files: the student who uploaded them, and the org's instructors and org_admins | Owner-org editors*; a student writes only their own `submission` files                                                                                                                                                                                                                                                  |
+| submission_attempts (student org, immutable work)                            | Own student; student-org instructors/org_admins; platform admins                                                                                                                                     | Own student INSERT scoped to the parent submission; published-rule guard, immutable history (app UPDATE/DELETE revoked)                                                                                                                                                                                                 |
+| assignments (draft definitions, owner org)                                   | Owner-org editors* only; students and graders read the published copy in the version                                                                                                                 | Owner-org editors*                                                                                                                                                                                                                                                                                                      |
+| assignment_submissions, assignment_grades (the student's org)                | The student (own); the org's instructors and org_admins; platform admins                                                                                                                             | Submissions: the student (own, only while `submitted`, only into their own active enrollment); graders mark them graded. Grades: same-org graders/platform append only for the active attempt; frozen rubric/penalty guard. Grade UPDATE/DELETE revoked; submission projections must match the active immutable attempt |
+| catalog_entries                                                              | Everyone                                                                                                                                                                                             | Owner-org editors*                                                                                                                                                                                                                                                                                                      |
+| question_banks, questions, question_skills, question_keys (draft, owner org) | Owner-org instructors/org_admins and platform admins only; students never read draft keys or explanations                                                                                            | Same editors; skill links are replace-by-delete/insert                                                                                                                                                                                                                                                                  |
+| quizzes (draft, owner org)                                                   | Owner-org editors only                                                                                                                                                                               | Same editors                                                                                                                                                                                                                                                                                                            |
+| quiz_versions (published, owner org)                                         | Owner editors, assigned-org reader staff, or an active enrolled student with the matching major and current batch access                                                                             | Owner editors INSERT; no app-role UPDATE/DELETE                                                                                                                                                                                                                                                                         |
+| quiz_version_questions (published public prompts)                            | Reader staff; students only the questions selected for an accessible own attempt                                                                                                                     | Owner editors INSERT; no app-role UPDATE/DELETE                                                                                                                                                                                                                                                                         |
+| quiz_version_keys (published private keys/explanations)                      | Owner-org editors only, including after submission; controlled solutions require the narrow reveal function                                                                                          | Owner editors INSERT; no app-role UPDATE/DELETE                                                                                                                                                                                                                                                                         |
+| quiz_attempts, quiz_answers (student org)                                    | Owning active student with current batch access; student's org instructor/org_admin; platform admins. Publisher staff cannot read another org's work                                                 | Direct app-role INSERT/UPDATE/DELETE revoked; guarded runtime mutation functions ship in step 3                                                                                                                                                                                                                         |
 
 \* **Editors**: `instructor` or `org_admin` of the course's owner org, acting in that org, or platform
 admins.
 
 \** **Readers** of a published course, where the course is assigned to the reader's active org:
+
 - that org's `org_admin` and `instructor`, through any assignment (org grant or batch assignment)
 - students, **only** through a batch assignment for a batch they belong to. This applies in the
   owner org too.
@@ -233,11 +243,13 @@ enrollment through an assigned batch; unassigned orgs see nothing.
 org can list the names of **all** active organizations. That is acceptable while SkillifyMe is the
 only publisher. **Revisit it before any other organization gets `is_content_publisher`.**
 Options then:
+
 - limit each publisher to orgs it already has a relationship with
 - make the directory opt-in per organization
 - keep cross-org discovery for platform admins only
 
 **Assignment rules (confirmed 2026-09-26):**
+
 1. Assignments the publisher made, including publisher-made batch assignments, can be removed only
    by the publisher. A receiving org's `org_admin` can remove only the assignments their own org
    created.
@@ -249,6 +261,7 @@ Options then:
 The content rules are enforced by `app/modules/courses/tests/test_course_rls.py`,
 `app/modules/skills/tests/` and `app/modules/enrollments/tests/`. The identity rules are enforced by
 `app/modules/identity/tests/test_rls_*.py`:
+
 - an org A user cannot read, change or insert org B data, tested through raw SQL **and** through
   direct repository calls
 - a forged org context grants nothing
@@ -281,12 +294,12 @@ every foreign key is indexed.
 
 All use Redis sliding windows and return `429` with `Retry-After`.
 
-| What | Key | Default |
-|---|---|---|
-| Failed authentication / probing orgs you don't belong to (API) | Client IP | 30 / minute |
-| Invitations, including resends | Acting user | 60 / hour |
-| CSV imports | Acting user | 10 / hour |
-| `/auth/login`, `/auth/callback` (web BFF) | Client IP (`X-Forwarded-For`) | 20 / minute |
+| What                                                           | Key                           | Default     |
+| -------------------------------------------------------------- | ----------------------------- | ----------- |
+| Failed authentication / probing orgs you don't belong to (API) | Client IP                     | 30 / minute |
+| Invitations, including resends                                 | Acting user                   | 60 / hour   |
+| CSV imports                                                    | Acting user                   | 10 / hour   |
+| `/auth/login`, `/auth/callback` (web BFF)                      | Client IP (`X-Forwarded-For`) | 20 / minute |
 
 The local dev default for the web BFF limit is higher: 300. There's no edge proxy locally to tell
 clients apart.
@@ -306,17 +319,17 @@ realm (`infra/keycloak/realm.template.json`) and re-applied to an existing realm
 ## Adding an endpoint or a table (checklist)
 
 - [ ] **Service function:** call `require_permission`, or `require_org_permission` for org-scoped
-  actions, before doing anything. Add a permission to `ROLE_PERMISSIONS` if needed, and update the
-  tables above.
+      actions, before doing anything. Add a permission to `ROLE_PERMISSIONS` if needed, and update the
+      tables above.
 - [ ] **Router:** use `CurrentPrincipal` / `TenantSession`, so the RLS context is set.
 - [ ] **Tests:** add a row to `MATRIX` in `tests/test_endpoint_roles.py`. The meta-test fails until
-  you do.
-  Routes that belong to one user (like a student's enrollment) set `denied="404"`.
+      you do.
+      Routes that belong to one user (like a student's enrollment) set `denied="404"`.
 - [ ] **New tenant-owned table:** add `organization_id` (indexed), enable RLS, and write one policy
-  per operation using the `app.*` helpers. The schema guards fail otherwise.
+      per operation using the `app.*` helpers. The schema guards fail otherwise.
 - [ ] **Admin action:** record it with `audit.record()` in the same transaction.
 - [ ] **Changing who can see a batch or course:** emit an outbox event, and document it in
-  `docs/events.md`.
+      `docs/events.md`.
 
 ## Phase 3 assessment authoring (step 2)
 
@@ -328,22 +341,22 @@ Every list uses cursor pagination. Question edits serialize through the parent
 bank revision; quiz edits and publishing serialize through the course revision.
 Every mutation below requires `If-Match` (428 missing, 409 stale).
 
-| Method | Endpoint | Permission / scope | Revision |
-| --- | --- | --- | --- |
-| GET | `/question-banks` | `course.edit`, active org's unarchived banks; optional text search | — |
-| POST | `/question-banks` | `course.edit`, creates in active org | `0` |
-| GET | `/question-banks/{bank_id}` | `course.edit`, bank owner org | — |
-| PATCH | `/question-banks/{bank_id}` | `course.edit`, bank owner org | bank |
-| DELETE | `/question-banks/{bank_id}` | `course.edit`, archives bank; published copies survive | bank |
-| GET | `/question-banks/{bank_id}/questions` | `course.edit`, bank owner org; text/type/all listed skill filters | — |
-| POST | `/question-banks/{bank_id}/questions` | `course.edit`, bank owner org; validated private grading rule | bank |
-| GET | `/questions/{question_id}` | `course.edit`, question owner org; author keys included | — |
-| PATCH | `/questions/{question_id}` | `course.edit`, question owner org; merged grading rule validated | bank |
-| DELETE | `/questions/{question_id}` | `course.edit`, archives question; published copies survive | bank |
-| PUT | `/questions/{question_id}/skills` | `course.edit`, question owner org; replaces global skill tags | bank |
-| GET | `/courses/{course_id}/lessons/{lesson_id}/quiz` | `course.edit`, course owner org | — |
-| PUT | `/courses/{course_id}/lessons/{lesson_id}/quiz` | `course.edit`, course owner org; same-org active question references only | course |
-| GET | `/courses/{course_id}/versions/{version_id}/lessons/{lesson_id}/quiz` | `course.read`, owner or assigned-org staff; public prompts only, never keys/explanations | — |
+| Method | Endpoint                                                              | Permission / scope                                                                       | Revision |
+| ------ | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | -------- |
+| GET    | `/question-banks`                                                     | `course.edit`, active org's unarchived banks; optional text search                       | —        |
+| POST   | `/question-banks`                                                     | `course.edit`, creates in active org                                                     | `0`      |
+| GET    | `/question-banks/{bank_id}`                                           | `course.edit`, bank owner org                                                            | —        |
+| PATCH  | `/question-banks/{bank_id}`                                           | `course.edit`, bank owner org                                                            | bank     |
+| DELETE | `/question-banks/{bank_id}`                                           | `course.edit`, archives bank; published copies survive                                   | bank     |
+| GET    | `/question-banks/{bank_id}/questions`                                 | `course.edit`, bank owner org; text/type/all listed skill filters                        | —        |
+| POST   | `/question-banks/{bank_id}/questions`                                 | `course.edit`, bank owner org; validated private grading rule                            | bank     |
+| GET    | `/questions/{question_id}`                                            | `course.edit`, question owner org; author keys included                                  | —        |
+| PATCH  | `/questions/{question_id}`                                            | `course.edit`, question owner org; merged grading rule validated                         | bank     |
+| DELETE | `/questions/{question_id}`                                            | `course.edit`, archives question; published copies survive                               | bank     |
+| PUT    | `/questions/{question_id}/skills`                                     | `course.edit`, question owner org; replaces global skill tags                            | bank     |
+| GET    | `/courses/{course_id}/lessons/{lesson_id}/quiz`                       | `course.edit`, course owner org                                                          | —        |
+| PUT    | `/courses/{course_id}/lessons/{lesson_id}/quiz`                       | `course.edit`, course owner org; same-org active question references only                | course   |
+| GET    | `/courses/{course_id}/versions/{version_id}/lessons/{lesson_id}/quiz` | `course.read`, owner or assigned-org staff; public prompts only, never keys/explanations | —        |
 
 The existing `POST /courses/{course_id}/versions` now requires the course revision
 in `If-Match`, including first-party web, seed and test callers. Quiz content is
@@ -356,7 +369,6 @@ private rules or their hashes never enter snapshots, previews, catalog or audits
 Manual sets contain at most 100 questions; draws take up to 100 from a frozen
 skill-filtered pool of at most 1,000. Author lists remain cursor-paginated.
 
-
 ## Phase 3 quiz runtime (step 3)
 
 Every route requires the owning enrolled student and current batch entitlement.
@@ -365,15 +377,15 @@ Student role checks also run in services and guarded SQL functions. All list
 routes use cursors. Quiz prompts and answers are read from Postgres; no answer
 Redis cache exists. Mutations require If-Match (428 missing, 409 stale).
 
-| Method | Endpoint under /api/v1 | Revision / response |
-| --- | --- | --- |
-| GET | `/enrollments/{enrollment_id}/lessons/{lesson_id}/quiz` | Rules, attempt counters/set revision, active ID and database server time; no prompts/keys |
-| GET | `/enrollments/{enrollment_id}/lessons/{lesson_id}/quiz-attempts` | Cursor history of this major's attempts; aggregate scores only |
-| POST | `/enrollments/{enrollment_id}/lessons/{lesson_id}/quiz-attempts` | Started-attempt count (0 initially); select once and freeze database start/deadline |
-| GET | `/quiz-attempts/{attempt_id}` | Resume selected prompts and saved answers; never keys, explanations or awarded marks |
-| PUT | `/quiz-attempts/{attempt_id}/answers` | Attempt revision; atomic validated batch, durable before acknowledgement |
-| POST | `/quiz-attempts/{attempt_id}/submit` | Attempt revision; optional final batch before deadline, ignored at/after expiry; replay emits nothing |
-| GET | `/quiz-attempts/{attempt_id}/results` | Submitted only; frozen reveal mode/timing independently enforced by SQL and schemas |
+| Method | Endpoint under /api/v1                                           | Revision / response                                                                                   |
+| ------ | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| GET    | `/enrollments/{enrollment_id}/lessons/{lesson_id}/quiz`          | Rules, attempt counters/set revision, active ID and database server time; no prompts/keys             |
+| GET    | `/enrollments/{enrollment_id}/lessons/{lesson_id}/quiz-attempts` | Cursor history of this major's attempts; aggregate scores only                                        |
+| POST   | `/enrollments/{enrollment_id}/lessons/{lesson_id}/quiz-attempts` | Started-attempt count (0 initially); select once and freeze database start/deadline                   |
+| GET    | `/quiz-attempts/{attempt_id}`                                    | Resume selected prompts and saved answers; never keys, explanations or awarded marks                  |
+| PUT    | `/quiz-attempts/{attempt_id}/answers`                            | Attempt revision; atomic validated batch, durable before acknowledgement                              |
+| POST   | `/quiz-attempts/{attempt_id}/submit`                             | Attempt revision; optional final batch before deadline, ignored at/after expiry; replay emits nothing |
+| GET    | `/quiz-attempts/{attempt_id}/results`                            | Submitted only; frozen reveal mode/timing independently enforced by SQL and schemas                   |
 
 SQL interfaces in migration 0014 keep direct app-role attempt/answer writes
 revoked. `app.quiz_start`, `app.quiz_save_answers`, `app.quiz_submit` validate
@@ -394,3 +406,23 @@ Passing completes a quiz; manual completion returns 409 completed_by_quiz.
 Stable completed lesson IDs survive major opt-in; its attempt budget resets and
 old active attempts are abandoned. Revoked work may be sealed by expiry without
 completing its enrollment or restoring access.
+
+Phase 3 assignment rules: existing definition/student/queue/detail/grade responses
+extend additively with optional rubric, late and active-attempt/grade-breakdown
+fields; there is no response version parameter. Replacement appends immutable
+work until grading; grading/correction appends immutable revisions against only
+the active attempt, frozen rubric and late rules. Total-only grading cannot
+bypass a rubric. Upload tickets now require the current submission If-Match (0
+before first submission), and both ticket/submission paths enforce due rejection.
+
+Existing staff/student lesson image URL endpoints accept assignment instruction
+images as well as notes. Publication supplies their file references through the
+assignment service hook. `app.assignment_image_readable(file)` authorizes older
+instruction images only through own frozen attempts with active enrollment and
+current batch entitlement (or the student's org's graders with course access).
+Insert guards compare frozen rules with the published lesson before granting
+that history scope. It does not widen other historical course-file access.
+`app.lock_assessment_enrollment(id)` locks only an own enrollment or one in the
+caller's grader scope (platform override), granting no additional progress writes.
+`app.lesson_graded`/`app.enrollment_graded` require a grade of the active attempt;
+completion evidence also filters the displayed major through assignments service.

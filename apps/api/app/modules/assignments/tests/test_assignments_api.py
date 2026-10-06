@@ -145,7 +145,7 @@ async def test_definition_validation_and_access(api: CourseApi, campus: Campus) 
             {"instructions": {"type": "doc", "content": [{"type": "script"}]}},
             "invalid_instructions",
         ),
-        ({"instructions": image_doc}, "instructions_images"),
+        ({"instructions": image_doc}, "invalid_image"),
     ]
     for fields, code in bad:
         response = await api.define_assignment(
@@ -290,6 +290,7 @@ async def test_file_submission_through_minio(api: CourseApi, campus: Campus) -> 
             campus.cse,
             campus.c,
             json={"file_name": "fizzbuzz.pdf", "content_type": "application/pdf"},
+            headers={"If-Match": "0"},
         ),
         201,
     )
@@ -342,6 +343,7 @@ async def test_rejected_upload_cannot_be_submitted(api: CourseApi, campus: Campu
             campus.cse,
             campus.c,
             json={"file_name": "fake.pdf", "content_type": "application/pdf"},
+            headers={"If-Match": "0"},
         ),
         201,
     )
@@ -411,6 +413,13 @@ async def test_grading_completes_the_lesson_and_progress(api: CourseApi, campus:
         "feedback": "Good",
         "graded_at": seen["submission"]["grade"]["graded_at"],
         "graded_by": str(campus.c_instructor.id),
+        "id": graded["submission"]["grade"]["id"],
+        "attempt_id": submission["active_attempt_id"],
+        "grade_sequence": 1,
+        "rubric_breakdown": None,
+        "raw_score": "8.50",
+        "penalty_percent": "0.00",
+        "penalty_marks": "0.00",
     }
     detail = ok(await api.request("GET", f"/enrollments/{eid}", campus.cse, campus.c))
     assert detail["enrollment"]["progress_percent"] == 100

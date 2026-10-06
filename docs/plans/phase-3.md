@@ -1,6 +1,6 @@
 # Phase 3 — Quizzes and full assignments
 
-**Status: approved (2026-10-04); steps 1 and 2 complete; step 3 local gates passed, pushed CI pending.** Decisions D1–D7 and
+**Status: approved (2026-10-04); steps 1-3 complete; step 4 locally verified, CI pending.** Decisions D1–D7 and
 the security repair below include the user's approved revisions.
 
 **Baseline:** `4f7d00826e368b9dbd7ce1635332a8b1d93dedb7`, the peeled
@@ -739,22 +739,22 @@ approval before coding that step; steps 6 and 7 use its guidelines/components.
 
 ## 14. Implementation record
 
-Steps 1 and 2 completed with green pushed CI. After each green pushed step, report its full SHA and
+Steps 1-3 completed with green pushed CI. After each green pushed step, report its full SHA and
 CI URL in the step summary; carry known commit/run records into this table in
 the next plan update. Do not invent a self-referential commit SHA or a CI URL
 before the commit/run exists. The close-out summary records its own final run.
 
-| Step | Status                     | Commit                                     | CI run                                                                                   |
-| ---- | -------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| 1    | Complete                   | `99b59e7b3e8d284fafce9fb40ef9533d20b503a9` | [37220970826](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37220970826) |
-| 2    | Complete                   | `d660c7330e2f520a043cd58745aac4452576816e` | [37231238285](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37231238285) |
-| 3    | Local verified; CI pending | —                                          | —                                                                                        |
-| 4    | Not started                | —                                          | —                                                                                        |
-| 5    | Not started                | —                                          | —                                                                                        |
-| 6    | Not started                | —                                          | —                                                                                        |
-| 7    | Not started                | —                                          | —                                                                                        |
-| 8    | Not started                | —                                          | —                                                                                        |
-| 9    | Not started                | —                                          | —                                                                                        |
+| Step | Status                         | Commit                                     | CI run                                                                                   |
+| ---- | ------------------------------ | ------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| 1    | Complete                       | `99b59e7b3e8d284fafce9fb40ef9533d20b503a9` | [37220970826](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37220970826) |
+| 2    | Complete                       | `d660c7330e2f520a043cd58745aac4452576816e` | [37231238285](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37231238285) |
+| 3    | Complete                       | `c9aac0b02a9964ddee43c5ba5304d027fa7c7a0e` | [37355212064](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37355212064) |
+| 4    | Local gates passed; CI pending | —                                          | —                                                                                        |
+| 5    | Not started                    | —                                          | —                                                                                        |
+| 6    | Not started                    | —                                          | —                                                                                        |
+| 7    | Not started                    | —                                          | —                                                                                        |
+| 8    | Not started                    | —                                          | —                                                                                        |
+| 9    | Not started                    | —                                          | —                                                                                        |
 
 ### Deviations
 
@@ -823,6 +823,36 @@ The host standalone production launch incorrectly retained the development-only
 runtime. Correcting the launch to production/CI's default tagged cache resolves
 that configuration mismatch. Catalog code, assertions and timeouts are unchanged;
 the full local gate passed with the corrected production launch.
+
+Step 4: no product/architecture deviation outside the approved changes. Before beginning the backend,
+added `test_passing_expiry_sweeper_without_client_survives_restart`: the production
+sweep function uses fresh app-role connections, is rerun after connection/worker
+recreation and expiry-task replay, and reads Postgres before any client request.
+It requires the same passing score/revision/submitted time, one completed lesson,
+one completion event and one quiz event. This fills the passing-completion gap in
+Step 3's existing zero-score sweeper regression; no existing assertion or timeout
+was weakened. Both this regression and the existing late-PUT lock-boundary case
+passed locally before Step 4 began. These tests invoke the beat task's production
+sweep implementation; they do not claim a live-clock/broker test was run.
+
+Compatibility test changes implement approved contracts: upload setup/callers
+send If-Match; the unknown instruction image remains 422 with invalid_image;
+the exact grade-response assertion includes all original fields and every new
+field. Role assertions/timeouts remain unchanged. Historical migration setup
+uses frozen pre-0012 SQL rather than today's ORM columns, preserving the actual
+v1 payload leakage reproduction and all preservation/isolation assertions.
+
+Step 4 verification repairs: add composite FK indexes required by the unchanged
+schema-wide guard; make the event topic-table parser tolerate Markdown formatter
+spacing while retaining its exact topic equality and payload/version assertions;
+refresh the returned published-snapshot fixture after its database update;
+allow SQL NULL/JSON null for an absent rubric breakdown; and drop the dependent
+grade INSERT policy before its columns during downgrade. Audit captures the
+definition before mutating its ORM identity. The legacy upgrade regression now
+checks both text and file work, retained files, grades and completed progress.
+The local Keycloak setup-email test also needed the existing Mailpit service
+started. These repairs do not weaken assertions, change timeouts or deviate from
+the approved product contracts.
 
 ### Security repairs
 
@@ -930,6 +960,58 @@ the full local gate passed with the corrected production launch.
   CI URL are reported in the step summary and carried into the table at the next
   authorized plan update. No later step has started.
 
+### Step 4 implementation
+
+- Migration 0015 extends the existing module with immutable submission attempts
+  and append-only grade revisions. Each surviving Phase 2.5 submission backfills
+  exactly one attempt; its IDs, work, timestamps, revision and existing grade
+  survive. The aggregate retains its stable ID and projects one active attempt.
+  Deferred composite constraints and app-role SQL guards prevent forged frozen
+  rules, mismatched projections, invalid grading and edits to historical rows.
+- Assignment definitions gain nullable rubric and late-policy fields. Every
+  accepted submission freezes its published definition, displayed major and
+  database-clock lateness. Reject closes late submissions; penalty uses earned
+  marks per begun UTC day, caps at 100% and rounds half-up to two decimals.
+  Regrading appends a revision and computes the penalty from earned marks once.
+  Rubric criterion IDs/maxima remain structural; late mode/rate are minor-safe.
+- Instructions use the existing notes document/image validation and rendering
+  flow. Publishing freezes referenced image IDs. A narrowly scoped SQL media
+  interface allows authorized historical instructions without granting broad
+  access to old course versions or another student's work.
+- Six GET methods add sanitized author preview and separate cursor-paginated
+  submission/grade histories. All have MATRIX and access-control entries.
+  Existing response fields and URLs remain; new fields are additive, with no
+  schema-version parameter. Submission-upload now requires If-Match and its
+  existing first-party caller sends the submission revision.
+- Definition writes lock the course before publishing; submission/grading lock
+  the enrollment before the aggregate. Completion evidence uses only the active
+  grade for the displayed major through the assignments service. Historical
+  scores cannot create new-major completion; existing completed stable lesson
+  IDs retain their established carryover behavior.
+- `assignment_graded` v2 includes the frozen rubric/late breakdown on the existing
+  enrollment topic. Strict schema tests validate both the current producer and
+  historical v1 payloads independently. Five modified writes (definition,
+  submission, upload, grading and publication) each have separate-connection
+  visibility-at-headers, missing/stale If-Match and failed-commit rollback tests.
+- Checks run personally (2026-10-06): `make gen-api`, `make lint` (both apps'
+  lint, format and strict type-checks), `make migrate`, `uv run alembic check`,
+  production web build and repository hooks **passed**. The final full
+  `make test` **passed**: API **1,651 passed**, Vitest **157 passed**, Playwright
+  **41 passed / 7 existing intentional skips / 0 failures**, against the host
+  production web server and real Compose services. The assignment UI journey
+  and all four read-only demo role cases ran and passed; desktop duplicates
+  retain their intentional skip conditions. No assertion or timeout weakened.
+- The initial full API gate had 1,646 passed / 4 failed (two topic-table parsing
+  cases, the missing Mailpit service, and the composite FK-index guard).
+  The focused repaired gate passed all 10 cases, and the final full gate above
+  reran the entire suite. Fresh migration tests and the schema-wide guards
+  verify all four indexes; the already-migrated local dev database received the
+  same index additions without changing data. Hooks needed Git Bash on PATH,
+  as documented for this Windows checkout, after normalizing line endings.
+- A step is complete only after its local gates and exact pushed-commit CI pass.
+  The summary records that commit and run URL, and the next authorized plan
+  update carries them into the table. Step 5 has not started.
+
 ### Open follow-ups / carried forward
 
 - Plagiarism detection, AI feedback and coding labs remain outside this brief;
@@ -955,6 +1037,6 @@ The tracked check exited 0; the no-index comparison exited 1 for the new-file
 difference and emitted no whitespace warnings.
 At the initial planning gate only this plan was added; implementation checks,
 commit, push and CI had not run. Step 1 subsequently passed its local and pushed-CI gates (recorded above).
-Step 2 passed its local and pushed-CI gates (recorded above). Step 3 is authorized
-and its verification is recorded in its implementation entry and step summary;
+Steps 2 and 3 passed their local and pushed-CI gates (recorded above). Step 4 is authorized
+and its local verification is recorded in its implementation entry; pushed CI remains pending;
 later steps remain gated on the user's "continue".

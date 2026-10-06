@@ -57,6 +57,8 @@ def lesson_file_ids(lesson_type: LessonType, content: Mapping[str, Any]) -> list
         return [UUID(str(file_id))]
     if lesson_type == LessonType.NOTES and (doc := content.get("doc")):
         return notes.image_file_ids(doc)
+    if lesson_type == LessonType.ASSIGNMENT:
+        return [UUID(str(i)) for i in content.get("image_file_ids", [])]
     return []
 
 

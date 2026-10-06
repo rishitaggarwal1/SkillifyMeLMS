@@ -21,6 +21,57 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/assignment-submissions/{submission_id}/attempts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Submission Attempt History */
+    get: operations["submission_attempt_history"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/assignment-submissions/{submission_id}/attempts/{attempt_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Submission Attempt Detail */
+    get: operations["submission_attempt_detail"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/assignment-submissions/{submission_id}/attempts/{attempt_id}/grades": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Assignment Grade History */
+    get: operations["assignment_grade_history"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/assignment-submissions/{submission_id}/grade": {
     parameters: {
       query?: never;
@@ -355,6 +406,23 @@ export interface paths {
      * @description Create or update the definition. It is published with the next course version.
      */
     put: operations["put_lesson_assignment"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/courses/{course_id}/lessons/{lesson_id}/assignment/preview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Preview Assignment */
+    get: operations["preview_assignment"];
+    put?: never;
     post?: never;
     delete?: never;
     options?: never;
@@ -907,6 +975,40 @@ export interface paths {
      * @description Submit, or replace the submission until it is graded.
      */
     put: operations["submit_assignment"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/submission-attempts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** My Submission Attempts */
+    get: operations["my_submission_attempts"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/submission-attempts/{attempt_id}/grades": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** My Assignment Grade History */
+    get: operations["my_assignment_grade_history"];
+    put?: never;
     post?: never;
     delete?: never;
     options?: never;
@@ -1917,6 +2019,7 @@ export interface components {
       instructions: {
         [key: string]: unknown;
       } | null;
+      late_policy?: components["schemas"]["LatePolicy-Output"] | null;
       /**
        * Lesson Id
        * Format: uuid
@@ -1924,6 +2027,7 @@ export interface components {
       lesson_id: string;
       /** Max Marks */
       max_marks: number;
+      rubric?: components["schemas"]["Rubric-Output"] | null;
       /** Submission Kinds */
       submission_kinds: ("file" | "text")[];
       /** Title */
@@ -1972,22 +2076,35 @@ export interface components {
       /** Parent Assignment Id */
       parent_assignment_id: string | null;
     };
+    /** AssignmentPreviewOut */
+    AssignmentPreviewOut: {
+      /** Expires At */
+      expires_at: string | null;
+      /** Html */
+      html: string;
+      /** Image Urls */
+      image_urls: {
+        [key: string]: string;
+      };
+    };
     /** AssignmentUpsert */
     AssignmentUpsert: {
       /**
        * Due At
-       * @description Shown to students. Late submissions are accepted (no policy yet).
+       * @description UTC due time, enforced against the configured late policy.
        */
       due_at?: string | null;
       /**
        * Instructions
-       * @description Tiptap JSON document with the notes allow-list (see courses/notes.py), without images.
+       * @description Tiptap JSON document with the notes allow-list (see courses/notes.py), with confirmed same-owner image file IDs.
        */
       instructions?: {
         [key: string]: unknown;
       } | null;
+      late_policy?: components["schemas"]["LatePolicy-Input"] | null;
       /** Max Marks */
       max_marks: number;
+      rubric?: components["schemas"]["Rubric-Input"] | null;
       /** Submission Kinds */
       submission_kinds: ("file" | "text")[];
       /** Title */
@@ -2448,6 +2565,20 @@ export interface components {
       /** Title */
       title?: string | null;
     };
+    /** CriterionScore */
+    "CriterionScore-Input": {
+      /** Criterion Id */
+      criterion_id: string;
+      /** Score */
+      score: number | string;
+    };
+    /** CriterionScore */
+    "CriterionScore-Output": {
+      /** Criterion Id */
+      criterion_id: string;
+      /** Score */
+      score: string;
+    };
     /** CursorPage[AssignmentOut] */
     CursorPage_AssignmentOut_: {
       /** Items */
@@ -2558,6 +2689,16 @@ export interface components {
        */
       next_cursor: string | null;
     };
+    /** CursorPage[GradeOut] */
+    CursorPage_GradeOut_: {
+      /** Items */
+      items: components["schemas"]["GradeOut"][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for the next page; null when there are no more items.
+       */
+      next_cursor: string | null;
+    };
     /** CursorPage[GraderSubmissionRow] */
     CursorPage_GraderSubmissionRow_: {
       /** Items */
@@ -2642,6 +2783,16 @@ export interface components {
     CursorPage_SkillOut_: {
       /** Items */
       items: components["schemas"]["SkillOut"][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for the next page; null when there are no more items.
+       */
+      next_cursor: string | null;
+    };
+    /** CursorPage[SubmissionAttemptOut] */
+    CursorPage_SubmissionAttemptOut_: {
+      /** Items */
+      items: components["schemas"]["SubmissionAttemptOut"][];
       /**
        * Next Cursor
        * @description Opaque cursor for the next page; null when there are no more items.
@@ -2890,18 +3041,26 @@ export interface components {
     };
     /** GradeBody */
     GradeBody: {
+      /** Attempt Id */
+      attempt_id?: string | null;
+      /** Criterion Scores */
+      criterion_scores?: components["schemas"]["CriterionScore-Input"][] | null;
       /**
        * Feedback
        * @default
        */
       feedback: string;
       /** Score */
-      score: number | string;
+      score?: number | string | null;
     };
     /** GradeOut */
     GradeOut: {
+      /** Attempt Id */
+      attempt_id?: string | null;
       /** Feedback */
       feedback: string;
+      /** Grade Sequence */
+      grade_sequence?: number | null;
       /**
        * Graded At
        * Format: date-time
@@ -2909,8 +3068,18 @@ export interface components {
       graded_at: string;
       /** Graded By */
       graded_by: string | null;
+      /** Id */
+      id?: string | null;
       /** Max Marks */
       max_marks: number;
+      /** Penalty Marks */
+      penalty_marks?: string | null;
+      /** Penalty Percent */
+      penalty_percent?: string | null;
+      /** Raw Score */
+      raw_score?: string | null;
+      /** Rubric Breakdown */
+      rubric_breakdown?: components["schemas"]["CriterionScore-Output"][] | null;
       /** Score */
       score: string;
     };
@@ -2937,6 +3106,8 @@ export interface components {
     };
     /** GraderSubmissionRow */
     GraderSubmissionRow: {
+      /** Active Attempt Id */
+      active_attempt_id?: string | null;
       /**
        * Enrollment Id
        * Format: uuid
@@ -3063,6 +3234,45 @@ export interface components {
       status: string;
       /** User Id */
       user_id: string | null;
+    };
+    /** LateData */
+    LateData: {
+      /**
+       * Closed
+       * @default false
+       */
+      closed: boolean;
+      /** Due At */
+      due_at: string | null;
+      /** Is Late */
+      is_late: boolean;
+      /** Late Days */
+      late_days: number;
+      /** Penalty Percent */
+      penalty_percent: string;
+      policy: components["schemas"]["LatePolicy-Output"];
+    };
+    /** LatePolicy */
+    "LatePolicy-Input": {
+      /**
+       * Mode
+       * @default accept
+       * @enum {string}
+       */
+      mode: "accept" | "reject" | "penalty";
+      /** Percent Per Day */
+      percent_per_day?: number | string | null;
+    };
+    /** LatePolicy */
+    "LatePolicy-Output": {
+      /**
+       * Mode
+       * @default accept
+       * @enum {string}
+       */
+      mode: "accept" | "reject" | "penalty";
+      /** Percent Per Day */
+      percent_per_day?: string | null;
     };
     /** LessonCompletionOut */
     LessonCompletionOut: {
@@ -3682,10 +3892,14 @@ export interface components {
       assignment_id: string;
       /** Due At */
       due_at: string | null;
+      /** Image File Ids */
+      image_file_ids?: string[];
       /** Instructions Html */
       instructions_html: string;
+      late_policy?: components["schemas"]["LatePolicy-Output"];
       /** Max Marks */
       max_marks: number;
+      rubric?: components["schemas"]["Rubric-Output"] | null;
       /** Submission Kinds */
       submission_kinds: ("file" | "text")[];
       /** Title */
@@ -3994,6 +4208,44 @@ export interface components {
       /** Course Revision */
       course_revision: number;
     };
+    /** Rubric */
+    "Rubric-Input": {
+      /** Criteria */
+      criteria: components["schemas"]["RubricCriterion-Input"][];
+    };
+    /** Rubric */
+    "Rubric-Output": {
+      /** Criteria */
+      criteria: components["schemas"]["RubricCriterion-Output"][];
+    };
+    /** RubricCriterion */
+    "RubricCriterion-Input": {
+      /**
+       * Description
+       * @default
+       */
+      description: string;
+      /** Id */
+      id: string;
+      /** Label */
+      label: string;
+      /** Max Marks */
+      max_marks: number | string;
+    };
+    /** RubricCriterion */
+    "RubricCriterion-Output": {
+      /**
+       * Description
+       * @default
+       */
+      description: string;
+      /** Id */
+      id: string;
+      /** Label */
+      label: string;
+      /** Max Marks */
+      max_marks: string;
+    };
     /** SavedAnswer */
     SavedAnswer: {
       /** Option Ids */
@@ -4086,6 +4338,9 @@ export interface components {
     /** StudentAssignmentOut */
     StudentAssignmentOut: {
       assignment: components["schemas"]["PublishedAssignment"];
+      late?: components["schemas"]["LateData"] | null;
+      /** Server Time */
+      server_time?: string | null;
       submission: components["schemas"]["SubmissionOut"] | null;
     };
     /** StudentProgress */
@@ -4194,6 +4449,50 @@ export interface components {
        */
       id: string;
     };
+    /** SubmissionAttemptOut */
+    SubmissionAttemptOut: {
+      assignment: components["schemas"]["PublishedAssignment"];
+      /** Attempt Number */
+      attempt_number: number;
+      file: components["schemas"]["SubmissionFileOut"] | null;
+      grade: components["schemas"]["GradeOut"] | null;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Image Urls */
+      image_urls?: {
+        [key: string]: string;
+      };
+      /** Image Urls Expires At */
+      image_urls_expires_at?: string | null;
+      /** Is Active */
+      is_active: boolean;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "file" | "text";
+      late: components["schemas"]["LateData"] | null;
+      /**
+       * Submission Id
+       * Format: uuid
+       */
+      submission_id: string;
+      /**
+       * Submitted At
+       * Format: date-time
+       */
+      submitted_at: string;
+      /** Text Body */
+      text_body: string | null;
+      /**
+       * Version Id
+       * Format: uuid
+       */
+      version_id: string;
+    };
     /** SubmissionFileOut */
     SubmissionFileOut: {
       /** Content Type */
@@ -4215,6 +4514,10 @@ export interface components {
     };
     /** SubmissionOut */
     SubmissionOut: {
+      /** Active Attempt Id */
+      active_attempt_id?: string | null;
+      /** Attempt Number */
+      attempt_number?: number | null;
       file: components["schemas"]["SubmissionFileOut"] | null;
       grade: components["schemas"]["GradeOut"] | null;
       /**
@@ -4227,6 +4530,7 @@ export interface components {
        * @enum {string}
        */
       kind: "file" | "text";
+      late?: components["schemas"]["LateData"] | null;
       /**
        * Revision
        * @description Send it as If-Match to resubmit (students) or grade
@@ -4555,6 +4859,143 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["GraderSubmissionDetail"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  submission_attempt_history: {
+    parameters: {
+      query?: {
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        submission_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_SubmissionAttemptOut_"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  submission_attempt_detail: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        submission_id: string;
+        attempt_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SubmissionAttemptOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  assignment_grade_history: {
+    parameters: {
+      query?: {
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        submission_id: string;
+        attempt_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_GradeOut_"];
         };
       };
       /** @description Client error */
@@ -5823,6 +6264,50 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["AssignmentDraftOut"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  preview_assignment: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        course_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssignmentPreviewOut"];
         };
       };
       /** @description Client error */
@@ -7370,12 +7855,109 @@ export interface operations {
       };
     };
   };
+  my_submission_attempts: {
+    parameters: {
+      query?: {
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        enrollment_id: string;
+        lesson_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_SubmissionAttemptOut_"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  my_assignment_grade_history: {
+    parameters: {
+      query?: {
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path: {
+        enrollment_id: string;
+        lesson_id: string;
+        attempt_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_GradeOut_"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
   create_submission_upload: {
     parameters: {
       query?: never;
       header?: {
         /** @description Active organization for this request (from the org switcher). */
         "x-organization-id"?: string | null;
+        /** @description The revision this change is based on */
+        "If-Match"?: string | null;
       };
       path: {
         enrollment_id: string;

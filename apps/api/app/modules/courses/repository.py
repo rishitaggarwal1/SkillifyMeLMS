@@ -107,6 +107,14 @@ class CourseRepository:
                 update(Course).where(Course.id == course_id).values(**values_)
             )
 
+    async def lock(self, course_id: UUID) -> Course | None:
+        return await self.session.scalar(
+            select(Course)
+            .where(Course.id == course_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+
     async def bump_revision(self, course_id: UUID, expected: int | None) -> int | None:
         """Increment the draft revision (row-locking the course, which serializes concurrent edits
         of one course). None if the course isn't editable or `expected` is stale."""
