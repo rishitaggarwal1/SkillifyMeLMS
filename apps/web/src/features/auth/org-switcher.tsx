@@ -23,7 +23,10 @@ export function OrgSwitcher({ me, onSwitch = switchOrganization }: Props) {
   if (me.memberships.length === 0) return null;
   if (me.memberships.length === 1) {
     return (
-      <span className="truncate text-sm text-muted-foreground" data-testid="current-org">
+      <span
+        className="max-w-24 min-w-0 truncate text-sm text-muted-foreground sm:max-w-64"
+        data-testid="current-org"
+      >
         {me.memberships[0]!.organization.name}
       </span>
     );

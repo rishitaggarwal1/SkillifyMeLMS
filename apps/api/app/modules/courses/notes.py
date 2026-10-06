@@ -21,6 +21,7 @@ Allowed document shape (Tiptap/ProseMirror JSON):
     codeBlock    -> text* (no marks)
 """
 
+import re
 from collections.abc import Callable, Iterator, Mapping
 from html import escape
 from typing import Any, NoReturn
@@ -378,4 +379,24 @@ def stylesheet() -> str:
     Only rules scoped to `pre.highlight` are kept: Pygments also emits global `pre` and
     line-number rules, which would restyle every `<pre>` in the app."""
     css = str(HtmlFormatter().get_style_defs("pre.highlight"))  # type: ignore[no-untyped-call]
-    return "\n".join(line for line in css.splitlines() if line.startswith("pre.highlight"))
+    lines = []
+    for line in css.splitlines():
+        if not line.startswith("pre.highlight"):
+            continue
+        css_variable = "--code-name"
+        selector = line.split("{", 1)[0]
+        if " .c" in selector or " .w " in selector:
+            css_variable = "--code-comment"
+        elif " .k" in selector or " .ow " in selector:
+            css_variable = "--code-keyword"
+        elif " .s" in selector or " .dl " in selector or " .gi " in selector:
+            css_variable = "--code-string"
+        elif " .m" in selector:
+            css_variable = "--code-number"
+        elif " .err " in selector or " .gr " in selector or " .gd " in selector:
+            css_variable = "--code-error"
+        themed_line = re.sub(
+            r"background(?:-color)?: #[0-9a-fA-F]+", "background: var(--muted)", line
+        )
+        lines.append(re.sub(r"#[0-9a-fA-F]+", f"var({css_variable})", themed_line))
+    return "\n".join(lines)

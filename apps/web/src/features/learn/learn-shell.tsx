@@ -1,15 +1,16 @@
 "use client";
 
+import { RoleFrame } from "@/components/patterns/role-frame";
 import type { ReactNode } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageSkeleton } from "@/components/patterns/states";
 import { useMe } from "@/features/auth/queries";
 
 /** Student area: needs an active organization (enrollments belong to the student's org). */
 export function LearnShell({ children }: { children: ReactNode }) {
   const { data: me, isPending } = useMe();
-  if (isPending) return <Skeleton className="h-40 w-full" />;
+  if (isPending) return <PageSkeleton />;
   if (!me) return null; // proxy.ts already sent signed-out visitors to the login page
   if (!me.active_organization_id) {
     return (
@@ -21,5 +22,5 @@ export function LearnShell({ children }: { children: ReactNode }) {
       </Alert>
     );
   }
-  return <>{children}</>;
+  return <RoleFrame area="learn">{children}</RoleFrame>;
 }

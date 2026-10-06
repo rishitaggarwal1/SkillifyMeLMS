@@ -9,7 +9,7 @@ import { useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageSkeleton } from "@/components/patterns/states";
 import { ErrorAlert } from "@/features/admin/ui";
 import { cn } from "@/lib/utils";
 
@@ -40,9 +40,10 @@ export function ResumeCourse({ enrollmentId }: { enrollmentId: string }) {
   useEffect(() => {
     if (target) router.replace(`/learn/enrollments/${enrollmentId}/lessons/${target}`);
   }, [target, enrollmentId, router]);
-  if (detail.error) return <ErrorAlert error={detail.error} />;
+  if (detail.error)
+    return <ErrorAlert error={detail.error} onRetry={() => void detail.refetch()} />;
   if (detail.data && !target) return <p>This course has no lessons yet.</p>;
-  return <Skeleton className="h-64 w-full" />;
+  return <PageSkeleton kind="form" rows={4} />;
 }
 
 export function CoursePlayer({
@@ -59,8 +60,9 @@ export function CoursePlayer({
     recordVisit(lessonId);
   }, [lessonId, recordVisit]);
 
-  if (detail.isPending) return <Skeleton className="h-64 w-full" />;
-  if (detail.error) return <ErrorAlert error={detail.error} />;
+  if (detail.isPending) return <PageSkeleton kind="form" rows={4} />;
+  if (detail.error)
+    return <ErrorAlert error={detail.error} onRetry={() => void detail.refetch()} />;
   const outline = readOutline(detail.data.outline);
   const progress = progressByLesson(detail.data.progress);
   const lesson = allLessons(outline).find((l) => l.id === lessonId);
@@ -73,9 +75,7 @@ export function CoursePlayer({
         <Link href="/learn" className="text-sm text-muted-foreground hover:underline">
           ← My learning
         </Link>
-        <h1 className="text-lg font-semibold tracking-tight sm:text-2xl">
-          {outline.course.title || enrollment.course_title}
-        </h1>
+        <h1>{outline.course.title || enrollment.course_title}</h1>
         <Progress value={enrollment.progress_percent} aria-label="Course progress" />
         <p className="text-xs text-muted-foreground tabular-nums" role="status">
           {enrollment.completed_at

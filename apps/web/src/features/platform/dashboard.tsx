@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageSkeleton } from "@/components/patterns/states";
 import { ErrorAlert, PageTitle } from "@/features/admin/ui";
 import { ROLE_LABELS, type OrgRole } from "@/lib/api/types";
 
@@ -27,8 +27,8 @@ export function PlatformDashboard() {
   return (
     <div className="flex flex-col gap-6">
       <PageTitle title="Platform" />
-      {query.isPending ? <Skeleton className="h-40 w-full" /> : null}
-      {query.error ? <ErrorAlert error={query.error} /> : null}
+      {query.isPending ? <PageSkeleton /> : null}
+      {query.error ? <ErrorAlert error={query.error} onRetry={() => void query.refetch()} /> : null}
       {s ? (
         <>
           <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-label="Platform totals">

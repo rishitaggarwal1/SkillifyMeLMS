@@ -19,8 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
+import { FormField, PageSkeleton } from "@/components/patterns/states";
 import { Textarea } from "@/components/ui/textarea";
 
 import { batchesQuery, useCreateBatch } from "./api";
@@ -43,8 +42,8 @@ export function BatchesPage() {
         title="Batches"
         actions={<Button onClick={() => setOpen(true)}>New batch</Button>}
       />
-      {query.isPending ? <Skeleton className="h-24 w-full" /> : null}
-      {query.error ? <ErrorAlert error={query.error} /> : null}
+      {query.isPending ? <PageSkeleton /> : null}
+      {query.error ? <ErrorAlert error={query.error} onRetry={() => void query.refetch()} /> : null}
       {query.isSuccess && batches.length === 0 ? (
         <EmptyState>No batches yet. Create one to group students, e.g. “CSE 2026”.</EmptyState>
       ) : null}
@@ -115,22 +114,21 @@ function CreateBatchDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(submit)} className="flex flex-col gap-4" noValidate>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="batch-name">Name</Label>
-            <Input
-              id="batch-name"
-              autoComplete="off"
-              {...form.register("name")}
-              aria-invalid={!!form.formState.errors.name}
-            />
-            {form.formState.errors.name ? (
-              <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
-            ) : null}
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="batch-description">Description (optional)</Label>
-            <Textarea id="batch-description" rows={3} {...form.register("description")} />
-          </div>
+          <FormField
+            id="batch-name"
+            label="Name"
+            error={form.formState.errors.name?.message}
+            saving={form.formState.isSubmitting}
+          >
+            {(props) => <Input {...props} autoComplete="off" {...form.register("name")} />}
+          </FormField>
+          <FormField
+            id="batch-description"
+            label="Description (optional)"
+            saving={form.formState.isSubmitting}
+          >
+            {(props) => <Textarea {...props} rows={3} {...form.register("description")} />}
+          </FormField>
           {form.formState.errors.root ? (
             <p role="alert" className="text-sm text-destructive">
               {form.formState.errors.root.message}

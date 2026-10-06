@@ -223,7 +223,7 @@ function ImportHistory() {
       <h2 id="import-history" className="text-base font-medium">
         Recent imports
       </h2>
-      {query.error ? <ErrorAlert error={query.error} /> : null}
+      {query.error ? <ErrorAlert error={query.error} onRetry={() => void query.refetch()} /> : null}
       {jobs.map((job) => (
         <JobSummary key={job.id} job={job} />
       ))}

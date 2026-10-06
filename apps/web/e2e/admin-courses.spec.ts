@@ -110,12 +110,26 @@ test("a college admin assigns a granted course and staff see progress", async ({
   );
   const t = instructor.page;
   await expect(t.getByLabel("Batch")).toHaveValue(batchId);
+  const cards = t.getByRole("list", { name: "Progress table" });
+  await expect(
+    cards
+      .getByRole("term")
+      .filter({ hasText: /^Welcome$/ })
+      .first(),
+  ).toBeVisible();
+  await expect(
+    cards.getByRole("listitem").filter({ hasText: "ece.student@demo-college.local" }),
+  ).toContainText("0%");
+  await noSideScroll(t);
+  // The shared table retains the original desktop semantics and exact progress assertions.
+  await t.setViewportSize(DESKTOP);
   const table = t.getByRole("region", { name: "Progress table" });
   await expect(table.getByRole("columnheader", { name: "Welcome" })).toBeVisible();
   await expect(
     table.getByRole("row").filter({ hasText: "ece.student@demo-college.local" }),
   ).toContainText("0%");
-  await noSideScroll(t); // only the table scrolls sideways
+  await noSideScroll(t);
+  await t.setViewportSize(PHONE);
   const download = t.waitForEvent("download");
   await t.getByRole("button", { name: "Download CSV" }).click();
   const csv = await download;

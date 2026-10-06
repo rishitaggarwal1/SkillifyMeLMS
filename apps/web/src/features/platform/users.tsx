@@ -9,7 +9,7 @@ import { NativeSelect } from "@/components/native-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageSkeleton } from "@/components/patterns/states";
 import { useMe } from "@/features/auth/queries";
 import { useDebounced } from "@/features/admin/hooks";
 import {
@@ -110,8 +110,8 @@ export function UsersPage({ organizationId }: { organizationId?: string }) {
           ))}
         </NativeSelect>
       </div>
-      {query.isPending ? <Skeleton className="h-24 w-full" /> : null}
-      {query.error ? <ErrorAlert error={query.error} /> : null}
+      {query.isPending ? <PageSkeleton /> : null}
+      {query.error ? <ErrorAlert error={query.error} onRetry={() => void query.refetch()} /> : null}
       {query.isSuccess && rows.length === 0 ? <EmptyState>No users match.</EmptyState> : null}
       <ul className="flex flex-col gap-2" aria-label="Users">
         {rows.map((u) => (
@@ -159,8 +159,8 @@ export function UserDetailPage({ userId }: { userId: string }) {
   const query = useQuery(userQuery(userId));
   const { data: me } = useMe();
   const setEnabled = useSetUserEnabled(userId);
-  if (query.isPending) return <Skeleton className="h-40 w-full" />;
-  if (query.error) return <ErrorAlert error={query.error} />;
+  if (query.isPending) return <PageSkeleton />;
+  if (query.error) return <ErrorAlert error={query.error} onRetry={() => void query.refetch()} />;
   const user = query.data;
   const orgNames = new Map(user.memberships.map((m) => [m.organization.id, m.organization.name]));
   const isSelf = me?.user.id === user.id;

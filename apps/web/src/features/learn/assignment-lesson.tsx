@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageSkeleton } from "@/components/patterns/states";
 import { Textarea } from "@/components/ui/textarea";
 import { ErrorAlert, errorMessage } from "@/features/admin/ui";
 import { ApiError } from "@/lib/api/errors";
@@ -25,8 +25,8 @@ type Props = { enrollmentId: string; lesson: OutlineLesson; progress?: LessonPro
 /** An assignment lesson: instructions, the student's one submission, and the grade. */
 export function AssignmentLesson({ enrollmentId, lesson }: Props) {
   const query = useQuery(myAssignmentQuery(enrollmentId, lesson.id));
-  if (query.isPending) return <Skeleton className="h-48 w-full" />;
-  if (query.error) return <ErrorAlert error={query.error} />;
+  if (query.isPending) return <PageSkeleton />;
+  if (query.error) return <ErrorAlert error={query.error} onRetry={() => void query.refetch()} />;
   const { assignment, submission } = query.data;
   return (
     <div className="flex flex-col gap-5">

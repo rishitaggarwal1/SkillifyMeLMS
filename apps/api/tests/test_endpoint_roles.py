@@ -367,6 +367,32 @@ def _content(kind: str) -> Builder:
 
 
 MATRIX = [
+    Route("GET", "/api/v1/dashboards/admin", ADMINS, at("/api/v1/dashboards/admin")),
+    Route(
+        "GET", "/api/v1/dashboards/admin/batches", ADMINS, at("/api/v1/dashboards/admin/batches")
+    ),
+    Route(
+        "GET",
+        "/api/v1/dashboards/admin/unassigned-courses",
+        ADMINS,
+        at("/api/v1/dashboards/admin/unassigned-courses"),
+    ),
+    Route("GET", "/api/v1/dashboards/teach", STAFF_READ, at("/api/v1/dashboards/teach")),
+    Route(
+        "GET", "/api/v1/assignment-submissions", STAFF_READ, at("/api/v1/assignment-submissions")
+    ),
+    Route(
+        "GET",
+        "/api/v1/dashboards/learn/due",
+        {"student", "platform_admin"},
+        at("/api/v1/dashboards/learn/due"),
+    ),
+    Route(
+        "GET",
+        "/api/v1/dashboards/learn/results",
+        {"student", "platform_admin"},
+        at("/api/v1/dashboards/learn/results"),
+    ),
     # Org A is not a content publisher: only platform admins may browse (publisher staff are
     # covered in identity/tests/test_organization_directory.py).
     Route(

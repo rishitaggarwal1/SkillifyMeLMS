@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FormField, PageSkeleton } from "@/components/patterns/states";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ConfirmButton,
@@ -37,8 +38,8 @@ type InviteAdminForm = z.infer<typeof inviteAdminSchema>;
 
 export function OrganizationDetailPage({ organizationId }: { organizationId: string }) {
   const query = useQuery(organizationQuery(organizationId));
-  if (query.isPending) return <Skeleton className="h-40 w-full" />;
-  if (query.error) return <ErrorAlert error={query.error} />;
+  if (query.isPending) return <PageSkeleton />;
+  if (query.error) return <ErrorAlert error={query.error} onRetry={() => void query.refetch()} />;
   const org = query.data;
   return (
     <div className="flex flex-col gap-6">
@@ -107,21 +108,23 @@ function InviteAdmin({ organizationId }: { organizationId: string }) {
         aria-label="Invite an org admin"
         noValidate
       >
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="admin-email">Email</Label>
-          <Input
-            id="admin-email"
-            type="email"
-            autoComplete="off"
-            {...form.register("email")}
-            aria-invalid={!!errors.email}
-          />
-          {errors.email ? <p className="text-sm text-destructive">{errors.email.message}</p> : null}
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="admin-name">Full name (optional)</Label>
-          <Input id="admin-name" autoComplete="off" {...form.register("full_name")} />
-        </div>
+        <FormField
+          id="admin-email"
+          label="Email"
+          error={errors.email?.message}
+          saving={form.formState.isSubmitting}
+        >
+          {(props) => (
+            <Input {...props} type="email" autoComplete="off" {...form.register("email")} />
+          )}
+        </FormField>
+        <FormField
+          id="admin-name"
+          label="Full name (optional)"
+          saving={form.formState.isSubmitting}
+        >
+          {(props) => <Input {...props} autoComplete="off" {...form.register("full_name")} />}
+        </FormField>
         {errors.root ? (
           <p role="alert" className="text-sm text-destructive">
             {errors.root.message}
@@ -144,7 +147,7 @@ function OrgAdmins({ organizationId }: { organizationId: string }) {
         Org admins
       </h2>
       {query.isPending ? <Skeleton className="h-12 w-full" /> : null}
-      {query.error ? <ErrorAlert error={query.error} /> : null}
+      {query.error ? <ErrorAlert error={query.error} onRetry={() => void query.refetch()} /> : null}
       {query.isSuccess && rows.length === 0 ? <EmptyState>No org admin yet.</EmptyState> : null}
       <ul className="flex flex-col gap-2" aria-label="Org admins">
         {rows.map((u) => (
@@ -192,11 +195,14 @@ function EditOrganization({ org }: { org: Organization }) {
         Settings
       </h2>
       <form onSubmit={form.handleSubmit(submit)} className="flex flex-col gap-3" noValidate>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="edit-org-name">Name</Label>
-          <Input id="edit-org-name" {...form.register("name")} aria-invalid={!!errors.name} />
-          {errors.name ? <p className="text-sm text-destructive">{errors.name.message}</p> : null}
-        </div>
+        <FormField
+          id="edit-org-name"
+          label="Name"
+          error={errors.name?.message}
+          saving={form.formState.isSubmitting}
+        >
+          {(props) => <Input {...props} {...form.register("name")} />}
+        </FormField>
         <Controller
           control={form.control}
           name="is_content_publisher"

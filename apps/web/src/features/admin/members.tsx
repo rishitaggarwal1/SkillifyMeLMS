@@ -20,8 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
+import { FormField, PageSkeleton } from "@/components/patterns/states";
 import { ORG_ROLES, ROLE_LABELS, type Member, type OrgRole } from "@/lib/api/types";
 
 import {
@@ -86,8 +85,8 @@ export function MembersPage() {
           ))}
         </NativeSelect>
       </div>
-      {query.isPending ? <Skeleton className="h-24 w-full" /> : null}
-      {query.error ? <ErrorAlert error={query.error} /> : null}
+      {query.isPending ? <PageSkeleton /> : null}
+      {query.error ? <ErrorAlert error={query.error} onRetry={() => void query.refetch()} /> : null}
       {query.isSuccess && rows.length === 0 ? <EmptyState>No members match.</EmptyState> : null}
       <ul className="flex flex-col gap-2" aria-label="Members">
         {rows.map((m) => (
@@ -230,17 +229,23 @@ function InviteDialog({ onClose }: { onClose: () => void }) {
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(submit)} className="flex flex-col gap-4" noValidate>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="invite-email">Email</Label>
-            <Input id="invite-email" type="email" autoComplete="off" {...form.register("email")} />
-            {errors.email ? (
-              <p className="text-sm text-destructive">{errors.email.message}</p>
-            ) : null}
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="invite-name">Full name (optional)</Label>
-            <Input id="invite-name" autoComplete="off" {...form.register("full_name")} />
-          </div>
+          <FormField
+            id="invite-email"
+            label="Email"
+            error={errors.email?.message}
+            saving={form.formState.isSubmitting}
+          >
+            {(props) => (
+              <Input {...props} type="email" autoComplete="off" {...form.register("email")} />
+            )}
+          </FormField>
+          <FormField
+            id="invite-name"
+            label="Full name (optional)"
+            saving={form.formState.isSubmitting}
+          >
+            {(props) => <Input {...props} autoComplete="off" {...form.register("full_name")} />}
+          </FormField>
           <Controller
             control={form.control}
             name="roles"
@@ -305,11 +310,11 @@ function PendingInvitations() {
   if (query.isSuccess && rows.length === 0) return null;
 
   return (
-    <section className="flex flex-col gap-2" aria-labelledby="pending-invitations">
+    <section id="invitations" className="flex flex-col gap-2" aria-labelledby="pending-invitations">
       <h2 id="pending-invitations" className="text-base font-medium">
         Pending invitations
       </h2>
-      {query.error ? <ErrorAlert error={query.error} /> : null}
+      {query.error ? <ErrorAlert error={query.error} onRetry={() => void query.refetch()} /> : null}
       <ul className="flex flex-col gap-2">
         {rows.map((inv) => (
           <li

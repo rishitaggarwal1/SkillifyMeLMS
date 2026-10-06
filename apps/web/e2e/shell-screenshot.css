@@ -1,0 +1,4 @@
+/* Shell smoke: retain the header and desktop/mobile navigation; hide dynamic page contents. */
+[data-testid^="shell-"] > div {
+  visibility: hidden !important;
+}

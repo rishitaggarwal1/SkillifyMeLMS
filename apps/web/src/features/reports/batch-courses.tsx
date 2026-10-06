@@ -19,7 +19,7 @@ export function BatchCourses({ batchId }: { batchId: string }) {
         Courses and progress
       </h2>
       {query.isPending ? <Skeleton className="h-16 w-full" /> : null}
-      {query.error ? <ErrorAlert error={query.error} /> : null}
+      {query.error ? <ErrorAlert error={query.error} onRetry={() => void query.refetch()} /> : null}
       {query.isSuccess && items.length === 0 ? (
         <EmptyState>No courses are assigned to this batch yet.</EmptyState>
       ) : null}

@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
+import { FormField, PageSkeleton } from "@/components/patterns/states";
 import { ErrorAlert, PageTitle } from "@/features/admin/ui";
 import { VideoUpload } from "@/features/video/video-upload";
 import { api } from "@/lib/api/client";
@@ -37,15 +37,16 @@ import { SkillsPicker } from "./skills-picker";
 
 const NotesEditor = dynamic(() => import("./notes-editor"), {
   ssr: false,
-  loading: () => <Skeleton className="h-48 w-full" />,
+  loading: () => <PageSkeleton />,
 });
 
 export function LessonPage({ courseId, lessonId }: { courseId: string; lessonId: string }) {
   const draft = useQuery(draftQuery(courseId)); // holds the revision every save sends
   const lesson = useQuery(lessonQuery(courseId, lessonId));
-  if (lesson.isPending || draft.isPending) return <Skeleton className="h-48 w-full" />;
-  if (lesson.error) return <ErrorAlert error={lesson.error} />;
-  if (draft.error) return <ErrorAlert error={draft.error} />;
+  if (lesson.isPending || draft.isPending) return <PageSkeleton />;
+  if (lesson.error)
+    return <ErrorAlert error={lesson.error} onRetry={() => void lesson.refetch()} />;
+  if (draft.error) return <ErrorAlert error={draft.error} onRetry={() => void draft.refetch()} />;
   const data = lesson.data;
   return (
     <div className="flex flex-col gap-6">
@@ -125,35 +126,44 @@ function LessonSettings({ courseId, lesson }: { courseId: string; lesson: Lesson
         className="flex max-w-xl flex-col gap-4"
         noValidate
       >
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="lesson-title">Title</Label>
-          <Input id="lesson-title" aria-invalid={!!errors.title} {...form.register("title")} />
-          {errors.title ? <p className="text-sm text-destructive">{errors.title.message}</p> : null}
-        </div>
+        <FormField
+          id="lesson-title"
+          label="Title"
+          error={errors.title?.message}
+          saving={form.formState.isSubmitting}
+        >
+          {(props) => <Input {...props} {...form.register("title")} />}
+        </FormField>
         <div className="flex flex-wrap gap-4">
           <div className="flex w-40 flex-col gap-1.5">
-            <Label htmlFor="lesson-minutes">Estimated minutes</Label>
-            <Input
+            <FormField
               id="lesson-minutes"
-              inputMode="numeric"
-              {...form.register("estimated_minutes")}
-            />
-            {errors.estimated_minutes ? (
-              <p className="text-sm text-destructive">{errors.estimated_minutes.message}</p>
-            ) : null}
+              label="Estimated minutes"
+              error={errors.estimated_minutes?.message}
+              saving={form.formState.isSubmitting}
+            >
+              {(props) => (
+                <Input {...props} inputMode="numeric" {...form.register("estimated_minutes")} />
+              )}
+            </FormField>
           </div>
           {lesson.lesson_type === "video" ? (
             <div className="flex w-48 flex-col gap-1.5">
-              <Label htmlFor="lesson-threshold">Watched to complete (%)</Label>
-              <Input
+              <FormField
                 id="lesson-threshold"
-                inputMode="numeric"
-                placeholder="90"
-                {...form.register("threshold_percent")}
-              />
-              {errors.threshold_percent ? (
-                <p className="text-sm text-destructive">{errors.threshold_percent.message}</p>
-              ) : null}
+                label="Watched to complete (%)"
+                error={errors.threshold_percent?.message}
+                saving={form.formState.isSubmitting}
+              >
+                {(props) => (
+                  <Input
+                    {...props}
+                    inputMode="numeric"
+                    placeholder="90"
+                    {...form.register("threshold_percent")}
+                  />
+                )}
+              </FormField>
             </div>
           ) : null}
         </div>
@@ -383,7 +393,7 @@ function NotesContent({ courseId, lesson }: { courseId: string; lesson: Lesson }
         }),
       ),
   });
-  if (preview.isPending) return <Skeleton className="h-48 w-full" />;
+  if (preview.isPending) return <PageSkeleton />;
   return (
     <section aria-label="Lesson notes" className="flex flex-col gap-2">
       <h2 className="text-base font-semibold">Notes</h2>

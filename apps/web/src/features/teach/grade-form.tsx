@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FormField, LiveAnnouncement } from "@/components/patterns/states";
 import { Textarea } from "@/components/ui/textarea";
 import { errorMessage } from "@/features/admin/ui";
 import { ApiError } from "@/lib/api/errors";
@@ -73,24 +73,25 @@ export function GradeForm({ submission, save, onConflict, onSaved }: Props) {
       aria-label="Grade"
       noValidate
     >
-      <div className="flex w-40 flex-col gap-1.5">
-        <Label htmlFor="grade-score">Score (out of {maxMarks})</Label>
-        <Input
-          id="grade-score"
-          inputMode="decimal"
-          autoComplete="off"
-          aria-invalid={!!errors.score}
-          {...form.register("score")}
-        />
-        {errors.score ? <p className="text-sm text-destructive">{errors.score.message}</p> : null}
+      <div className="w-40">
+        <FormField
+          label={`Score (out of ${maxMarks})`}
+          error={errors.score?.message}
+          saving={form.formState.isSubmitting}
+        >
+          {(props) => (
+            <Input {...props} inputMode="decimal" autoComplete="off" {...form.register("score")} />
+          )}
+        </FormField>
       </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="grade-feedback">Feedback for the student (optional)</Label>
-        <Textarea id="grade-feedback" rows={4} {...form.register("feedback")} />
-        {errors.feedback ? (
-          <p className="text-sm text-destructive">{errors.feedback.message}</p>
-        ) : null}
-      </div>
+      <FormField
+        label="Feedback for the student (optional)"
+        error={errors.feedback?.message}
+        saving={form.formState.isSubmitting}
+      >
+        {(props) => <Textarea {...props} rows={4} {...form.register("feedback")} />}
+      </FormField>
+      <LiveAnnouncement>{form.formState.isSubmitting ? "Saving grade" : ""}</LiveAnnouncement>
       {errors.root ? (
         <p role="alert" className="text-sm text-destructive">
           {errors.root.message}

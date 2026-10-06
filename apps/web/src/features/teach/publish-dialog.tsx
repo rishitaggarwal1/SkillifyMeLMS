@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageSkeleton } from "@/components/patterns/states";
 import { Textarea } from "@/components/ui/textarea";
 import { ErrorAlert } from "@/features/admin/ui";
 import type { Course, PublishPreview } from "@/lib/api/types";
@@ -75,8 +75,10 @@ export function PublishDialog({ course, onClose }: { course: Course; onClose: ()
             publish.
           </DialogDescription>
         </DialogHeader>
-        {preview.isPending ? <Skeleton className="h-24 w-full" /> : null}
-        {preview.error ? <ErrorAlert error={preview.error} /> : null}
+        {preview.isPending ? <PageSkeleton /> : null}
+        {preview.error ? (
+          <ErrorAlert error={preview.error} onRetry={() => void preview.refetch()} />
+        ) : null}
         {data ? (
           <div className="flex flex-col gap-4 text-sm">
             {data.blockers.length ? (

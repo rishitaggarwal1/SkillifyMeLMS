@@ -10,8 +10,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
+import { FormField, PageSkeleton } from "@/components/patterns/states";
 import { ErrorAlert } from "@/features/admin/ui";
 import type { AssignmentDraft } from "@/lib/api/types";
 import { istInputToIso, isoToIstInput } from "@/lib/ist";
@@ -21,7 +20,7 @@ import { normalizeNotesDoc, type NotesDoc } from "./notes-doc";
 
 const NotesEditor = dynamic(() => import("./notes-editor"), {
   ssr: false,
-  loading: () => <Skeleton className="h-48 w-full" />,
+  loading: () => <PageSkeleton />,
 });
 
 const KINDS = [
@@ -70,8 +69,8 @@ export function AssignmentEditor({
   lessonTitle: string;
 }) {
   const draft = useQuery(assignmentDraftQuery(courseId, lessonId));
-  if (draft.isPending) return <Skeleton className="h-48 w-full" />;
-  if (draft.error) return <ErrorAlert error={draft.error} />;
+  if (draft.isPending) return <PageSkeleton />;
+  if (draft.error) return <ErrorAlert error={draft.error} onRetry={() => void draft.refetch()} />;
   return (
     <AssignmentEditorForm
       key={draft.data?.updated_at ?? "new"}
@@ -122,33 +121,35 @@ function AssignmentEditorForm({
           aria-label="Assignment details"
           noValidate
         >
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="assignment-title">Title students see</Label>
-            <Input
-              id="assignment-title"
-              aria-invalid={!!errors.title}
-              {...form.register("title")}
-            />
-            {errors.title ? (
-              <p className="text-sm text-destructive">{errors.title.message}</p>
-            ) : null}
-          </div>
+          <FormField
+            id="assignment-title"
+            label="Title students see"
+            error={errors.title?.message}
+            saving={form.formState.isSubmitting}
+          >
+            {(props) => <Input {...props} {...form.register("title")} />}
+          </FormField>
           <div className="flex flex-wrap gap-4">
             <div className="flex w-36 flex-col gap-1.5">
-              <Label htmlFor="assignment-marks">Maximum marks</Label>
-              <Input
+              <FormField
                 id="assignment-marks"
-                inputMode="numeric"
-                aria-invalid={!!errors.max_marks}
-                {...form.register("max_marks")}
-              />
-              {errors.max_marks ? (
-                <p className="text-sm text-destructive">{errors.max_marks.message}</p>
-              ) : null}
+                label="Maximum marks"
+                error={errors.max_marks?.message}
+                saving={form.formState.isSubmitting}
+              >
+                {(props) => (
+                  <Input {...props} inputMode="numeric" {...form.register("max_marks")} />
+                )}
+              </FormField>
             </div>
             <div className="flex w-60 flex-col gap-1.5">
-              <Label htmlFor="assignment-due">Due (IST, optional)</Label>
-              <Input id="assignment-due" type="datetime-local" {...form.register("due")} />
+              <FormField
+                id="assignment-due"
+                label="Due (IST, optional)"
+                saving={form.formState.isSubmitting}
+              >
+                {(props) => <Input {...props} type="datetime-local" {...form.register("due")} />}
+              </FormField>
             </div>
           </div>
           <fieldset className="flex flex-col gap-2">

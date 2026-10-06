@@ -6,7 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageSkeleton } from "@/components/patterns/states";
 
 import { AreaSkeleton } from "./area-skeleton";
 import { switchOrganization, useMe } from "./queries";
@@ -57,7 +57,7 @@ export function RoleHome({ children, onSwitch = switchOrganization }: Props) {
     }
   }
 
-  if (isPending) return <Skeleton className="h-40 w-full" />;
+  if (isPending) return <PageSkeleton />;
   if (!me || !home) return <>{children}</>;
   if (home.kind === "none") {
     return (

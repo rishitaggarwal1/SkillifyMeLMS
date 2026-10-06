@@ -5,8 +5,9 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { DataTable } from "@/components/patterns/data-table";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageSkeleton } from "@/components/patterns/states";
 import { EmptyState, ErrorAlert, LoadMore, errorMessage } from "@/features/admin/ui";
 import { toApiError } from "@/lib/api/errors";
 import type { ProgressLesson, StudentProgress } from "@/lib/api/types";
@@ -47,8 +48,7 @@ function LessonCell({ row, lesson }: { row: StudentProgress; lesson: ProgressLes
   );
 }
 
-/** The table: one row per student, a sticky name column, one column per lesson. Scrolls
- * sideways on phones; nothing else on the page does. */
+/** The table: one row per student, a sticky name column, one column per lesson. Uses the shared sticky-header table and readable phone cards. */
 export function ProgressGrid({
   lessons,
   rows,
@@ -57,68 +57,48 @@ export function ProgressGrid({
   rows: StudentProgress[];
 }) {
   return (
-    <div
-      className="relative max-w-full overflow-x-auto rounded-lg border"
-      role="region"
-      aria-label="Progress table"
-      tabIndex={0}
-    >
-      <table className="w-max min-w-full border-collapse text-sm">
-        <thead className="bg-muted/50 text-left">
-          <tr>
-            <th scope="col" className="sticky left-0 z-10 min-w-40 bg-muted px-3 py-2 font-medium">
-              Student
-            </th>
-            <th scope="col" className="px-3 py-2 font-medium">
-              Progress
-            </th>
-            <th scope="col" className="px-3 py-2 font-medium">
-              Last activity
-            </th>
-            {lessons.map((lesson) => (
-              <th
-                key={lesson.id}
-                scope="col"
-                title={`${lesson.module_title} / ${lesson.title}`}
-                className="max-w-28 truncate px-3 py-2 text-center font-medium"
-              >
-                {lesson.title}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.student.id} className="border-t">
-              <th
-                scope="row"
-                className="sticky left-0 z-10 max-w-48 bg-background px-3 py-2 text-left font-normal"
-              >
-                <span className="block truncate font-medium">
-                  {row.student.full_name || row.student.email}
-                </span>
-                <span className="block truncate text-xs text-muted-foreground">
-                  {row.enrollment_status === "active"
-                    ? row.student.email
-                    : row.enrollment_status === "revoked"
-                      ? "Access removed"
-                      : "Not enrolled"}
-                </span>
-              </th>
-              <td className="px-3 py-2 tabular-nums">{row.progress_percent}%</td>
-              <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
-                {row.last_activity_at ? formatIst(row.last_activity_at) : "Never"}
-              </td>
-              {lessons.map((lesson) => (
-                <td key={lesson.id} className="px-3 py-2 text-center tabular-nums">
-                  <LessonCell row={row} lesson={lesson} />
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      label="Progress table"
+      rows={rows}
+      rowKey={(row) => row.student.id}
+      columns={[
+        {
+          key: "student",
+          title: "Student",
+          rowHeader: true,
+          render: (row) => (
+            <>
+              <span className="block font-medium">
+                {row.student.full_name || row.student.email}
+              </span>
+              <span className="block text-xs text-muted-foreground">
+                {row.enrollment_status === "active"
+                  ? row.student.email
+                  : row.enrollment_status === "revoked"
+                    ? "Access removed"
+                    : "Not enrolled"}
+              </span>
+            </>
+          ),
+        },
+        {
+          key: "percent",
+          title: "Progress",
+          render: (row) => <span className="tabular-nums">{row.progress_percent}%</span>,
+        },
+        {
+          key: "activity",
+          title: "Last activity",
+          render: (row) => (row.last_activity_at ? formatIst(row.last_activity_at) : "Never"),
+        },
+        ...lessons.map((lesson) => ({
+          key: lesson.id,
+          title: lesson.title,
+          headingTitle: `${lesson.module_title} / ${lesson.title}`,
+          render: (row: StudentProgress) => <LessonCell row={row} lesson={lesson} />,
+        })),
+      ]}
+    />
   );
 }
 
@@ -161,8 +141,8 @@ export function CourseProgress({ courseId, batchId }: { courseId: string; batchI
   const pages = query.data?.pages ?? [];
   const rows = pages.flatMap((p) => p.items);
   const first = pages[0];
-  if (query.isPending) return <Skeleton className="h-40 w-full" />;
-  if (query.error) return <ErrorAlert error={query.error} />;
+  if (query.isPending) return <PageSkeleton />;
+  if (query.error) return <ErrorAlert error={query.error} onRetry={() => void query.refetch()} />;
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">

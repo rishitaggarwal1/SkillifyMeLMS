@@ -116,7 +116,7 @@ export function VideoPlayer({
         controls
         playsInline
         preload="metadata"
-        className="aspect-video w-full rounded-lg bg-black"
+        className="aspect-video w-full rounded-lg bg-video-surface"
         aria-label="Lesson video"
         onError={() => setError("Video could not load. Please retry.")}
       />

@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+  "/api/v1/assignment-submissions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Cross Course Grading Queue */
+    get: operations["cross_course_grading_queue"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/assignment-submissions/{submission_id}": {
     parameters: {
       query?: never;
@@ -764,6 +781,108 @@ export interface paths {
     };
     /** Published Quiz */
     get: operations["preview_published_quiz"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/dashboards/admin": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Admin Overview */
+    get: operations["admin_overview"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/dashboards/admin/batches": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Dashboard Batches */
+    get: operations["dashboard_batches"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/dashboards/admin/unassigned-courses": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Unassigned Granted Courses */
+    get: operations["unassigned_granted_courses"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/dashboards/learn/due": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Learning Due Soon */
+    get: operations["learning_due_soon"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/dashboards/learn/results": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Recent Learning Results */
+    get: operations["recent_learning_results"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/dashboards/teach": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Teach Overview */
+    get: operations["teach_overview"];
     put?: never;
     post?: never;
     delete?: never;
@@ -1915,6 +2034,21 @@ export interface components {
       /** Skill Ids */
       skill_ids?: string[];
     };
+    /** AdminOverview */
+    AdminOverview: {
+      /** Failed Imports */
+      failed_imports: number;
+      /** Has Assignment */
+      has_assignment: boolean;
+      /** Has Batch */
+      has_batch: boolean;
+      /** Has Students */
+      has_students: boolean;
+      /** Pending Invitations */
+      pending_invitations: number;
+      /** Running Imports */
+      running_imports: number;
+    };
     /** AnswerBatch */
     AnswerBatch: {
       /** Answers */
@@ -2579,6 +2713,52 @@ export interface components {
       /** Score */
       score: string;
     };
+    /** CrossCourseSubmissionRow */
+    CrossCourseSubmissionRow: {
+      /** Active Attempt Id */
+      active_attempt_id?: string | null;
+      /** Assignment Title */
+      assignment_title: string;
+      /**
+       * Course Id
+       * Format: uuid
+       */
+      course_id: string;
+      /** Course Title */
+      course_title: string;
+      /**
+       * Enrollment Id
+       * Format: uuid
+       */
+      enrollment_id: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "file" | "text";
+      /** Max Marks */
+      max_marks: number | null;
+      /** Revision */
+      revision: number;
+      /** Score */
+      score: string | null;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "submitted" | "graded";
+      student: components["schemas"]["StudentSummary"];
+      /**
+       * Submitted At
+       * Format: date-time
+       */
+      submitted_at: string;
+    };
     /** CursorPage[AssignmentOut] */
     CursorPage_AssignmentOut_: {
       /** Items */
@@ -2659,10 +2839,40 @@ export interface components {
        */
       next_cursor: string | null;
     };
+    /** CursorPage[CrossCourseSubmissionRow] */
+    CursorPage_CrossCourseSubmissionRow_: {
+      /** Items */
+      items: components["schemas"]["CrossCourseSubmissionRow"][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for the next page; null when there are no more items.
+       */
+      next_cursor: string | null;
+    };
+    /** CursorPage[DashboardBatch] */
+    CursorPage_DashboardBatch_: {
+      /** Items */
+      items: components["schemas"]["DashboardBatch"][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for the next page; null when there are no more items.
+       */
+      next_cursor: string | null;
+    };
     /** CursorPage[DirectoryOrganization] */
     CursorPage_DirectoryOrganization_: {
       /** Items */
       items: components["schemas"]["DirectoryOrganization"][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for the next page; null when there are no more items.
+       */
+      next_cursor: string | null;
+    };
+    /** CursorPage[DueAssignment] */
+    CursorPage_DueAssignment_: {
+      /** Items */
+      items: components["schemas"]["DueAssignment"][];
       /**
        * Next Cursor
        * @description Opaque cursor for the next page; null when there are no more items.
@@ -2723,6 +2933,16 @@ export interface components {
     CursorPage_InvitationOut_: {
       /** Items */
       items: components["schemas"]["InvitationOut"][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for the next page; null when there are no more items.
+       */
+      next_cursor: string | null;
+    };
+    /** CursorPage[LearningResult] */
+    CursorPage_LearningResult_: {
+      /** Items */
+      items: components["schemas"]["LearningResult"][];
       /**
        * Next Cursor
        * @description Opaque cursor for the next page; null when there are no more items.
@@ -2819,6 +3039,25 @@ export interface components {
        */
       next_cursor: string | null;
     };
+    /** DashboardBatch */
+    DashboardBatch: {
+      /**
+       * Completion Percent
+       * @description Mean progress across active, entitled enrollments; null if none
+       */
+      completion_percent: number | null;
+      /** Enrolled */
+      enrolled: number;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Last Activity At */
+      last_activity_at: string | null;
+      /** Name */
+      name: string;
+    };
     /**
      * DirectoryOrganization
      * @description What content publishers see of another organization: its id and name only.
@@ -2851,6 +3090,33 @@ export interface components {
       course: components["schemas"]["CourseOut"];
       /** Modules */
       modules: components["schemas"]["DraftModule"][];
+    };
+    /** DueAssignment */
+    DueAssignment: {
+      /**
+       * Course Id
+       * Format: uuid
+       */
+      course_id: string;
+      /** Course Title */
+      course_title: string;
+      /**
+       * Due At
+       * Format: date-time
+       */
+      due_at: string;
+      /**
+       * Enrollment Id
+       * Format: uuid
+       */
+      enrollment_id: string;
+      /**
+       * Lesson Id
+       * Format: uuid
+       */
+      lesson_id: string;
+      /** Title */
+      title: string;
     };
     /**
      * EnrollmentDetail
@@ -3273,6 +3539,52 @@ export interface components {
       mode: "accept" | "reject" | "penalty";
       /** Percent Per Day */
       percent_per_day?: string | null;
+    };
+    /**
+     * LearningResult
+     * @description Score-only submitted outcomes; no response can carry answer-key material.
+     */
+    LearningResult: {
+      /**
+       * Course Id
+       * Format: uuid
+       */
+      course_id: string;
+      /** Course Title */
+      course_title: string;
+      /**
+       * Enrollment Id
+       * Format: uuid
+       */
+      enrollment_id: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "assignment" | "quiz";
+      /**
+       * Lesson Id
+       * Format: uuid
+       */
+      lesson_id: string;
+      /** Max Marks */
+      max_marks: string;
+      /**
+       * Occurred At
+       * Format: date-time
+       */
+      occurred_at: string;
+      /** Passed */
+      passed: boolean | null;
+      /** Score */
+      score: string;
+      /** Title */
+      title: string;
     };
     /** LessonCompletionOut */
     LessonCompletionOut: {
@@ -4588,6 +4900,27 @@ export interface components {
       /** Text */
       text: string;
     };
+    /** TeachOverview */
+    TeachOverview: {
+      /** Assignments Due Soon */
+      assignments_due_soon: number;
+      /** Has Course */
+      has_course: boolean;
+      /** Has Lesson */
+      has_lesson: boolean;
+      /** Has Publication */
+      has_publication: boolean;
+      /** Inactive Students */
+      inactive_students: number;
+      /** Oldest Ungraded At */
+      oldest_ungraded_at: string | null;
+      /** Quiz Failures */
+      quiz_failures: number;
+      /** Quiz Passes */
+      quiz_passes: number;
+      /** Ungraded Count */
+      ungraded_count: number;
+    };
     /** UpgradeAccepted */
     UpgradeAccepted: {
       /** Batch Ids */
@@ -4838,6 +5171,50 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  cross_course_grading_queue: {
+    parameters: {
+      query?: {
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_CrossCourseSubmissionRow_"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
   get_submission: {
     parameters: {
       query?: never;
@@ -7294,6 +7671,264 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["PublishedQuiz"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  admin_overview: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AdminOverview"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  dashboard_batches: {
+    parameters: {
+      query?: {
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_DashboardBatch_"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  unassigned_granted_courses: {
+    parameters: {
+      query?: {
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_CourseOut_"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  learning_due_soon: {
+    parameters: {
+      query?: {
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_DueAssignment_"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  recent_learning_results: {
+    parameters: {
+      query?: {
+        limit?: number;
+        cursor?: string | null;
+      };
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CursorPage_LearningResult_"];
+        };
+      };
+      /** @description Client error */
+      "4XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      "5XX": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  teach_overview: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Active organization for this request (from the org switcher). */
+        "x-organization-id"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TeachOverview"];
         };
       };
       /** @description Client error */

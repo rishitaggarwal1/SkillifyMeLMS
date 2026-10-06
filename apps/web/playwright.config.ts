@@ -9,6 +9,7 @@ const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`;
  */
 export default defineConfig({
   testDir: "./e2e",
+  snapshotPathTemplate: "{testDir}/{testFilePath}-snapshots/{arg}{ext}",
   fullyParallel: true,
   // A local dev server compiles on the same event loop that serves requests; don't swamp it.
   workers: process.env.CI ? undefined : 2,

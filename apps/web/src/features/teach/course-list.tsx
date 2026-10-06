@@ -21,12 +21,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
+import { FormField, PageSkeleton } from "@/components/patterns/states";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState, ErrorAlert, LoadMore, PageTitle, errorMessage } from "@/features/admin/ui";
 import { hasPermission, useMe } from "@/features/auth/queries";
 import type { Course } from "@/lib/api/types";
 
+import { TeachingAttention } from "./overview";
 import { coursesQuery, useCreateCourse } from "./api";
 
 export const courseFormSchema = z.object({
@@ -36,18 +37,20 @@ export const courseFormSchema = z.object({
 });
 type CourseForm = z.infer<typeof courseFormSchema>;
 
-export function CourseList() {
+export function CourseList({ landing = false }: { landing?: boolean }) {
   const { data: me } = useMe();
   const [open, setOpen] = useState(false);
   const canAuthor = hasPermission(me, "course.edit");
   return (
     <div className="flex flex-col gap-6">
       <PageTitle
-        title="Courses"
+        title={landing ? "Teaching" : "Courses"}
         actions={canAuthor ? <Button onClick={() => setOpen(true)}>New course</Button> : null}
       />
+      {landing ? <TeachingAttention onCreate={() => setOpen(true)} /> : null}
       <CourseSection
         owned
+        firstRun={landing}
         title="Your organization's courses"
         empty="No courses yet. Create one to start building lessons."
       />
@@ -61,16 +64,28 @@ export function CourseList() {
   );
 }
 
-function CourseSection({ owned, title, empty }: { owned: boolean; title: string; empty: string }) {
+function CourseSection({
+  owned,
+  title,
+  empty,
+  firstRun = false,
+}: {
+  owned: boolean;
+  title: string;
+  empty: string;
+  firstRun?: boolean;
+}) {
   const query = useInfiniteQuery(coursesQuery(owned));
   const courses = query.data?.pages.flatMap((p) => p.items) ?? [];
   const label = owned ? "Your courses" : "Assigned courses";
   return (
     <section className="flex flex-col gap-3" aria-label={label}>
       <h2 className="text-base font-semibold">{title}</h2>
-      {query.isPending ? <Skeleton className="h-20 w-full" /> : null}
-      {query.error ? <ErrorAlert error={query.error} /> : null}
-      {query.isSuccess && courses.length === 0 ? <EmptyState>{empty}</EmptyState> : null}
+      {query.isPending ? <PageSkeleton /> : null}
+      {query.error ? <ErrorAlert error={query.error} onRetry={() => void query.refetch()} /> : null}
+      {query.isSuccess && courses.length === 0 && !firstRun ? (
+        <EmptyState>{empty}</EmptyState>
+      ) : null}
       <ul className="flex flex-col gap-2">
         {courses.map((course) => (
           <CourseRow key={course.id} course={course} />
@@ -148,25 +163,22 @@ function CreateCourseDialog({
           <DialogDescription>You can add modules and lessons next.</DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(submit)} className="flex flex-col gap-4" noValidate>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="course-title">Title</Label>
-            <Input
-              id="course-title"
-              autoComplete="off"
-              aria-invalid={!!errors.title}
-              {...form.register("title")}
-            />
-            {errors.title ? (
-              <p className="text-sm text-destructive">{errors.title.message}</p>
-            ) : null}
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="course-description">Description (optional)</Label>
-            <Textarea id="course-description" rows={3} {...form.register("description")} />
-            {errors.description ? (
-              <p className="text-sm text-destructive">{errors.description.message}</p>
-            ) : null}
-          </div>
+          <FormField
+            id="course-title"
+            label="Title"
+            error={errors.title?.message}
+            saving={form.formState.isSubmitting}
+          >
+            {(props) => <Input {...props} autoComplete="off" {...form.register("title")} />}
+          </FormField>
+          <FormField
+            id="course-description"
+            label="Description (optional)"
+            error={errors.description?.message}
+            saving={form.formState.isSubmitting}
+          >
+            {(props) => <Textarea {...props} rows={3} {...form.register("description")} />}
+          </FormField>
           <Label className="flex items-center gap-2 font-normal">
             <Checkbox
               checked={isPublic}

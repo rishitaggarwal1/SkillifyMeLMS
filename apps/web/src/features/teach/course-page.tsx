@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageSkeleton } from "@/components/patterns/states";
 import { ErrorAlert, PageTitle } from "@/features/admin/ui";
 import { hasPermission, useMe } from "@/features/auth/queries";
 import type { Course } from "@/lib/api/types";
@@ -22,8 +22,9 @@ import { PublishDialog } from "./publish-dialog";
 
 export function CoursePage({ courseId }: { courseId: string }) {
   const course = useQuery(courseQuery(courseId));
-  if (course.isPending) return <Skeleton className="h-48 w-full" />;
-  if (course.error) return <ErrorAlert error={course.error} />;
+  if (course.isPending) return <PageSkeleton />;
+  if (course.error)
+    return <ErrorAlert error={course.error} onRetry={() => void course.refetch()} />;
   return course.data.is_owner ? (
     <CourseEditor course={course.data} />
   ) : (

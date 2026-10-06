@@ -33,7 +33,7 @@ from app.core.errors import (
 from app.core.pagination import CursorParams, decode_cursor, encode_cursor
 from app.core.storage import ObjectStorage
 from app.db.base import new_id
-from app.modules.assignments import events
+from app.modules.assignments import dashboard, events
 from app.modules.assignments.models import (
     Assignment,
     AssignmentGrade,
@@ -54,6 +54,7 @@ from app.modules.assignments.schemas import (
     AssignmentPreviewOut,
     AssignmentUpsert,
     CriterionScore,
+    CrossCourseSubmissionRow,
     FileUploadOut,
     GradeBody,
     GradeOut,
@@ -864,3 +865,44 @@ async def student_grade_history(
     if submission is None:
         raise NotFoundError("Attempt not found.")
     return await _grade_history(ctx, await _attempt(ctx, submission, attempt_id), params)
+
+
+async def cross_course_queue(
+    ctx: Ctx, params: CursorParams
+) -> tuple[list[CrossCourseSubmissionRow], str | None]:
+    rows, cursor = await dashboard_queue(ctx, params)
+    users = await identity.user_summaries(ctx.session, [r.user_id for r in rows])
+    grades = await GradeRepository(ctx.session).for_submissions([r.id for r in rows])
+    attempts = await AttemptRepository(ctx.session).get_many(
+        [r.active_attempt_id for r in rows if r.active_attempt_id]
+    )
+    titles = await courses.course_titles(ctx.session, [r.course_id for r in rows])
+    items = []
+    for r in rows:
+        g = grades.get(r.id)
+        a = attempts.get(r.active_attempt_id) if r.active_attempt_id else None
+        items.append(
+            CrossCourseSubmissionRow(
+                id=r.id,
+                student=_student(users, r.user_id),
+                enrollment_id=r.enrollment_id,
+                kind=r.kind,  # type: ignore[arg-type]
+                status=r.status,  # type: ignore[arg-type]
+                revision=r.revision,
+                active_attempt_id=r.active_attempt_id,
+                submitted_at=r.submitted_at,
+                score=g.score if g else None,
+                max_marks=g.max_marks if g else None,
+                course_id=r.course_id,
+                course_title=titles.get(r.course_id, "Course"),
+                assignment_title=a.assignment_rules["title"] if a else "Assignment",
+            )
+        )
+    return items, cursor
+
+
+# Public dashboard read interfaces; callers never import the implementation module.
+dashboard_attention = dashboard.dashboard_attention
+dashboard_queue = dashboard.dashboard_queue
+dashboard_own_results = dashboard.dashboard_own_results
+dashboard_submitted_pairs = dashboard.dashboard_submitted_pairs

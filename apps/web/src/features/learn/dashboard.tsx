@@ -5,22 +5,23 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageSkeleton } from "@/components/patterns/states";
 import { EmptyState, ErrorAlert } from "@/features/admin/ui";
 
+import { LearningActivity } from "./activity";
 import { myEnrollmentsQuery } from "./api";
 import { splitDashboard, type Enrollment } from "./outline";
 
 export function Dashboard() {
   const query = useQuery(myEnrollmentsQuery());
-  if (query.isPending) return <Skeleton className="h-40 w-full" />;
-  if (query.error) return <ErrorAlert error={query.error} />;
+  if (query.isPending) return <PageSkeleton />;
+  if (query.error) return <ErrorAlert error={query.error} onRetry={() => void query.refetch()} />;
   const { continueLearning, others } = splitDashboard(query.data);
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">My learning</h1>
+      <h1>My learning</h1>
       {query.data.length === 0 ? (
-        <EmptyState>
+        <EmptyState href="/catalog" actionLabel="Browse catalog">
           No courses yet. Courses appear here when your college assigns them to your batch.
         </EmptyState>
       ) : null}
@@ -34,6 +35,7 @@ export function Dashboard() {
           </ul>
         </section>
       ) : null}
+      <LearningActivity />
       {others.length ? (
         <section aria-label="My courses" className="flex flex-col gap-3">
           <h2 className="text-base font-semibold">

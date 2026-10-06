@@ -82,6 +82,9 @@ class AssignmentSubmission(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     __tablename__ = "assignment_submissions"
     __table_args__ = (
+        Index(
+            "ix_assignment_submissions_org_queue", "organization_id", "status", "submitted_at", "id"
+        ),
         UniqueConstraint(
             "enrollment_id",
             "assignment_id",
@@ -205,6 +208,9 @@ class SubmissionAttempt(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 class AssignmentGrade(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "assignment_grades"
     __table_args__ = (
+        Index(
+            "ix_assignment_grades_org_user_recent", "organization_id", "user_id", "graded_at", "id"
+        ),
         ForeignKeyConstraint(
             ["submission_id", "organization_id"],
             ["assignment_submissions.id", "assignment_submissions.organization_id"],

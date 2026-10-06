@@ -6,7 +6,7 @@ import { useState } from "react";
 
 import { NativeSelect } from "@/components/native-select";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageSkeleton } from "@/components/patterns/states";
 import { EmptyState, ErrorAlert, LoadMore, PageTitle } from "@/features/admin/ui";
 
 import { coursesQuery, organizationQuery } from "./api";
@@ -45,8 +45,8 @@ export function PlatformCoursesPage({ organizationId }: { organizationId?: strin
           <option value="">All</option>
         </NativeSelect>
       </div>
-      {query.isPending ? <Skeleton className="h-24 w-full" /> : null}
-      {query.error ? <ErrorAlert error={query.error} /> : null}
+      {query.isPending ? <PageSkeleton /> : null}
+      {query.error ? <ErrorAlert error={query.error} onRetry={() => void query.refetch()} /> : null}
       {query.isSuccess && rows.length === 0 ? <EmptyState>No courses match.</EmptyState> : null}
       <ul className="flex flex-col gap-2" aria-label="Courses">
         {rows.map((c) => (

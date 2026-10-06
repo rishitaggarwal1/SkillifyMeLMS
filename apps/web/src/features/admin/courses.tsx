@@ -6,7 +6,7 @@ import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageSkeleton } from "@/components/patterns/states";
 import { coursesQuery } from "@/features/teach/api";
 import { AssignmentsPanel } from "@/features/teach/assignments-panel";
 import type { Course } from "@/lib/api/types";
@@ -27,8 +27,8 @@ export function AdminCoursesPage() {
         Courses your organization has been granted. Choose which batches get each one; students see
         a course only once their batch has it.
       </p>
-      {query.isPending ? <Skeleton className="h-24 w-full" /> : null}
-      {query.error ? <ErrorAlert error={query.error} /> : null}
+      {query.isPending ? <PageSkeleton /> : null}
+      {query.error ? <ErrorAlert error={query.error} onRetry={() => void query.refetch()} /> : null}
       {query.isSuccess && courses.length === 0 ? (
         <EmptyState>No courses have been granted to your organization yet.</EmptyState>
       ) : null}

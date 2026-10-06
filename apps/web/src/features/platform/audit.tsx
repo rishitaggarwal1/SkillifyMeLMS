@@ -7,7 +7,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageSkeleton } from "@/components/patterns/states";
 import { useDebounced } from "@/features/admin/hooks";
 import { EmptyState, ErrorAlert, LoadMore, PageTitle } from "@/features/admin/ui";
 import type { AuditEntry } from "@/lib/api/types";
@@ -88,8 +88,8 @@ export function PlatformAuditPage({
           <Input id="audit-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
       </fieldset>
-      {query.isPending ? <Skeleton className="h-24 w-full" /> : null}
-      {query.error ? <ErrorAlert error={query.error} /> : null}
+      {query.isPending ? <PageSkeleton /> : null}
+      {query.error ? <ErrorAlert error={query.error} onRetry={() => void query.refetch()} /> : null}
       {query.isSuccess && rows.length === 0 ? <EmptyState>No entries match.</EmptyState> : null}
       <ul className="flex flex-col gap-2" aria-label="Audit entries">
         {rows.map((e) => (

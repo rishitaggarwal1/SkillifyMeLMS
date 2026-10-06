@@ -36,7 +36,8 @@ export function CourseProgressPage({ courseId, batchId }: { courseId: string; ba
   const batchesPending = batches.some((b) => b.isPending);
   const selected = batchId && assignedIds.includes(batchId) ? batchId : choices[0]?.id;
 
-  if (course.error) return <ErrorAlert error={course.error} />;
+  if (course.error)
+    return <ErrorAlert error={course.error} onRetry={() => void course.refetch()} />;
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">

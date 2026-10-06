@@ -426,3 +426,28 @@ that history scope. It does not widen other historical course-file access.
 caller's grader scope (platform override), granting no additional progress writes.
 `app.lesson_graded`/`app.enrollment_graded` require a grade of the active attempt;
 completion evidence also filters the displayed major through assignments service.
+
+## Phase 3 role dashboards (step 5)
+
+All lists below are cursor-paginated, scoped to the active organization, and
+read-only. No permissions on underlying learning rows are broadened.
+
+| Method | Endpoint under /api/v1                 | Access and response                                                                                                                                                                                                       |
+| ------ | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/dashboards/admin`                    | batch.manage; real-state first-run flags, live pending invitations, queued/running and failed/partial imports                                                                                                             |
+| GET    | `/dashboards/admin/batches`            | batch.manage; active own-org batches, mean progress of live entitled enrollments assigned to that batch (null when none), last activity                                                                                   |
+| GET    | `/dashboards/admin/unassigned-courses` | course.distribute; active org-granted courses with no batch assignment in this org                                                                                                                                        |
+| GET    | `/dashboards/teach`                    | course.read and assignment.grade; own/assigned visible published courses, ungraded count/oldest, next-seven-day assignment count, inactive incomplete students, last-seven-day quiz outcomes; real-state author checklist |
+| GET    | `/assignment-submissions`              | assignment.grade; own student-org, readable courses, excludes self-grading, ungraded before graded, oldest submission first; no cross-org student work                                                                    |
+| GET    | `/dashboards/learn/due`                | student role (platform override); own active enrollment/current batch entitlement, latest minor of displayed major; unsubmitted assignments in the next seven days                                                        |
+| GET    | `/dashboards/learn/results`            | student role (platform override); own active enrollment/current batch entitlement; latest active-attempt assignment grades and submitted quiz outcomes, score-only; no answers, keys or explanations                      |
+
+The assessment-owned `app.quiz_dashboard_outcomes()` SQL interface returns only
+pass/fail counts for the last seven days. It has no caller-supplied org selector;
+requires membership and instructor/org_admin role (platform override); scopes
+to current org, active enrollments, readable courses and live student batch
+entitlement. Students, lab authors and unrelated-org staff receive zero counts.
+It runs with a fixed search_path and no PUBLIC execute grant. Existing student-org staff attempt/answer visibility is preserved; no key
+grants or additional work visibility are introduced. The reports module
+remains tableless and composes these summaries only through service interfaces,
+like its existing Phase 2.5 OLTP progress reports.

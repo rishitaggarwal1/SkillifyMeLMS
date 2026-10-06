@@ -33,7 +33,7 @@ from app.db.session import run_after_commit, run_after_commit_async
 from app.db.tenancy import set_tenant_context
 from app.modules.audit import service as audit
 from app.modules.audit.service import AuditActor
-from app.modules.identity import events
+from app.modules.identity import dashboard, events
 from app.modules.identity.authz import (
     Permission,
     Principal,
@@ -994,3 +994,9 @@ async def import_errors_csv(ctx: Ctx, job_id: UUID) -> str:
             ]
         )
     return buffer.getvalue()
+
+
+# Public dashboard read interfaces; callers never import the implementation module.
+dashboard_overview = dashboard.dashboard_overview
+dashboard_batch_students = dashboard.dashboard_batch_students
+dashboard_batches = dashboard.dashboard_batches

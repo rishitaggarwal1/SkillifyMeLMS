@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageSkeleton } from "@/components/patterns/states";
 import { batchesQuery } from "@/features/admin/api";
 import { useDebounced } from "@/features/admin/hooks";
 import { ErrorAlert, LoadMore, errorMessage } from "@/features/admin/ui";
@@ -44,8 +44,8 @@ export function AssignmentsPanel({ course }: { course: Course }) {
   return (
     <section className="flex flex-col gap-4" aria-label="Assignments">
       <h2 className="text-base font-semibold">Who gets this course</h2>
-      {query.isPending ? <Skeleton className="h-20 w-full" /> : null}
-      {query.error ? <ErrorAlert error={query.error} /> : null}
+      {query.isPending ? <PageSkeleton /> : null}
+      {query.error ? <ErrorAlert error={query.error} onRetry={() => void query.refetch()} /> : null}
       {query.isSuccess && orgId ? (
         <>
           <BatchAssignments
@@ -108,7 +108,9 @@ function BatchAssignments({
           The publisher assigned this course to specific batches; only they can change which.
         </p>
       ) : null}
-      {batches.error ? <ErrorAlert error={batches.error} /> : null}
+      {batches.error ? (
+        <ErrorAlert error={batches.error} onRetry={() => void batches.refetch()} />
+      ) : null}
       {batches.isSuccess && list.length === 0 ? (
         <p className="text-sm text-muted-foreground">Your organization has no batches yet.</p>
       ) : null}
@@ -229,7 +231,9 @@ function OrgGrants({
             maxLength={100}
             onChange={(event) => setSearch(event.target.value)}
           />
-          {results.error ? <ErrorAlert error={results.error} /> : null}
+          {results.error ? (
+            <ErrorAlert error={results.error} onRetry={() => void results.refetch()} />
+          ) : null}
           {results.data ? (
             <ul className="flex flex-col gap-1" aria-label="Organization search results">
               {results.data.items

@@ -30,7 +30,7 @@ from app.core.storage import ObjectStorage
 from app.db.base import new_id
 from app.db.session import run_after_commit, run_after_commit_async
 from app.modules.audit import service as audit
-from app.modules.courses import content_sources, events, notes
+from app.modules.courses import content_sources, dashboard, events, notes
 from app.modules.courses.cache import VersionCache, lesson_fields
 from app.modules.courses.jobs import REVALIDATE_CATALOG
 from app.modules.courses.models import (
@@ -1369,3 +1369,18 @@ async def student_has_course(session: AsyncSession, student: UUID, org: UUID, co
     from app.modules.courses.repository import student_course_assigned  # noqa: PLC0415
 
     return await student_course_assigned(session, student, org, course)
+
+
+async def dashboard_unassigned_courses(
+    ctx: Ctx, page: CursorParams
+) -> tuple[list[CourseOut], str | None]:
+    rows, cursor = await dashboard_unassigned_grants(ctx, page)
+    return await _courses_out(ctx, rows), cursor
+
+
+# Public dashboard read interfaces; callers never import the implementation module.
+dashboard_author_checklist = dashboard.dashboard_author_checklist
+dashboard_has_batch_assignment = dashboard.dashboard_has_batch_assignment
+dashboard_unassigned_grants = dashboard.dashboard_unassigned_grants
+dashboard_due_assignments = dashboard.dashboard_due_assignments
+dashboard_batch_courses = dashboard.dashboard_batch_courses

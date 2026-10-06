@@ -29,7 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageSkeleton } from "@/components/patterns/states";
 import { ConfirmButton, EmptyState, ErrorAlert } from "@/features/admin/ui";
 import {
   LESSON_TYPE_LABELS,
@@ -65,8 +65,8 @@ export function OutlineEditor({ courseId }: { courseId: string }) {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  if (draft.isPending) return <Skeleton className="h-48 w-full" />;
-  if (draft.error) return <ErrorAlert error={draft.error} />;
+  if (draft.isPending) return <PageSkeleton />;
+  if (draft.error) return <ErrorAlert error={draft.error} onRetry={() => void draft.refetch()} />;
   const modules = draft.data.modules;
 
   function requestModuleMove(moduleId: string, toIndex: number) {
@@ -268,7 +268,7 @@ function ModuleCard({
             {index + 1}. {mod.title}
           </h3>
         )}
-        <span className="ml-auto flex items-center">
+        <span className="ml-auto flex w-full items-center justify-end sm:w-auto">
           <StepButtons
             label={`module ${mod.title}`}
             canUp={index > 0}
@@ -345,7 +345,7 @@ function LessonRow({
     <li
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-1 px-2 py-1.5 ${isDragging ? "opacity-50" : ""}`}
+      className={`flex flex-wrap items-center gap-1 px-2 py-1.5 ${isDragging ? "opacity-50" : ""}`}
     >
       <DragHandle
         label={`Drag lesson ${lesson.title}`}
@@ -354,7 +354,7 @@ function LessonRow({
       />
       <Link
         href={`/teach/courses/${courseId}/lessons/${lesson.id}`}
-        className="min-w-0 flex-1 truncate text-sm underline-offset-4 hover:underline"
+        className="min-w-0 flex-1 basis-[calc(100%-3.5rem)] truncate text-sm underline-offset-4 hover:underline sm:basis-auto"
       >
         {lesson.title}
       </Link>

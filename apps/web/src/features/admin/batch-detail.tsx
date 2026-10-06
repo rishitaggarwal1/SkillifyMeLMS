@@ -18,7 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageSkeleton } from "@/components/patterns/states";
 
 import {
   batchMembersQuery,
@@ -41,8 +41,8 @@ export function BatchDetailPage({ batchId }: { batchId: string }) {
   const archive = useArchiveBatch();
   const [adding, setAdding] = useState(false);
 
-  if (batch.isPending) return <Skeleton className="h-40 w-full" />;
-  if (batch.error) return <ErrorAlert error={batch.error} />;
+  if (batch.isPending) return <PageSkeleton />;
+  if (batch.error) return <ErrorAlert error={batch.error} onRetry={() => void batch.refetch()} />;
   const b = batch.data;
   const rows = members.data?.pages.flatMap((p) => p.items) ?? [];
   const active = b.status === "active";
@@ -88,7 +88,9 @@ export function BatchDetailPage({ batchId }: { batchId: string }) {
       <h2 className="text-base font-medium">
         Members <span className="text-muted-foreground tabular-nums">({b.member_count})</span>
       </h2>
-      {members.error ? <ErrorAlert error={members.error} /> : null}
+      {members.error ? (
+        <ErrorAlert error={members.error} onRetry={() => void members.refetch()} />
+      ) : null}
       {members.isSuccess && rows.length === 0 ? (
         <EmptyState>No members yet. Add existing members or import a CSV of students.</EmptyState>
       ) : null}

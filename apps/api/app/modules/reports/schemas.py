@@ -60,3 +60,59 @@ class BatchCourseSummary(BaseModel):
     enrolled: int = Field(description="The batch's students actively enrolled")
     completed: int
     average_percent: int
+
+
+class AdminOverview(BaseModel):
+    has_batch: bool
+    has_students: bool
+    has_assignment: bool
+    pending_invitations: int
+    running_imports: int
+    failed_imports: int
+
+
+class DashboardBatch(BaseModel):
+    id: UUID
+    name: str
+    completion_percent: int | None = Field(
+        description="Mean progress across active, entitled enrollments; null if none"
+    )
+    last_activity_at: datetime | None
+    enrolled: int
+
+
+class TeachOverview(BaseModel):
+    has_course: bool
+    has_lesson: bool
+    has_publication: bool
+    ungraded_count: int
+    oldest_ungraded_at: datetime | None
+    assignments_due_soon: int
+    inactive_students: int
+    quiz_passes: int
+    quiz_failures: int
+
+
+class DueAssignment(BaseModel):
+    enrollment_id: UUID
+    course_id: UUID
+    lesson_id: UUID
+    course_title: str
+    title: str
+    due_at: datetime
+
+
+class LearningResult(BaseModel):
+    """Score-only submitted outcomes; no response can carry answer-key material."""
+
+    id: UUID
+    kind: Literal["assignment", "quiz"]
+    enrollment_id: UUID
+    course_id: UUID
+    lesson_id: UUID
+    course_title: str
+    title: str
+    occurred_at: datetime
+    score: Decimal
+    max_marks: Decimal
+    passed: bool | None

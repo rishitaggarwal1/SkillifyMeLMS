@@ -35,105 +35,248 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --color-success: var(--success);
+  --color-success-surface: var(--success-surface);
+  --color-warning: var(--warning);
+  --color-warning-surface: var(--warning-surface);
+  --color-danger: var(--danger);
+  --color-danger-surface: var(--danger-surface);
+  --color-info: var(--info);
+  --color-info-surface: var(--info-surface);
+  --color-video-surface: var(--video-surface);
+  --color-video-foreground: var(--video-foreground);
+  --color-overlay: var(--overlay);
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --text-3xl: 2.5rem;
+  --spacing: 0.25rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --shadow-xs: 0 1px 2px var(--elevation);
+  --shadow-sm: 0 2px 6px var(--elevation);
+  --shadow-lg: 0 12px 32px var(--elevation);
 }
 
+/* The only colour-literal source. Components and generated code styles use these tokens. */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  color-scheme: light;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #4338ca;
+  --primary-hover: #3730a3;
+  --primary-foreground: #ffffff;
+  --secondary: #e2e8f0;
+  --secondary-foreground: #0f172a;
+  --muted: #e2e8f0;
+  --muted-foreground: #475569;
+  --accent: #e0e7ff;
+  --accent-foreground: #3730a3;
+  --border: #cbd5e1;
+  --input: #64748b;
+  --ring: #4338ca;
+  --success: #166534;
+  --success-surface: #dcfce7;
+  --warning: #92400e;
+  --warning-surface: #fef3c7;
+  --danger: #b91c1c;
+  --danger-surface: #fee2e2;
+  --info: #1d4ed8;
+  --info-surface: #dbeafe;
+  --overlay: #0f172a80;
+  --elevation: #0f172a1a;
 }
-
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  color-scheme: dark;
+  --background: #0f172a;
+  --foreground: #f8fafc;
+  --card: #1e293b;
+  --card-foreground: #f8fafc;
+  --popover: #1e293b;
+  --popover-foreground: #f8fafc;
+  --primary: #a5b4fc;
+  --primary-hover: #c7d2fe;
+  --primary-foreground: #0f172a;
+  --secondary: #334155;
+  --secondary-foreground: #f8fafc;
+  --muted: #334155;
+  --muted-foreground: #cbd5e1;
+  --accent: #312e81;
+  --accent-foreground: #e0e7ff;
+  --border: #475569;
+  --input: #94a3b8;
+  --ring: #a5b4fc;
+  --success: #86efac;
+  --success-surface: #14532d;
+  --warning: #fcd34d;
+  --warning-surface: #451a03;
+  --danger: #fca5a5;
+  --danger-surface: #450a0a;
+  --info: #93c5fd;
+  --info-surface: #172554;
+  --overlay: #0f172acc;
+  --elevation: #00000066;
+}
+:root,
+.dark {
+  --video-surface: #0f172a;
+  --video-foreground: #f8fafc;
+  --destructive: var(--danger);
+  --radius: 0.75rem;
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+  --chart-1: var(--primary);
+  --chart-2: var(--success);
+  --chart-3: var(--warning);
+  --chart-4: var(--danger);
+  --chart-5: var(--info);
+  --code-comment: var(--muted-foreground);
+  --code-keyword: var(--primary);
+  --code-string: var(--success);
+  --code-number: var(--info);
+  --code-name: var(--foreground);
+  --code-error: var(--danger);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
+    @apply border-border;
   }
   html {
     @apply font-sans;
+    scroll-padding-top: 8rem;
+  }
+  body {
+    @apply bg-background text-base text-foreground;
+  }
+  h1 {
+    @apply text-xl font-semibold tracking-tight sm:text-2xl;
+  }
+  h2 {
+    @apply text-lg font-semibold;
+  }
+  :where(
+    button,
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea,
+    summary,
+    [role="button"],
+    [role="checkbox"]
+  ) {
+    min-height: 2.75rem;
+  }
+  :where(button, [role="button"], [role="checkbox"]) {
+    min-width: 2.75rem;
+  }
+  :where(input, textarea, select) {
+    font-size: 1rem;
+  }
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  :where(a) {
+    text-underline-offset: 0.25em;
   }
 }
 
+@layer components {
+  .app-content {
+    @apply min-w-0 flex-1;
+  }
+  .app-content:not(:has(.role-shell)) {
+    @apply mx-auto w-full max-w-5xl px-4 py-6 sm:py-10;
+  }
+  .public-content {
+    @apply mx-auto w-full max-w-5xl px-4 py-6 sm:py-10;
+  }
+  .role-shell {
+    @apply mx-auto grid w-full max-w-7xl gap-6 px-4 py-6 pb-28 lg:grid-cols-[13rem_minmax(0,1fr)] lg:pb-10;
+  }
+  .shell-nav-link {
+    @apply flex min-h-11 min-w-11 items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground;
+  }
+  .mobile-nav-link {
+    @apply flex min-h-14 min-w-11 flex-1 flex-col items-center justify-center gap-1 px-1 py-2 text-xs font-medium text-muted-foreground aria-[current=page]:text-primary;
+  }
+  .state-card {
+    @apply rounded-lg border bg-card p-4 sm:p-6;
+  }
+  .data-table {
+    @apply w-full text-left text-sm;
+  }
+  .data-table thead {
+    @apply sticky top-0 bg-card;
+  }
+  .data-table th {
+    @apply px-3 py-3 font-medium text-muted-foreground;
+  }
+  .data-table td {
+    @apply border-t px-3 py-3 align-top;
+  }
+  .data-table-cards {
+    @apply grid gap-3;
+  }
+  .skip-link {
+    @apply fixed top-2 left-2 z-[100] -translate-y-24 rounded-md bg-primary px-4 py-3 text-primary-foreground focus:translate-y-0;
+  }
+  [data-sonner-toast][data-type="success"] {
+    --normal-bg: var(--success-surface);
+    --normal-text: var(--success);
+    --normal-border: var(--success);
+  }
+  [data-sonner-toast][data-type="error"] {
+    --normal-bg: var(--danger-surface);
+    --normal-text: var(--danger);
+    --normal-border: var(--danger);
+  }
+  [data-sonner-toast][data-type="warning"] {
+    --normal-bg: var(--warning-surface);
+    --normal-text: var(--warning);
+    --normal-border: var(--warning);
+  }
+  [data-sonner-toast][data-type="info"] {
+    --normal-bg: var(--info-surface);
+    --normal-text: var(--info);
+    --normal-border: var(--info);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 /* Notes lessons: the editor (/teach) and the server-rendered HTML shown to students share these
    styles. Code highlighting uses Pygments' class names (stylesheet added with the player). */
 @layer components {
   .notes-content {
-    @apply text-sm leading-relaxed sm:text-base;
+    @apply text-base leading-relaxed;
   }
   .notes-content > * + * {
     @apply mt-3;
@@ -167,5 +310,21 @@
   }
   .notes-content pre code {
     @apply bg-transparent p-0;
+  }
+}
+
+/* Keep the opaque AA focus ring above utility resets. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+@layer base {
+  :where(a:not(.notes-content a)) {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+  }
+  :where(label:has(input[type="radio"]), label:has(input[type="checkbox"])) {
+    min-height: 2.75rem;
   }
 }

@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
+import { FormField, PageSkeleton } from "@/components/patterns/states";
 import { useDebounced } from "@/features/admin/hooks";
 import { EmptyState, ErrorAlert, LoadMore, PageTitle, errorMessage } from "@/features/admin/ui";
 
@@ -90,8 +90,8 @@ export function OrganizationsPage() {
           <option value="">All</option>
         </NativeSelect>
       </div>
-      {query.isPending ? <Skeleton className="h-24 w-full" /> : null}
-      {query.error ? <ErrorAlert error={query.error} /> : null}
+      {query.isPending ? <PageSkeleton /> : null}
+      {query.error ? <ErrorAlert error={query.error} onRetry={() => void query.refetch()} /> : null}
       {query.isSuccess && rows.length === 0 ? (
         <EmptyState>No organizations match.</EmptyState>
       ) : null}
@@ -155,34 +155,39 @@ function CreateOrganizationDialog({ onClose }: { onClose: () => void }) {
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(submit)} className="flex flex-col gap-4" noValidate>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="org-name">Name</Label>
-            <Input
-              id="org-name"
-              autoComplete="off"
-              {...name}
-              onChange={(e) => {
-                void name.onChange(e);
-                if (!slugEdited) form.setValue("slug", slugify(e.target.value));
-              }}
-              aria-invalid={!!errors.name}
-            />
-            {errors.name ? <p className="text-sm text-destructive">{errors.name.message}</p> : null}
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="org-slug">Slug</Label>
-            <Input
-              id="org-slug"
-              autoComplete="off"
-              {...form.register("slug", { onChange: () => setSlugEdited(true) })}
-              aria-invalid={!!errors.slug}
-              aria-describedby="org-slug-help"
-            />
-            <p id="org-slug-help" className="text-xs text-muted-foreground">
-              A short unique id, e.g. “st-xaviers-mumbai”. It can&apos;t be changed later.
-            </p>
-            {errors.slug ? <p className="text-sm text-destructive">{errors.slug.message}</p> : null}
-          </div>
+          <FormField
+            id="org-name"
+            label="Name"
+            error={errors.name?.message}
+            saving={form.formState.isSubmitting}
+          >
+            {(props) => (
+              <Input
+                {...props}
+                autoComplete="off"
+                {...name}
+                onChange={(e) => {
+                  void name.onChange(e);
+                  if (!slugEdited) form.setValue("slug", slugify(e.target.value));
+                }}
+              />
+            )}
+          </FormField>
+          <FormField
+            id="org-slug"
+            label="Slug"
+            error={errors.slug?.message}
+            saving={form.formState.isSubmitting}
+            help="A short unique id, e.g. st-xaviers-mumbai. It can't be changed later."
+          >
+            {(props) => (
+              <Input
+                {...props}
+                autoComplete="off"
+                {...form.register("slug", { onChange: () => setSlugEdited(true) })}
+              />
+            )}
+          </FormField>
           <Controller
             control={form.control}
             name="is_content_publisher"

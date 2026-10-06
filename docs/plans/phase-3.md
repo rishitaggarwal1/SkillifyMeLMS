@@ -1,6 +1,6 @@
 # Phase 3 — Quizzes and full assignments
 
-**Status: approved (2026-10-04); steps 1-3 complete; step 4 locally verified, CI pending.** Decisions D1–D7 and
+**Status: approved (2026-10-04); steps 1-4 complete; step 5 approved and in progress.** Decisions D1–D7 and
 the security repair below include the user's approved revisions.
 
 **Baseline:** `4f7d00826e368b9dbd7ce1635332a8b1d93dedb7`, the peeled
@@ -495,8 +495,9 @@ and working components covering:
 
 - **Tokens and themes:** globals.css/Tailwind tokens for a deliberate type and
   spacing scale, one brand palette, semantic success/warning/danger/info colours,
-  focus ring, radius and elevation; light and dark. No ad-hoc hex colours in
-  components after this step, enforced by a lint rule or grep test.
+  focus ring, radius and elevation; light and dark. Components use semantic tokens only. A test rejects raw Tailwind colour classes
+  (including indigo-600) and colour literals outside the central token file.
+  Theme defaults to the system setting with a persistent manual override.
 - **Role shells:** one shell each for `/platform`, `/admin`, `/teach`, `/learn`;
   consistent header, desktop sidebar and mobile bottom navigation or drawer,
   breadcrumbs, page titles and persistent location/org/role indicator.
@@ -509,11 +510,64 @@ and working components covering:
   contrast checked by a test; aria-live for save/timer announcements; touch
   targets at least 44px; respect reduced motion.
 - **Retrofit:** every existing platform/admin/teach/learn/auth/home chooser/catalog
-  screen uses the shells and shared components. No functional changes; existing
-  tests stay unchanged apart from selectors.
+  screen uses the shells and shared components. Existing flows retain their
+  behavior; the approved landing summaries, first-run checklists and cross-course
+  grading below are added. Existing assertions and timeouts remain unchanged.
 - **Evidence:** Playwright shell screenshot assertions per role at 360px and
   1280px (content is not pixel-perfect); axe-core scans on every route with zero
   serious/critical violations.
+
+### Approved role walkthrough (2026-10-06)
+
+Tap counts count navigation, selections and actions, excluding typing, scrolling
+and the OS file picker. Each additional cursor page takes one Load more tap.
+The persistent header shows working area, actual active role and organization;
+platform context says All organizations. Shared breadcrumbs and a page title
+orient every screen. Account controls include organization, theme and sign out.
+
+| Role           | Landing content, in order                                                                                                                                                                                                                            | Frequent phone tasks                                                                                                                                                                             | Desktop / mobile navigation                                                                                                                                |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Platform admin | Global organization, user, course, enrollment and activity counts, then role distribution                                                                                                                                                            | Create a college: 3 taps (Organizations, New, Create); invite its admin: 3 (Organizations, college, Send invitation); inspect a user: 2 (Users, user)                                            | Sidebar: Dashboard, Organizations, Users, Courses, Audit. Bottom nav: Dashboard, Organizations, Users, More; More opens Courses/Audit drawer               |
+| College admin  | `/admin` overview: batches with completion percentage and last activity, highlighted granted courses with no batch assignment, pending invitations, running/failed imports                                                                           | Create a batch: 2 from Batches (New, Create); import students: 5 (Import, file, batch selector, batch, Start); assign a granted course: 3 (Courses, Choose batches, checkbox; saves immediately) | Sidebar and bottom nav: Batches, Courses, Members, Import; overview is the area/home link                                                                  |
+| Instructor     | `/teach`: Needs attention above course list: ungraded count and oldest submission, assignments due within 7 days, students inactive for 7+ days in my courses, quiz pass/fail counts for the last 7 days. Owned and assigned courses remain distinct | Create course: 2 (New, Create); edit lesson: 3 (course, lesson, Save); grade: 3 (Grading, submission, Save grade)                                                                                | Sidebar and bottom nav: Courses, Grading, Question banks, Videos. Cross-course Grading orders ungraded first; Question banks is a placeholder until step 6 |
+| Student        | Continue learning, Due soon (next 7 days, assignment links open the lesson directly), Recent results (latest grades and submitted quiz outcomes), then other courses                                                                                 | Resume: 1; submit text via outline: 4 (course, outline, assignment, Submit); view grade via outline: 3. Due soon opens its assignment in 1                                                       | Sidebar and bottom nav: My learning, Catalog. Player outline is visible on desktop and opens above lesson content on mobile                                |
+
+New college-admin organizations show a first-run checklist: create a batch,
+import or invite students, assign a course. New instructor organizations show:
+create a course, add a lesson, publish. Completion is derived from real saved
+state; steps tick off and the checklist disappears when all are complete.
+Platform organization detail offers Invite admin as its first action; a student
+with no assignments has a Browse catalog action and explains batch assignment.
+
+The approved palette starts with indigo brand `#4338CA` / `#A5B4FC`; light
+background/surface `#F8FAFC` / `#FFFFFF`, dark `#0F172A` / `#1E293B`;
+primary/secondary text light `#0F172A` / `#475569`, dark `#F8FAFC` / `#CBD5E1`;
+success `#166534` / `#86EFAC`, warning `#92400E` / `#FCD34D`, danger
+`#B91C1C` / `#FCA5A5`, info `#1D4ED8` / `#93C5FD`. All component colours
+reference semantic tokens in one file. Status uses text/icon as well as colour.
+Actual foreground/background combinations, including dark and focus states,
+are verified for WCAG AA rather than assuming this starting palette passes.
+
+Keep Geist and Geist Mono. Type sizes: 12 caption, 14 metadata, 16 body/input,
+20 section, 24 mobile page title, 32 desktop page title, 40 public hero.
+Spacing: 4, 8, 12, 16, 20, 24, 32, 48, 64px; phone gutters 16px.
+Radii: 8px controls, 12px cards, 16px dialogs. Restrained elevations and a
+2px focus ring with 2px offset. Scores and timers use tabular numbers.
+
+Shared set: role shell/header/context switcher/sidebar/mobile nav/drawer,
+breadcrumbs/page header; page/card/table/form skeletons; actionable empty state;
+inline/page errors with retry; form field label/help/error/saving pattern;
+sticky-header data table/mobile cards/cursor Load more; confirmation dialog;
+toast conventions; status badge/progress/upload progress/live announcements.
+All controls are keyboard reachable, visibly focused and at least 44px touch
+targets. Reduced motion is respected. Shell screenshots run at 360px and 1280px
+for all four roles; axe scans cover every application page route with no
+serious/critical violations.
+
+Also approved for this commit: a configuration regression proving the actual
+Celery beat schedule registers `assessments.sweep_expired` at the configured
+interval, including a non-default interval. This complements the existing
+browserless production-sweeper tests without claiming a live broker-clock test.
 
 Steps 6 and 7 build on these components and guidelines. Each UI step's summary
 lists the guideline sections applied and every new shared component.
@@ -671,7 +725,11 @@ only after the user's "continue". Tests and documentation ship with each step.
    covered; add migration, history, concurrency, late, rubric and durability tests.
 5. **UI foundation and design system.** Deliver `docs/design/ui-guidelines.md`
    and tokens, light/dark themes, shared shells and state/form/table components.
-   Retrofit every existing screen without functional changes. Add shell visual
+   Retrofit every existing screen, retaining existing flows and adding the approved
+   role landing summaries, cross-course grading and state-derived first-run
+   checklists in section 9. Read summaries use module service interfaces, bounded
+   cursor lists and existing visibility rules; every new endpoint gets MATRIX
+   and access-control coverage. Add the beat-schedule interval regression. Add shell visual
    smoke at 360px/1280px, token/contrast checks and axe scans on every route with
    zero serious/critical violations. **Before coding, present written mockups per
    role**: first landing content, two or three frequent tasks and taps required; wait for
@@ -734,27 +792,27 @@ The user approved the plan with the following changes; these are binding for imp
 
 The outbox SELECT security repair is explicitly approved for step 1, including
 historical assignment_graded v1 rows, and receives its own repair record.
-The new UI foundation is step 5. Its written role walkthrough requires separate
-approval before coding that step; steps 6 and 7 use its guidelines/components.
+The new UI foundation is step 5. Its written role walkthrough and the additions
+in section 9 were approved on 2026-10-06 before coding; steps 6 and 7 use its guidelines/components.
 
 ## 14. Implementation record
 
-Steps 1-3 completed with green pushed CI. After each green pushed step, report its full SHA and
+Steps 1-4 completed with green pushed CI. After each green pushed step, report its full SHA and
 CI URL in the step summary; carry known commit/run records into this table in
 the next plan update. Do not invent a self-referential commit SHA or a CI URL
 before the commit/run exists. The close-out summary records its own final run.
 
-| Step | Status                         | Commit                                     | CI run                                                                                   |
-| ---- | ------------------------------ | ------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| 1    | Complete                       | `99b59e7b3e8d284fafce9fb40ef9533d20b503a9` | [37220970826](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37220970826) |
-| 2    | Complete                       | `d660c7330e2f520a043cd58745aac4452576816e` | [37231238285](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37231238285) |
-| 3    | Complete                       | `c9aac0b02a9964ddee43c5ba5304d027fa7c7a0e` | [37355212064](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37355212064) |
-| 4    | Local gates passed; CI pending | —                                          | —                                                                                        |
-| 5    | Not started                    | —                                          | —                                                                                        |
-| 6    | Not started                    | —                                          | —                                                                                        |
-| 7    | Not started                    | —                                          | —                                                                                        |
-| 8    | Not started                    | —                                          | —                                                                                        |
-| 9    | Not started                    | —                                          | —                                                                                        |
+| Step | Status      | Commit                                     | CI run                                                                                   |
+| ---- | ----------- | ------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| 1    | Complete    | `99b59e7b3e8d284fafce9fb40ef9533d20b503a9` | [37220970826](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37220970826) |
+| 2    | Complete    | `d660c7330e2f520a043cd58745aac4452576816e` | [37231238285](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37231238285) |
+| 3    | Complete    | `c9aac0b02a9964ddee43c5ba5304d027fa7c7a0e` | [37355212064](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37355212064) |
+| 4    | Complete    | `c34ddc9b265b2865e5ade2a8eb1c89b8f7eb5cf0` | [37494612624](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37494612624) |
+| 5    | In progress | —                                          | —                                                                                        |
+| 6    | Not started | —                                          | —                                                                                        |
+| 7    | Not started | —                                          | —                                                                                        |
+| 8    | Not started | —                                          | —                                                                                        |
+| 9    | Not started | —                                          | —                                                                                        |
 
 ### Deviations
 
@@ -853,6 +911,13 @@ checks both text and file work, retained files, grades and completed progress.
 The local Keycloak setup-email test also needed the existing Mailpit service
 started. These repairs do not weaken assertions, change timeouts or deviate from
 the approved product contracts.
+
+Step 5 approved scope addition: the user explicitly approved functional landing
+summaries, the cross-course grading queue and state-derived first-run checklists
+alongside the visual retrofit. Implemented through existing module services;
+no assessment authoring/attempt UI from steps 6/7 starts here. System-default
+manual themes and a semantic-token-only guard replace the original hex-only
+guard. The beat-schedule registration regression is explicitly approved.
 
 ### Security repairs
 
@@ -1010,7 +1075,96 @@ the approved product contracts.
   as documented for this Windows checkout, after normalizing line endings.
 - A step is complete only after its local gates and exact pushed-commit CI pass.
   The summary records that commit and run URL, and the next authorized plan
-  update carries them into the table. Step 5 has not started.
+  update carries them into the table. Step 4 pushed commit `c34ddc9b265b2865e5ade2a8eb1c89b8f7eb5cf0` passed all
+  required CI jobs: [37494612624](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37494612624).
+
+### Step 5 implementation (2026-10-07)
+
+- Updated section 9 with the approved role walkthrough and additions before
+  coding. Delivered `docs/design/ui-guidelines.md`, sections 1-8: semantic
+  tokens/themes; type/spacing/elevation; shells/navigation; landings/first run;
+  loading/empty/error/save states; forms/tables/progress; accessibility;
+  extension rules for the following UI steps.
+- Shared set: RoleFrame/Breadcrumbs, ThemeControl, PageSkeleton, StatusBadge,
+  FirstRunChecklist, FormField and LiveAnnouncement, DataTable. Existing
+  PageTitle, EmptyState, ErrorAlert, LoadMore and ConfirmButton now live in
+  the shared patterns directory; existing imports retain their public names.
+  Every role and existing public/auth/catalog screen uses the shared tokens
+  and controls. Progress has sticky desktop headers/name column and labelled
+  mobile cards. Common validation forms preserve labels, validation and
+  conditional-write behavior, with linked help/errors and saving states.
+- Added the approved real admin/instructor/student landing panels and the
+  cross-course grading page. Question banks remains a Step 6 placeholder.
+  Checklists derive from saved state and disappear when complete. Dashboard
+  queries refresh on remount, including return from saving a grade. Quiz and
+  assignment authoring/attempt interfaces from Steps 6/7 remain unstarted.
+- Seven read-only endpoints are documented in `docs/access-control.md` and
+  MATRIX. Lists have bounded cursors and batched queries. Reports remains
+  tableless and composes identity/courses/enrollments/assignments/assessments
+  service interfaces. Owning modules expose their own dashboard read helpers
+  through service.py. No new write endpoint or transaction path was added.
+- Migration 0016 adds four filter/cursor indexes and an assessment-owned,
+  fixed-search-path aggregate SQL interface for current-org, live-entitled
+  seven-day quiz pass/fail counts. Existing staff attempt/answer visibility
+  is preserved; keys and other-org work gain no grants. Raw app-role SQL and
+  safe score-only HTTP response checks are independent. Dashboard regressions
+  cover own-org queue ordering, pagination, invalid cursors, displayed majors,
+  immediate batch revocation, latest active grades, real-state checklists,
+  no-enrollment vs zero completion, and constant query count as batches grow.
+  Recent quiz labels come from the assessment-owned frozen version; the result
+  projection still excludes questions, keys, answers and explanations.
+- Added `tests/test_beat_configuration.py`: fresh subprocesses import the
+  actual Celery app/task registrations and verify exactly one configured beat
+  entry for `assessments.sweep_expired`, at both 5.0 and 17.5 seconds. This
+  closes the configuration-level registration/interval caveat, without
+  claiming a live broker/clock test.
+- Semantic guard rejects raw Tailwind palettes, hex and numeric CSS colour
+  literals outside globals.css, including generated notes CSS. Pygments
+  generation maps existing classes to semantic code tokens. Contrast checks
+  cover both themes, status/code/video and opaque primary-hover pairs, plus
+  focus/input contrast. Screenshots assert only shells at 360/1280 in both
+  themes; the accessibility inventory enumerates every page.tsx route and
+  exercises details, editors, redirects, chooser and auth result states.
+  Axe runs all rules, with zero serious/critical violations required; no
+  exclusion, assertion reduction or timeout increase is used.
+- Verification repairs: invitations use a PostgreSQL-supported bound ANY
+  predicate; the video canvas uses its semantic token. New test setup uses
+  UUID identity values, the key table's actual question_id, the standard 400
+  invalid_cursor envelope and same-origin BFF write headers. One initial new
+  test incorrectly assumed staff had no own-org attempt SELECT; its exact raw
+  result assertion now matches the existing documented RLS, while key denial
+  remains explicit. No existing security assertion was changed.
+- Browser repairs: the 44px controls crowded a placeholder lesson row to
+  373px; module/lesson action groups now wrap on phones, retaining the original
+  <=360 assertion in teach.spec.ts. The existing admin-courses spec selects
+  the approved mobile cards for the same visible Welcome label and the same
+  student's 0%, and also runs its original desktop table assertions. The
+  platform spec opens More before selecting Audit on a phone. These are
+  approved navigation/selector adaptations; original assertions and timeouts
+  remain. Badge/button colours switch together rather than interpolating
+  through an inaccessible contrast pair; primary hover is an opaque token.
+- New browser readiness waits for layout loading states and fonts instead of
+  network idle: video playback keeps network traffic active. Existing helper
+  assertions/timeouts are untouched. The local production launch initially
+  failed because a PowerShell .env reader left KEYCLOAK_PORT interpolation
+  unresolved; python-dotenv supplies the same expanded settings as Compose.
+  Corrected runtime configuration is local-only and no secrets are tracked.
+- Initial full gate: API 1,713 passed, Vitest 165 passed; Playwright 49 passed,
+  7 existing intentional skips, 6 failures (mobile-card selector, More
+  navigation, two outline-width cases, two theme-transition contrast cases).
+- Checks run personally: final `make lint` (lint, format and strict type-checks)
+  and final full `make test` **passed**: API **1,713 passed**, Vitest **165
+  passed**, Playwright **55 passed / 7 existing intentional skips / 0 failures**.
+  The run includes all 30 page routes with zero serious/critical axe violations
+  and all 16 shell baselines at 360/1280 in light/dark themes. `make gen-api`,
+  `make migrate`, `uv run alembic check` and the production web build **passed**.
+  Migration 0016 was also downgraded/reapplied locally without data changes.
+  Playwright used the host production server against real Compose services.
+- Local gates alone do not complete the step. The exact commit, push result
+  and CI run URL are reported in the step summary and carried into the table
+  at the next authorized plan update. No later step has started. There is no
+  product or architecture deviation outside the approved scope additions;
+  verification repairs and selector/navigation adaptations are listed above.
 
 ### Open follow-ups / carried forward
 
@@ -1037,6 +1191,6 @@ The tracked check exited 0; the no-index comparison exited 1 for the new-file
 difference and emitted no whitespace warnings.
 At the initial planning gate only this plan was added; implementation checks,
 commit, push and CI had not run. Step 1 subsequently passed its local and pushed-CI gates (recorded above).
-Steps 2 and 3 passed their local and pushed-CI gates (recorded above). Step 4 is authorized
-and its local verification is recorded in its implementation entry; pushed CI remains pending;
+Steps 2-4 passed their local and pushed-CI gates (recorded above). Step 5 is
+authorized by the approved walkthrough and additions recorded in section 9;
 later steps remain gated on the user's "continue".

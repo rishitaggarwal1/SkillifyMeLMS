@@ -213,6 +213,7 @@ class Invitation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 class ImportJob(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "import_jobs"
     __table_args__ = (
+        Index("ix_import_jobs_org_status", "organization_id", "status"),
         # The migration adds `ON DELETE SET NULL (batch_id)` (PG15+ column list): only batch_id
         # is nulled, organization_id stays. SQLAlchemy can't express the column list.
         ForeignKeyConstraint(

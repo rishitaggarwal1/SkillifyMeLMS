@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 import { NativeSelect } from "@/components/native-select";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageSkeleton } from "@/components/patterns/states";
 import { allBatchesQuery } from "@/features/admin/api";
 import { EmptyState, ErrorAlert, LoadMore, PageTitle } from "@/features/admin/ui";
 import { hasPermission, useMe } from "@/features/auth/queries";
@@ -95,7 +95,8 @@ export function SubmissionsPage({ courseId, lessonId }: { courseId: string; less
   );
   const rows = query.data?.pages.flatMap((p) => p.items) ?? [];
 
-  if (course.error) return <ErrorAlert error={course.error} />;
+  if (course.error)
+    return <ErrorAlert error={course.error} onRetry={() => void course.refetch()} />;
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
@@ -135,8 +136,8 @@ export function SubmissionsPage({ courseId, lessonId }: { courseId: string; less
           <p className="text-xs text-muted-foreground">Showing the first 2,000 batches.</p>
         ) : null}
       </div>
-      {query.isPending ? <Skeleton className="h-24 w-full" /> : null}
-      {query.error ? <ErrorAlert error={query.error} /> : null}
+      {query.isPending ? <PageSkeleton /> : null}
+      {query.error ? <ErrorAlert error={query.error} onRetry={() => void query.refetch()} /> : null}
       {query.isSuccess && rows.length === 0 ? (
         <EmptyState>{status === "submitted" ? "Nothing to grade." : "No submissions."}</EmptyState>
       ) : null}
@@ -182,16 +183,24 @@ function SubmissionRow({ row }: { row: GraderSubmissionRow }) {
 }
 
 /** /teach/submissions/[id]: read the work, then grade it. */
-export function SubmissionReviewPage({ submissionId }: { submissionId: string }) {
+export function SubmissionReviewPage({
+  submissionId,
+  fromGrading = false,
+}: {
+  submissionId: string;
+  fromGrading?: boolean;
+}) {
   const qc = useQueryClient();
   const router = useRouter();
   const query = useQuery(submissionQuery(submissionId));
   const grade = useGrade(submissionId);
-  if (query.isPending) return <Skeleton className="h-48 w-full" />;
-  if (query.error) return <ErrorAlert error={query.error} />;
+  if (query.isPending) return <PageSkeleton />;
+  if (query.error) return <ErrorAlert error={query.error} onRetry={() => void query.refetch()} />;
   const detail = query.data;
   const work = detail.submission;
-  const back = `/teach/courses/${detail.course_id}/assignments/${detail.lesson_id}`;
+  const back = fromGrading
+    ? "/teach/grading"
+    : `/teach/courses/${detail.course_id}/assignments/${detail.lesson_id}`;
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-1">

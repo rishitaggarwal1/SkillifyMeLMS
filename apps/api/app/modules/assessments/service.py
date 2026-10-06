@@ -21,6 +21,7 @@ from app.core.pagination import CursorParams
 from app.db.base import new_id
 from app.db.outbox import add_outbox_event
 from app.db.session import run_after_commit
+from app.modules.assessments import dashboard
 from app.modules.assessments.models import (
     Question,
     QuestionBank,
@@ -931,3 +932,8 @@ class QuizCompletionSource:
         self, session: AsyncSession, enrollment_ids: Sequence[UUID], major: int
     ) -> None:
         await RuntimeRepository(session).close_major(enrollment_ids, major)
+
+
+# Public dashboard read interfaces; callers never import the implementation module.
+dashboard_outcomes = dashboard.dashboard_outcomes
+dashboard_own_results = dashboard.dashboard_own_results

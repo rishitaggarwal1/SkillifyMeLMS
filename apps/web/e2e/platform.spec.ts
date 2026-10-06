@@ -105,10 +105,15 @@ test("a platform admin creates a college and invites its admin", async ({ page, 
   await expect(page.getByRole("list", { name: "Memberships" })).toContainText(college);
   await noSideScroll(page);
 
-  await page
-    .getByRole("navigation", { name: "Platform" })
-    .getByRole("link", { name: "Audit log" })
-    .click();
+  if (isMobile) {
+    await page.getByRole("button", { name: "More", exact: true }).click();
+    await page.getByRole("dialog").getByRole("link", { name: "Audit log" }).click();
+  } else {
+    await page
+      .getByRole("navigation", { name: "Platform" })
+      .getByRole("link", { name: "Audit log" })
+      .click();
+  }
   await page.getByLabel("Action").fill("invitation.created");
   await expect(
     page.getByRole("list", { name: "Audit entries" }).getByRole("listitem").first(),

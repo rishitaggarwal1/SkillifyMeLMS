@@ -25,7 +25,7 @@ from app.modules.audit import service as audit
 from app.modules.courses import service as courses
 from app.modules.courses.models import LessonType
 from app.modules.courses.service import VersionLessonRef, VersionRef
-from app.modules.enrollments import completion_sources, events
+from app.modules.enrollments import completion_sources, dashboard, events
 from app.modules.enrollments import jobs as enrollment_jobs
 from app.modules.enrollments.heartbeat_cache import HeartbeatCache, HeartbeatCheck
 from app.modules.enrollments.models import Enrollment, EnrollmentStatus, LessonProgress
@@ -786,3 +786,9 @@ async def complete_passed_quiz(
     if version is None or lesson is None or lesson.lesson_type != LessonType.QUIZ:
         return None
     return await record_completion(session, enrollment, version, lesson)
+
+
+# Public dashboard read interfaces; callers never import the implementation module.
+dashboard_own_refs = dashboard.dashboard_own_refs
+dashboard_activity = dashboard.dashboard_activity
+dashboard_batch_activity = dashboard.dashboard_batch_activity

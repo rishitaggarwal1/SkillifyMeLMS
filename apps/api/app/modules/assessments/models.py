@@ -226,6 +226,9 @@ class QuizVersionKey(OwnerMixin, Base):
 class QuizAttempt(UUIDPrimaryKeyMixin, TimestampMixin, OwnerMixin, Base):
     __tablename__ = "quiz_attempts"
     __table_args__ = (
+        Index(
+            "ix_quiz_attempts_org_state_recent", "organization_id", "state", "submitted_at", "id"
+        ),
         UniqueConstraint("id", "organization_id"),
         UniqueConstraint("enrollment_id", "lesson_id", "major_version", "attempt_number"),
         Index(

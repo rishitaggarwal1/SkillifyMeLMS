@@ -221,6 +221,12 @@ class GraderSubmissionRow(BaseModel):
     active_attempt_id: UUID | None = None
 
 
+class CrossCourseSubmissionRow(GraderSubmissionRow):
+    course_id: UUID
+    course_title: str
+    assignment_title: str
+
+
 class GraderSubmissionDetail(BaseModel):
     id: UUID
     course_id: UUID
