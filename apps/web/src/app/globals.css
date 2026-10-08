@@ -262,6 +262,13 @@
     --normal-border: var(--info);
   }
 }
+/* Opacity fades blend otherwise AA-compliant text/surfaces through unreadable
+   colours. Keep toast movement, but make visibility change immediately. This
+   unlayered selector also overrides Sonner's unlayered transition declaration. */
+[data-sonner-toast][data-styled="true"],
+[data-sonner-toast][data-styled="true"] > * {
+  transition-property: transform, height, box-shadow !important;
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

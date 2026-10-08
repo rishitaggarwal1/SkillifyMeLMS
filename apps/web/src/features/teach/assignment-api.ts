@@ -6,7 +6,8 @@ import {
 } from "@tanstack/react-query";
 
 import { api } from "@/lib/api/client";
-import type { GraderSubmission, GraderSubmissionRow } from "@/lib/api/types";
+import type { GraderSubmission, GraderSubmissionRow, Rubric } from "@/lib/api/types";
+import type { components } from "@/lib/api/schema";
 import { unwrap } from "@/lib/api/unwrap";
 
 import { keys, useOutlineEdit, type IfMatch } from "./api";
@@ -37,7 +38,21 @@ export type AssignmentFields = {
   due_at: string | null;
   max_marks: number;
   submission_kinds: ("file" | "text")[];
+  rubric: Rubric | null;
+  late_policy: components["schemas"]["LatePolicy-Input"] | null;
 };
+
+export const assignmentPreviewQuery = (courseId: string, lessonId: string) =>
+  queryOptions({
+    queryKey: [...keys.lesson(courseId, lessonId), "assignment-preview"] as const,
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/v1/courses/{course_id}/lessons/{lesson_id}/assignment/preview", {
+          params: { path: lessonPath(courseId, lessonId) },
+        }),
+      ),
+    staleTime: 2 * 60_000,
+  });
 
 /** Save the definition: an outline edit (course revision as If-Match, serialized per course). */
 export function useSaveAssignment(courseId: string, lessonId: string) {
@@ -108,23 +123,75 @@ export const submissionQuery = (submissionId: string) =>
     staleTime: 2 * 60_000,
   });
 
-export type GradeValues = { score: string; feedback: string; revision: number };
+export type GradeValues = {
+  score?: string;
+  criterion_scores?: { criterion_id: string; score: string }[];
+  attempt_id?: string;
+  feedback: string;
+  revision: number;
+};
+
+export const attemptsQuery = (submissionId: string) =>
+  infiniteQueryOptions({
+    queryKey: ["grading", "submission", submissionId, "attempts"] as const,
+    queryFn: ({ pageParam }) =>
+      unwrap(
+        api.GET("/api/v1/assignment-submissions/{submission_id}/attempts", {
+          params: {
+            path: { submission_id: submissionId },
+            query: { limit: 25, cursor: pageParam },
+          },
+        }),
+      ),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
+  });
+
+export const attemptQuery = (submissionId: string, attemptId: string) =>
+  queryOptions({
+    queryKey: ["grading", "submission", submissionId, "attempt", attemptId] as const,
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/v1/assignment-submissions/{submission_id}/attempts/{attempt_id}", {
+          params: { path: { submission_id: submissionId, attempt_id: attemptId } },
+        }),
+      ),
+    staleTime: 2 * 60_000,
+  });
+
+export const gradeHistoryQuery = (submissionId: string, attemptId: string) =>
+  infiniteQueryOptions({
+    queryKey: ["grading", "submission", submissionId, "grades", attemptId] as const,
+    queryFn: ({ pageParam }) =>
+      unwrap(
+        api.GET("/api/v1/assignment-submissions/{submission_id}/attempts/{attempt_id}/grades", {
+          params: {
+            path: { submission_id: submissionId, attempt_id: attemptId },
+            query: { limit: 25, cursor: pageParam },
+          },
+        }),
+      ),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
+  });
 
 export function useGrade(submissionId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ score, feedback, revision }: GradeValues): Promise<GraderSubmission> =>
+    mutationFn: ({ revision, ...body }: GradeValues): Promise<GraderSubmission> =>
       unwrap(
         api.PUT("/api/v1/assignment-submissions/{submission_id}/grade", {
           params: {
             path: { submission_id: submissionId },
             header: { "If-Match": String(revision) },
           },
-          body: { score, feedback },
+          body,
         }),
       ),
     onSuccess: (detail) => {
       qc.setQueryData(submissionQuery(submissionId).queryKey, detail);
+      void qc.invalidateQueries({ queryKey: ["grading", "submission", submissionId] });
+      void qc.invalidateQueries({ queryKey: ["dashboards"] });
       void qc.invalidateQueries({ queryKey: ["grading", detail.course_id, detail.lesson_id] });
     },
   });

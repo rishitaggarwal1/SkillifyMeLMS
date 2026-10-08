@@ -64,6 +64,7 @@ from app.modules.assessments.schemas import (
     RevealTiming,
     SavedAnswer,
     ScoreResult,
+    SelectedQuestionSummary,
     StudentQuiz,
 )
 from app.modules.audit import service as audit
@@ -345,13 +346,22 @@ async def set_question_skills(
     return (await _question_out(repo, [q], bank))[0]
 
 
-def _quiz_out(q: Quiz, revision: int) -> QuizOut:
+async def _quiz_out(session: AsyncSession, q: Quiz, revision: int) -> QuizOut:
+    body = QuizBody.model_validate({k: getattr(q, k) for k in QuizBody.model_fields})
+    summaries = (
+        await AuthorRepository(session).selected_question_summaries(
+            [entry.question_id for entry in body.selection.questions]
+        )
+        if isinstance(body.selection, ManualSelection)
+        else []
+    )
     return QuizOut(
         id=q.id,
         course_id=q.course_id,
         lesson_id=q.lesson_id,
         course_revision=revision,
         max_marks=q.max_marks,
+        question_summaries=[SelectedQuestionSummary.model_validate(row) for row in summaries],
         **{k: getattr(q, k) for k in QuizBody.model_fields},
     )
 
@@ -370,7 +380,7 @@ async def get_quiz(ctx: RequestContext, course_id: UUID, lesson_id: UUID) -> Qui
     rows = await AuthorRepository(ctx.session).quizzes([lesson_id])
     if not rows:
         raise NotFoundError("Save the quiz definition first.")
-    return _quiz_out(rows[0], ref.course_revision)
+    return await _quiz_out(ctx.session, rows[0], ref.course_revision)
 
 
 async def put_quiz(
@@ -410,7 +420,7 @@ async def put_quiz(
         q.id,
         {"lesson_id": str(lesson_id), "course_revision": next_revision},
     )
-    return _quiz_out(q, next_revision)
+    return await _quiz_out(ctx.session, q, next_revision)
 
 
 async def _lock_selection(repo: AuthorRepository, bodies: Sequence[QuizBody]) -> None:

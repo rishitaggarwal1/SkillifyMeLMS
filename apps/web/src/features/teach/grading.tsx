@@ -8,17 +8,23 @@ import { toast } from "sonner";
 
 import { NativeSelect } from "@/components/native-select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { GradeBreakdown, LateStatus } from "@/components/patterns/assessment";
+import { PublishedContent } from "@/components/patterns/published-content";
 import { PageSkeleton } from "@/components/patterns/states";
 import { allBatchesQuery } from "@/features/admin/api";
 import { EmptyState, ErrorAlert, LoadMore, PageTitle } from "@/features/admin/ui";
 import { hasPermission, useMe } from "@/features/auth/queries";
 import { readOutline, type OutlineLesson } from "@/features/learn/outline";
-import type { Course, GraderSubmissionRow } from "@/lib/api/types";
+import type { Course, GraderSubmissionRow, Rubric } from "@/lib/api/types";
 import { formatIst } from "@/lib/ist";
 
 import { courseQuery } from "./api";
 import {
   submissionQuery,
+  attemptsQuery,
+  attemptQuery,
+  gradeHistoryQuery,
   submissionsQuery,
   useGrade,
   versionDetailQuery,
@@ -182,7 +188,7 @@ function SubmissionRow({ row }: { row: GraderSubmissionRow }) {
   );
 }
 
-/** /teach/submissions/[id]: read the work, then grade it. */
+/** /teach/submissions/[id]: review every frozen attempt; grade only the active one. */
 export function SubmissionReviewPage({
   submissionId,
   fromGrading = false,
@@ -193,6 +199,11 @@ export function SubmissionReviewPage({
   const qc = useQueryClient();
   const router = useRouter();
   const query = useQuery(submissionQuery(submissionId));
+  const attempts = useInfiniteQuery(attemptsQuery(submissionId));
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const activeId = query.data?.submission.active_attempt_id;
+  const displayedId = selectedId ?? activeId ?? "";
+  const selected = useQuery({ ...attemptQuery(submissionId, displayedId), enabled: !!displayedId });
   const grade = useGrade(submissionId);
   if (query.isPending) return <PageSkeleton />;
   if (query.error) return <ErrorAlert error={query.error} onRetry={() => void query.refetch()} />;
@@ -200,57 +211,192 @@ export function SubmissionReviewPage({
   const work = detail.submission;
   const back = fromGrading
     ? "/teach/grading"
-    : `/teach/courses/${detail.course_id}/assignments/${detail.lesson_id}`;
+    : "/teach/courses/" + detail.course_id + "/assignments/" + detail.lesson_id;
+  const rows = attempts.data?.pages.flatMap((p) => p.items) ?? [];
+  const isActive = selected.data?.is_active === true && selected.data.id === activeId;
+  const assignment = selected.data?.assignment ?? detail.assignment;
+  const displayed = selected.data ?? work;
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-1">
         <Link href={back} className="text-sm text-muted-foreground">
-          ← {detail.assignment.title}
+          Back to {detail.assignment.title}
         </Link>
         <PageTitle title={detail.student.full_name || detail.student.email} />
-        <p className="text-sm text-muted-foreground">
-          {detail.student.email} · submitted {formatIst(work.submitted_at)}
-        </p>
+        <p className="text-sm text-muted-foreground">{detail.student.email}</p>
       </div>
-      <section aria-label="Submission" className="flex flex-col gap-2">
-        <h2 className="text-base font-semibold">Submission</h2>
-        {work.kind === "text" ? (
-          <pre className="max-h-96 overflow-auto rounded-md border bg-muted/40 p-3 text-sm break-words whitespace-pre-wrap">
-            {work.text_body}
-          </pre>
-        ) : work.file?.url ? (
-          <p className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="font-medium">{work.file.file_name}</span>
-            <a
-              href={work.file.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline underline-offset-4"
-            >
-              Open file
-            </a>
-          </p>
-        ) : (
-          <p className="text-sm text-muted-foreground">The file isn&apos;t available.</p>
-        )}
-      </section>
-      <section aria-label="Grading" className="flex max-w-xl flex-col gap-2 rounded-lg border p-4">
-        <h2 className="text-base font-semibold">
-          {work.grade ? "Grade" : "Grade this submission"}
-        </h2>
-        <GradeForm
-          key={work.revision}
-          submission={detail}
-          save={(values) => grade.mutateAsync(values)}
-          onConflict={() =>
-            void qc.invalidateQueries({ queryKey: submissionQuery(submissionId).queryKey })
-          }
-          onSaved={() => {
-            toast.success("Grade saved");
-            router.push(back);
-          }}
+      <section aria-label="Attempt history" className="flex flex-col gap-3">
+        <h2 className="text-base font-semibold">Attempt history</h2>
+        {attempts.isPending ? <PageSkeleton /> : null}
+        {attempts.error ? (
+          <ErrorAlert error={attempts.error} onRetry={() => void attempts.refetch()} />
+        ) : null}
+        <ol className="flex flex-col gap-2">
+          {rows.map((attempt) => (
+            <li key={attempt.id}>
+              <Button
+                type="button"
+                variant={attempt.id === displayedId ? "secondary" : "outline"}
+                aria-pressed={attempt.id === displayedId}
+                className="h-auto w-full flex-wrap justify-start gap-2 p-3 whitespace-normal"
+                onClick={() => setSelectedId(attempt.id)}
+              >
+                <span>Attempt {attempt.attempt_number}</span>
+                <span className="text-xs">{formatIst(attempt.submitted_at)}</span>
+                <Badge variant="secondary">{attempt.is_active ? "Active" : "Historical"}</Badge>
+                <span>
+                  {attempt.grade
+                    ? Number(attempt.grade.score) + " / " + attempt.grade.max_marks
+                    : "Ungraded"}
+                </span>
+              </Button>
+            </li>
+          ))}
+        </ol>
+        <LoadMore
+          hasNextPage={attempts.hasNextPage}
+          isFetchingNextPage={attempts.isFetchingNextPage}
+          onClick={() => void attempts.fetchNextPage()}
         />
       </section>
+      {selected.isPending && displayedId ? (
+        <PageSkeleton />
+      ) : selected.error ? (
+        <ErrorAlert error={selected.error} onRetry={() => void selected.refetch()} />
+      ) : (
+        <>
+          <section
+            aria-label="Pinned instructions"
+            className="flex flex-col gap-2 rounded-lg border p-4"
+          >
+            <h2 className="text-base font-semibold">Instructions for this attempt</h2>
+            <p className="text-sm text-muted-foreground">
+              The instructions, rubric and late policy saved when this student submitted.
+            </p>
+            <PublishedContent
+              html={assignment.instructions_html}
+              imageUrls={selected.data?.image_urls ?? {}}
+            />
+            <LateStatus late={displayed.late} />
+            {assignment.rubric ? (
+              <section aria-label="Pinned rubric" className="flex flex-col gap-2">
+                <h3 className="font-semibold">Rubric for this attempt</h3>
+                <ul className="flex flex-col gap-2">
+                  {assignment.rubric.criteria.map((criterion) => (
+                    <li key={criterion.id} className="text-sm">
+                      <span className="font-medium">{criterion.label}</span> ·{" "}
+                      {Number(criterion.max_marks)} marks
+                      {criterion.description ? (
+                        <p className="text-muted-foreground">{criterion.description}</p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+          </section>
+          <section aria-label="Submission" className="flex flex-col gap-2">
+            <h2 className="text-base font-semibold">Submission</h2>
+            <p className="text-sm text-muted-foreground">
+              Submitted {formatIst(displayed.submitted_at)}
+            </p>
+            {displayed.kind === "text" ? (
+              <pre className="max-h-96 overflow-auto rounded-md border bg-muted/40 p-3 text-sm break-words whitespace-pre-wrap">
+                {displayed.text_body}
+              </pre>
+            ) : displayed.file?.url ? (
+              <p className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="font-medium">{displayed.file.file_name}</span>
+                <a
+                  href={displayed.file.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-4"
+                >
+                  Open file
+                </a>
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">The file isn&apos;t available.</p>
+            )}
+          </section>
+          {isActive ? (
+            <section
+              aria-label="Grading"
+              className="flex max-w-xl flex-col gap-2 rounded-lg border p-4"
+            >
+              <h2 className="text-base font-semibold">
+                {work.grade ? "Grade" : "Grade this submission"}
+              </h2>
+              <GradeForm
+                key={work.active_attempt_id}
+                submission={detail}
+                save={(values) => grade.mutateAsync(values)}
+                onConflict={() => {
+                  void qc.invalidateQueries({ queryKey: submissionQuery(submissionId).queryKey });
+                }}
+                onSaved={() => {
+                  toast.success("Grade saved");
+                  router.push(back);
+                }}
+              />
+            </section>
+          ) : (
+            <div className="state-card flex flex-col gap-3">
+              <p>This historical attempt is read-only. Grade the active attempt.</p>
+              <div>
+                <Button type="button" variant="outline" onClick={() => setSelectedId(null)}>
+                  View active attempt
+                </Button>
+              </div>
+            </div>
+          )}
+          {selected.data ? (
+            <GradeHistory
+              submissionId={submissionId}
+              attemptId={selected.data.id}
+              rubric={selected.data.assignment.rubric}
+            />
+          ) : null}
+        </>
+      )}
     </div>
+  );
+}
+function GradeHistory({
+  submissionId,
+  attemptId,
+  rubric,
+}: {
+  submissionId: string;
+  attemptId: string;
+  rubric?: Rubric | null;
+}) {
+  const history = useInfiniteQuery(gradeHistoryQuery(submissionId, attemptId));
+  const grades = history.data?.pages.flatMap((p) => p.items) ?? [];
+  return (
+    <section aria-label="Grade history" className="flex flex-col gap-3">
+      <h2 className="text-base font-semibold">Grade history</h2>
+      {history.isPending ? <PageSkeleton /> : null}
+      {history.error ? (
+        <ErrorAlert error={history.error} onRetry={() => void history.refetch()} />
+      ) : null}
+      {history.isSuccess && grades.length === 0 ? (
+        <p className="text-sm text-muted-foreground">This attempt has not been graded.</p>
+      ) : null}
+      <ol className="flex flex-col gap-3">
+        {grades.map((item) => (
+          <li key={item.id} className="rounded-lg border p-4">
+            <h3 className="mb-3 font-semibold">Grade {item.grade_sequence}</h3>
+            <GradeBreakdown grade={item} rubric={rubric} />
+          </li>
+        ))}
+      </ol>
+      <LoadMore
+        hasNextPage={history.hasNextPage}
+        isFetchingNextPage={history.isFetchingNextPage}
+        onClick={() => void history.fetchNextPage()}
+      />
+    </section>
   );
 }

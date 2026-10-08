@@ -41,9 +41,8 @@ export const LESSON_TYPE_LABELS: Record<LessonType, string> = {
   lab: "Lab",
   assignment: "Assignment",
 };
-/** Lesson types whose content arrives in later phases (they never count toward progress yet).
- * Assignments have content since Phase 2.5. */
-export const PLACEHOLDER_LESSON_TYPES: ReadonlySet<LessonType> = new Set(["quiz", "lab"]);
+/** Only labs remain unavailable in the course authoring UI. */
+export const PLACEHOLDER_LESSON_TYPES: ReadonlySet<LessonType> = new Set(["lab"]);
 
 export const ROLE_LABELS: Record<OrgRole, string> = {
   org_admin: "Org admin",
@@ -61,6 +60,17 @@ export type StudentAssignment = Schemas["StudentAssignmentOut"];
 export type Submission = Schemas["SubmissionOut"];
 export type GraderSubmissionRow = Schemas["GraderSubmissionRow"];
 export type GraderSubmission = Schemas["GraderSubmissionDetail"];
+export type SubmissionAttempt = Schemas["SubmissionAttemptOut"];
+export type AssignmentGrade = Schemas["GradeOut"];
+export type Rubric = NonNullable<PublishedAssignment["rubric"]>;
+export type LateData = Schemas["LateData"];
+
+// ---- assessment authoring (never used for student attempt projections)
+export type QuestionBank = Schemas["BankOut"];
+export type AuthorQuestion = Schemas["QuestionOut"];
+export type QuestionBody = Schemas["QuestionBody"];
+export type QuizBody = Schemas["QuizBody"];
+export type DraftQuiz = Schemas["QuizOut"];
 
 // ---- progress reports
 export type CourseProgressPage = Schemas["CourseProgressPage"];

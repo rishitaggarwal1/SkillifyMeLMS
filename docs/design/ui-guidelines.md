@@ -45,7 +45,7 @@ Desktop has a sidebar; phones have bottom navigation. Platform shows Dashboard,
 Organizations, Users, More; More opens an accessible dialog for Courses/Audit.
 College admin shows Batches, Courses, Members, Import, with the area link opening
 the overview. Instructor shows Courses, Grading, Question banks, Videos.
-Question banks is explicitly a placeholder until Step 6. Student shows My
+Question banks opens the bank editor and its question detail route in Step 6. Student shows My
 learning and Catalog; the player outline becomes a native drawer on phones.
 Shared shells are used throughout their role, including detail/editor routes.
 Public home, catalog and authentication result states use the same header,
@@ -141,3 +141,9 @@ Steps 6/7 reuse these guidelines and components. Each UI step summary names
 the guideline sections applied and any new shared component. Add a pattern
 only when it serves multiple screens; keep assessment rules in their feature
 modules. Never leak implementation terminology into product flows.
+
+Step 6 adds reusable PublishedContent for sanitized instructions with authorized
+image URLs, LateStatus for the frozen due/penalty state, and GradeBreakdown for
+earned marks, rubric criteria, penalty and final score. These patterns also
+serve the Step 7 student results/history views. Authoring validators and exact
+decimal grade previews remain in feature/helper code; the API owns grading.

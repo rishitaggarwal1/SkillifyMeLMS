@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,13 +27,14 @@ export function SkillsPicker({
   onChange: (skillIds: string[], picked?: Skill) => void;
 }) {
   const [search, setSearch] = useState("");
+  const searchId = useId();
   const q = useDebounced(search.trim(), 250);
   const results = useQuery({ ...skillsSearchQuery(q), enabled: q.length > 0 });
   const label = (id: string) => names.get(id)?.name ?? "Skill";
 
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor="skill-search">Skills</Label>
+      <Label htmlFor={searchId}>Skills</Label>
       {selected.length ? (
         <ul className="flex flex-wrap gap-1.5" aria-label="Tagged skills">
           {selected.map((id) => (
@@ -56,7 +57,8 @@ export function SkillsPicker({
         <p className="text-sm text-muted-foreground">No skills tagged.</p>
       )}
       <Input
-        id="skill-search"
+        id={searchId}
+        disabled={disabled}
         type="search"
         placeholder="Search skills, e.g. arrays"
         value={search}

@@ -48,6 +48,7 @@ export function LoadMore({
   if (!hasNextPage) return null;
   return (
     <Button
+      type="button"
       variant="outline"
       className="w-full sm:w-auto"
       onClick={onClick}

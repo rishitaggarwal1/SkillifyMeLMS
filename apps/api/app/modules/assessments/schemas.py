@@ -285,12 +285,21 @@ class QuizBody(SafeModel):
         return self.selection.draw_count * self.selection.marks_per_question
 
 
+class SelectedQuestionSummary(SafeModel):
+    id: UUID
+    bank_id: UUID
+    prompt: Text
+    question_type: QuestionType
+    archived: bool
+
+
 class QuizOut(QuizBody):
     id: UUID
     course_id: UUID
     lesson_id: UUID
     max_marks: Decimal
     course_revision: int
+    question_summaries: list[SelectedQuestionSummary] = Field(default_factory=list, max_length=100)
 
 
 class PublishedQuiz(SafeModel):

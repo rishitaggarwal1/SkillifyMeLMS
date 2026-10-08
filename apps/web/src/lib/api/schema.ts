@@ -4445,6 +4445,8 @@ export interface components {
       max_marks: string;
       /** Pass Marks */
       pass_marks: string;
+      /** Question Summaries */
+      question_summaries?: components["schemas"]["SelectedQuestionSummary"][];
       /**
        * Randomize Order
        * @default false
@@ -4586,6 +4588,28 @@ export interface components {
       reveal_mode: "score_only";
       /** Score */
       score: string;
+    };
+    /** SelectedQuestionSummary */
+    SelectedQuestionSummary: {
+      /** Archived */
+      archived: boolean;
+      /**
+       * Bank Id
+       * Format: uuid
+       */
+      bank_id: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Prompt */
+      prompt: string;
+      /**
+       * Question Type
+       * @enum {string}
+       */
+      question_type: "mcq_single" | "mcq_multi" | "fill_blank";
     };
     /** SkillCreate */
     SkillCreate: {

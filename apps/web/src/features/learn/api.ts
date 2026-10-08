@@ -20,6 +20,10 @@ export const learnKeys = {
 export const myEnrollmentsQuery = () =>
   queryOptions({
     queryKey: learnKeys.enrollments,
+    // Enrollment fan-out commits asynchronously. Refresh visible dashboards so
+    // a read racing that commit does not leave a new course hidden until reload.
+    refetchInterval: 10_000,
+    refetchIntervalInBackground: false,
     queryFn: async (): Promise<Enrollment[]> => {
       const all: Enrollment[] = [];
       let cursor: string | undefined;

@@ -78,6 +78,20 @@ class AuthorRepository:
     async def question(self, question_id: UUID) -> Question | None:
         return await self.session.get(Question, question_id, populate_existing=True)
 
+    async def selected_question_summaries(self, ids: Sequence[UUID]) -> list[dict[str, Any]]:
+        if not ids:
+            return []
+        rows = await self.session.execute(
+            select(
+                Question.id,
+                Question.bank_id,
+                Question.prompt,
+                Question.question_type,
+                Question.archived_at.is_not(None).label("archived"),
+            ).where(Question.id.in_(ids))
+        )
+        return [dict(row) for row in rows.mappings()]
+
     async def keys(self, ids: Sequence[UUID]) -> dict[UUID, QuestionKey]:
         if not ids:
             return {}

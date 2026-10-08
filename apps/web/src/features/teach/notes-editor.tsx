@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { NativeSelect } from "@/components/native-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { errorMessage } from "@/features/admin/ui";
 import { api } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
 
@@ -24,10 +25,11 @@ type Props = {
   initialImageUrls: Record<string, string>;
   saving: boolean;
   onSave: (doc: NotesDoc) => Promise<unknown>;
+  onChange?: (doc: NotesDoc) => void;
   /** The editable area's accessible name (default "Notes"). */
   label?: string;
   saveLabel?: string;
-  /** Assignment instructions can't hold images yet: hide the Image tool. */
+  /** Hide the image tool when a caller intentionally limits editing to text. */
   allowImages?: boolean;
 };
 
@@ -36,6 +38,7 @@ export default function NotesEditor({
   initialImageUrls,
   saving,
   onSave,
+  onChange,
   label = "Notes",
   saveLabel = "Save notes",
   allowImages = true,
@@ -43,6 +46,7 @@ export default function NotesEditor({
   // A stable map mutated as images are uploaded (read by the image node view, not by render).
   const [urls] = useState(() => new Map(Object.entries(initialImageUrls)));
   const [dirty, setDirty] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const editor = useEditor({
     extensions: notesExtensions((fileId) => urls.get(fileId)),
     content: initialDoc,
@@ -56,15 +60,23 @@ export default function NotesEditor({
         "aria-label": label,
       },
     },
-    onUpdate: () => setDirty(true),
+    onUpdate: ({ editor: updated }) => {
+      setDirty(true);
+      onChange?.(normalizeNotesDoc(updated.getJSON()));
+    },
   });
 
   if (!editor) return <div className="min-h-48 rounded-md border" aria-busy />;
 
   async function save() {
     if (!editor) return;
-    await onSave(normalizeNotesDoc(editor.getJSON()));
-    setDirty(false);
+    setError(null);
+    try {
+      await onSave(normalizeNotesDoc(editor.getJSON()));
+      setDirty(false);
+    } catch (failure) {
+      setError(errorMessage(failure));
+    }
   }
 
   return (
@@ -82,6 +94,11 @@ export default function NotesEditor({
         }}
       />
       <EditorContent editor={editor} />
+      {error ? (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
       <div className="flex items-center gap-3">
         <Button onClick={() => void save()} disabled={saving || !dirty}>
           {saving ? "Saving…" : saveLabel}

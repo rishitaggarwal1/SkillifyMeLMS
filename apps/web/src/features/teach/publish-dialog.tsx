@@ -31,8 +31,9 @@ const BLOCKERS: Record<PublishPreview["blockers"][number]["code"], string> = {
 };
 
 const CHANGES: Record<PublishPreview["structural_changes"][number]["code"], string> = {
-  quiz_structure_changed: "Quiz questions, marks or attempt rules changed",
-  quiz_grading_changed: "Quiz grading rules changed",
+  quiz_structure_changed:
+    "Quiz question set, types/options, marks, pass threshold, time limit or attempt allowance changed",
+  quiz_grading_changed: "Quiz answer keys or case rules changed",
   assignment_structure_changed: "Assignment marks, submission kinds or rubric criteria changed",
   modules_changed: "Modules were added, removed or reordered",
   lessons_added: "Lessons were added",

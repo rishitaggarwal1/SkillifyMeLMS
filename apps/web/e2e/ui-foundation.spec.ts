@@ -33,6 +33,7 @@ const ROUTES = [
   "/teach/submissions/[submissionId]",
   "/teach/grading",
   "/teach/question-banks",
+  "/teach/question-banks/[bankId]",
   "/teach/videos",
   "/learn",
   "/learn/enrollments/[enrollmentId]",
@@ -263,6 +264,13 @@ test("detail/editor/player routes and cross-course grading share accessible comp
   const platform = await user(browser, "platform.admin@skillifyme.local", "/platform");
   try {
     const batches = await appCall(admin.page, "GET", "/batches?name=CSE%202026");
+    const questionBank = await appCall(
+      author.page,
+      "POST",
+      "/question-banks",
+      { name: "UI foundation bank " + tag },
+      0,
+    );
     expect(batches.items).toHaveLength(1);
     const batchId = batches.items[0].id;
     const college = (await appCall(admin.page, "GET", "/me")).active_organization_id;
@@ -367,6 +375,7 @@ test("detail/editor/player routes and cross-course grading share accessible comp
       [
         author.page,
         [
+          "/teach/question-banks/" + questionBank.id,
           `/teach/courses/${course.id}`,
           `/teach/courses/${course.id}/lessons/${notes.id}`,
           `/teach/courses/${course.id}/lessons/${assignment.id}`,

@@ -34,6 +34,7 @@ import { uploadFile } from "./files";
 import { normalizeNotesDoc } from "./notes-doc";
 import { useSetLessonSkills, useUpdateLesson } from "./outline-hooks";
 import { SkillsPicker } from "./skills-picker";
+import { QuizEditor } from "./quiz-editor";
 
 const NotesEditor = dynamic(() => import("./notes-editor"), {
   ssr: false,
@@ -229,6 +230,8 @@ function LessonContent({ courseId, lesson }: { courseId: string; lesson: Lesson 
       return (
         <AssignmentEditor courseId={courseId} lessonId={lesson.id} lessonTitle={lesson.title} />
       );
+    case "quiz":
+      return <QuizEditor courseId={courseId} lessonId={lesson.id} lessonTitle={lesson.title} />;
     default:
       return (
         <Alert>

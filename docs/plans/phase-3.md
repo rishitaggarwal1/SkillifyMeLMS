@@ -1,6 +1,6 @@
 # Phase 3 — Quizzes and full assignments
 
-**Status: approved (2026-10-04); steps 1-4 complete; step 5 approved and in progress.** Decisions D1–D7 and
+**Status: approved (2026-10-04); steps 1-5 complete; step 6 local gates passed, awaiting pushed CI.** Decisions D1–D7 and
 the security repair below include the user's approved revisions.
 
 **Baseline:** `4f7d00826e368b9dbd7ce1635332a8b1d93dedb7`, the peeled
@@ -797,7 +797,7 @@ in section 9 were approved on 2026-10-06 before coding; steps 6 and 7 use its gu
 
 ## 14. Implementation record
 
-Steps 1-4 completed with green pushed CI. After each green pushed step, report its full SHA and
+Steps 1-5 completed with green pushed CI. After each green pushed step, report its full SHA and
 CI URL in the step summary; carry known commit/run records into this table in
 the next plan update. Do not invent a self-referential commit SHA or a CI URL
 before the commit/run exists. The close-out summary records its own final run.
@@ -808,8 +808,8 @@ before the commit/run exists. The close-out summary records its own final run.
 | 2    | Complete    | `d660c7330e2f520a043cd58745aac4452576816e` | [37231238285](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37231238285) |
 | 3    | Complete    | `c9aac0b02a9964ddee43c5ba5304d027fa7c7a0e` | [37355212064](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37355212064) |
 | 4    | Complete    | `c34ddc9b265b2865e5ade2a8eb1c89b8f7eb5cf0` | [37494612624](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37494612624) |
-| 5    | In progress | —                                          | —                                                                                        |
-| 6    | Not started | —                                          | —                                                                                        |
+| 5    | Complete    | `c17c0f02ef413ca6979ab92395b58897f552f3a8` | [37517763653](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37517763653) |
+| 6    | Awaiting CI | —                                          | —                                                                                        |
 | 7    | Not started | —                                          | —                                                                                        |
 | 8    | Not started | —                                          | —                                                                                        |
 | 9    | Not started | —                                          | —                                                                                        |
@@ -1166,6 +1166,83 @@ guard. The beat-schedule registration regression is explicitly approved.
   product or architecture deviation outside the approved scope additions;
   verification repairs and selector/navigation adaptations are listed above.
 
+### Step 6 implementation (2026-10-07 to 2026-10-08)
+
+- The user explicitly skipped the unspecified Step 5 UI follow-up and authorized
+  Step 6. Step 5 is complete at `c17c0f02ef413ca6979ab92395b58897f552f3a8`,
+  [green CI 37517763653](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37517763653).
+- Reused the existing assessment/assignment endpoints and generated contracts.
+  Delivered the bank/question editor and lesson quiz builder, then extended assignment
+  instructions/rubric/late policy and active-attempt grading/history. Apply the
+  shared guidelines and components; added Vitest and desktop/360px Playwright
+  coverage, including accessibility and every new page route.
+- Bank edits serialize with bank revisions; definition edits retain course
+  revisions. Preserve entered work on failed/conflicting saves. Historical
+  attempts are read-only. Grading sends the active attempt and submission
+  revision, uses earned marks for regrades and previews the frozen penalty
+  with the same exact decimal half-up rule as the backend.
+- Applied UI guidelines sections 1-8: semantic tokens/themes; responsive type
+  and spacing; existing role shell/navigation; existing Needs attention/grading
+  landing; shared loading/empty/error/save states; field/cursor/confirmation
+  patterns; keyboard/touch/focus/axe/mobile baseline; reusable shared patterns.
+  New shared components: PublishedContent, LateStatus and GradeBreakdown,
+  documented in the UI guidelines for reuse in Step 7. Existing NotesEditor
+  now reports failed saves inline and supplies live document changes; the
+  shared SkillsPicker has unique IDs when multiple pickers appear together,
+  and LoadMore explicitly uses button semantics inside authoring forms.
+- No new endpoint was added. Existing MATRIX rows cover bank/question edits,
+  definition saves and grading/history; the all-routes-in-MATRIX assertion is
+  included in the full suite. Updated the draft quiz access-control entries
+  and regenerated OpenAPI-derived web types with make gen-api.
+- Small API support addition: the existing author-only draft quiz GET/PUT
+  response gains a bounded manual-question summary (id, bank, prompt, type,
+  archived flag). One batched assessment-owned SELECT hydrates saved selections
+  without one HTTP request per question. It returns no key or explanation,
+  changes no permission or write contract and adds no endpoint.
+- Verification repair (2026-10-08): the new instructor axe scan caught a
+  partially transparent success toast at 3.85:1 while Sonner faded it out
+  and a stacked toast title at 1.56:1 during its content fade.
+  Shared toast/child CSS now transitions movement/height/elevation only; visibility
+  changes immediately, preserving semantic status colours and AA contrast.
+  The axe assertion remains zero serious/critical violations. No existing
+  assertion or timeout was weakened. The existing route inventory and its
+  setup only gained the new bank detail page and a real bank to scan.
+- Verification repair: rapid quiz selections now derive checkbox membership
+  from the field array rather than the broader value watch, and mutations
+  consult the current form selection to avoid duplicate/stale changes. The
+  new browser flow still requires all three choices to become checked and
+  the selected marks fields and persisted definition to match.
+- New browser setup waits for each lesson navigation before capturing IDs,
+  uses a valid underscore-only taxonomy slug, and respects replacement only
+  before grading. These fix the new test's setup; existing assertions/timeouts
+  are unchanged and no product rule changed.
+- Local verification resumed after an interruption with Docker Desktop stopped.
+  Restarted Docker/Compose, kept the documented production host-web fallback,
+  and pointed the local worker at that host for catalog revalidation. These are
+  local environment repairs; no deployed server configuration changed.
+- Verification repair: the first full gate passed 1,714 API and 197 Vitest
+  tests, but Playwright had 56 passed, 7 existing intentional skips and one
+  failure in learn.spec.ts:131, the unchanged 30-second course-card visibility
+  assertion. Trace reads began before the fan-out worker's transaction committed;
+  later cursor pages cannot include a newly inserted newest row. The dashboard
+  did not refresh while open. Its existing enrollment query now refreshes every
+  10 seconds while visible, with no background polling. A new unit regression
+  starts with a nonempty paged read, then verifies discovery from a fresh first
+  page after the worker commit and no polling after unsubscribe. No existing
+  test, assertion or timeout changed; this is an app freshness repair, not
+  Step 7 assessment UI.
+- Checks run personally: make lint passed (API Ruff/format/mypy and web
+  ESLint/Prettier/strict TypeScript); make gen-api and the final production web
+  build passed. The final full make test passed against real Compose services:
+  API 1,714 passed, Vitest 198 passed, Playwright 57 passed / 7 existing
+  intentional skips / 0 failures. Both instructor flows at 360px/1280px,
+  all 31 renderable page routes with zero serious/critical axe violations,
+  and all 16 shell baselines in light/dark themes passed. Existing MATRIX
+  coverage passed; no new endpoint needs a new row.
+- Local gates alone do not complete Step 6. Its exact full SHA, push result
+  and CI run URL are reported in the step summary and carried into the table
+  at the next authorized plan update. No later step has started.
+
 ### Open follow-ups / carried forward
 
 - Plagiarism detection, AI feedback and coding labs remain outside this brief;
@@ -1191,6 +1268,6 @@ The tracked check exited 0; the no-index comparison exited 1 for the new-file
 difference and emitted no whitespace warnings.
 At the initial planning gate only this plan was added; implementation checks,
 commit, push and CI had not run. Step 1 subsequently passed its local and pushed-CI gates (recorded above).
-Steps 2-4 passed their local and pushed-CI gates (recorded above). Step 5 is
-authorized by the approved walkthrough and additions recorded in section 9;
+Steps 2-5 passed their local and pushed-CI gates (recorded above). The user
+explicitly skipped the unspecified Step 5 follow-up and authorized Step 6;
 later steps remain gated on the user's "continue".

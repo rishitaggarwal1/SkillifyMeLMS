@@ -341,22 +341,22 @@ Every list uses cursor pagination. Question edits serialize through the parent
 bank revision; quiz edits and publishing serialize through the course revision.
 Every mutation below requires `If-Match` (428 missing, 409 stale).
 
-| Method | Endpoint                                                              | Permission / scope                                                                       | Revision |
-| ------ | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | -------- |
-| GET    | `/question-banks`                                                     | `course.edit`, active org's unarchived banks; optional text search                       | —        |
-| POST   | `/question-banks`                                                     | `course.edit`, creates in active org                                                     | `0`      |
-| GET    | `/question-banks/{bank_id}`                                           | `course.edit`, bank owner org                                                            | —        |
-| PATCH  | `/question-banks/{bank_id}`                                           | `course.edit`, bank owner org                                                            | bank     |
-| DELETE | `/question-banks/{bank_id}`                                           | `course.edit`, archives bank; published copies survive                                   | bank     |
-| GET    | `/question-banks/{bank_id}/questions`                                 | `course.edit`, bank owner org; text/type/all listed skill filters                        | —        |
-| POST   | `/question-banks/{bank_id}/questions`                                 | `course.edit`, bank owner org; validated private grading rule                            | bank     |
-| GET    | `/questions/{question_id}`                                            | `course.edit`, question owner org; author keys included                                  | —        |
-| PATCH  | `/questions/{question_id}`                                            | `course.edit`, question owner org; merged grading rule validated                         | bank     |
-| DELETE | `/questions/{question_id}`                                            | `course.edit`, archives question; published copies survive                               | bank     |
-| PUT    | `/questions/{question_id}/skills`                                     | `course.edit`, question owner org; replaces global skill tags                            | bank     |
-| GET    | `/courses/{course_id}/lessons/{lesson_id}/quiz`                       | `course.edit`, course owner org                                                          | —        |
-| PUT    | `/courses/{course_id}/lessons/{lesson_id}/quiz`                       | `course.edit`, course owner org; same-org active question references only                | course   |
-| GET    | `/courses/{course_id}/versions/{version_id}/lessons/{lesson_id}/quiz` | `course.read`, owner or assigned-org staff; public prompts only, never keys/explanations | —        |
+| Method | Endpoint                                                              | Permission / scope                                                                         | Revision |
+| ------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | -------- |
+| GET    | `/question-banks`                                                     | `course.edit`, active org's unarchived banks; optional text search                         | —        |
+| POST   | `/question-banks`                                                     | `course.edit`, creates in active org                                                       | `0`      |
+| GET    | `/question-banks/{bank_id}`                                           | `course.edit`, bank owner org                                                              | —        |
+| PATCH  | `/question-banks/{bank_id}`                                           | `course.edit`, bank owner org                                                              | bank     |
+| DELETE | `/question-banks/{bank_id}`                                           | `course.edit`, archives bank; published copies survive                                     | bank     |
+| GET    | `/question-banks/{bank_id}/questions`                                 | `course.edit`, bank owner org; text/type/all listed skill filters                          | —        |
+| POST   | `/question-banks/{bank_id}/questions`                                 | `course.edit`, bank owner org; validated private grading rule                              | bank     |
+| GET    | `/questions/{question_id}`                                            | `course.edit`, question owner org; author keys included                                    | —        |
+| PATCH  | `/questions/{question_id}`                                            | `course.edit`, question owner org; merged grading rule validated                           | bank     |
+| DELETE | `/questions/{question_id}`                                            | `course.edit`, archives question; published copies survive                                 | bank     |
+| PUT    | `/questions/{question_id}/skills`                                     | `course.edit`, question owner org; replaces global skill tags                              | bank     |
+| GET    | `/courses/{course_id}/lessons/{lesson_id}/quiz`                       | `course.edit`, course owner org; bounded selected-question summaries, no keys/explanations | —        |
+| PUT    | `/courses/{course_id}/lessons/{lesson_id}/quiz`                       | `course.edit`, course owner org; same-org active references; same bounded safe summaries   | course   |
+| GET    | `/courses/{course_id}/versions/{version_id}/lessons/{lesson_id}/quiz` | `course.read`, owner or assigned-org staff; public prompts only, never keys/explanations   | —        |
 
 The existing `POST /courses/{course_id}/versions` now requires the course revision
 in `If-Match`, including first-party web, seed and test callers. Quiz content is

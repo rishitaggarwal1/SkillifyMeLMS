@@ -5,12 +5,89 @@ from typing import Any
 from uuid import UUID
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import event, select
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.modules.assessments.models import QuizVersionKey, QuizVersionQuestion
 from app.modules.assessments.tests.authoring_helpers import SINGLE, AuthoredQuiz
 from app.modules.audit.models import AuditLog
 from tests.course_api import Campus, CourseApi, ok
+
+
+async def test_manual_quiz_summaries_are_batched_across_banks_and_never_include_keys(
+    authored: AuthoredQuiz,
+) -> None:
+    a = authored
+    bank = ok(
+        await a.api.request(
+            "POST",
+            "/question-banks",
+            a.campus.author,
+            a.campus.p,
+            json={"name": "Second bank"},
+            headers={"If-Match": "0"},
+        ),
+        201,
+    )
+    question = ok(
+        await a.api.request(
+            "POST",
+            f"/question-banks/{bank['id']}/questions",
+            a.campus.author,
+            a.campus.p,
+            json={**SINGLE, "prompt": "Second bank prompt"},
+            headers={"If-Match": str(bank["revision"])},
+        ),
+        201,
+    )
+    selection = {
+        "mode": "manual",
+        "questions": [{"question_id": q["id"], "marks": 2} for q in [*a.questions, question]],
+    }
+    saved = ok(await a.put(selection=selection))
+    assert len(saved["question_summaries"]) == 4
+    statements: list[str] = []
+    engine: AsyncEngine = a.api.app.state.engine
+
+    def capture(
+        _conn: Any,
+        _cursor: Any,
+        statement: str,
+        _params: Any,
+        _context: Any,
+        _many: bool,
+    ) -> None:
+        statements.append(statement)
+
+    event.listen(engine.sync_engine, "before_cursor_execute", capture)
+    try:
+        loaded = ok(await a.request("GET", a.quiz_path))
+    finally:
+        event.remove(engine.sync_engine, "before_cursor_execute", capture)
+    summaries = {row["id"]: row for row in loaded["question_summaries"]}
+    assert summaries[question["id"]] == {
+        "id": question["id"],
+        "bank_id": bank["id"],
+        "prompt": "Second bank prompt",
+        "question_type": "mcq_single",
+        "archived": False,
+    }
+    assert all(
+        set(row) == {"id", "bank_id", "prompt", "question_type", "archived"}
+        for row in summaries.values()
+    )
+    projection = [s for s in statements if "AS archived" in s]
+    assert len(projection) == 1
+    assert "question_keys" not in projection[0]
+    assert "answer_key" not in json.dumps(loaded)
+    assert "PRIVATE" not in json.dumps(loaded)
+    ok(await a.request("DELETE", f"/questions/{a.questions[0]['id']}"), 204)
+    archived = ok(await a.request("GET", a.quiz_path))["question_summaries"]
+    assert next(row for row in archived if row["id"] == a.questions[0]["id"])["archived"] is True
+    for reader, status in ((a.campus.cse, 403), (a.campus.c_instructor, 404)):
+        response = await a.api.request("GET", a.quiz_path, reader, a.campus.c)
+        assert response.status_code == status
+        assert "question_summaries" not in response.text
 
 
 async def test_required_quiz_and_missing_definition_block_publish(
