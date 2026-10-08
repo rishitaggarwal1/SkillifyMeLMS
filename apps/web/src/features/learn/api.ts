@@ -1,4 +1,9 @@
-import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  infiniteQueryOptions,
+  queryOptions,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { api } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/unwrap";
@@ -118,8 +123,48 @@ export const myAssignmentQuery = (enrollmentId: string, lessonId: string) =>
         }),
       ),
     // Shows the grade once an instructor records it; the file link is short-lived.
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
+  });
+
+export const assignmentAttemptsQuery = (enrollmentId: string, lessonId: string) =>
+  infiniteQueryOptions({
+    queryKey: ["learn", "assignment-attempts", enrollmentId, lessonId] as const,
+    queryFn: ({ pageParam }) =>
+      unwrap(
+        api.GET("/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/submission-attempts", {
+          params: {
+            path: lessonPath(enrollmentId, lessonId),
+            query: { limit: 25, cursor: pageParam },
+          },
+        }),
+      ),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
+    staleTime: 0,
+    refetchInterval: 4 * 60_000,
+  });
+
+export const assignmentGradesQuery = (enrollmentId: string, lessonId: string, attemptId: string) =>
+  infiniteQueryOptions({
+    queryKey: ["learn", "assignment-grades", enrollmentId, lessonId, attemptId] as const,
+    queryFn: ({ pageParam }) =>
+      unwrap(
+        api.GET(
+          "/api/v1/enrollments/{enrollment_id}/lessons/{lesson_id}/submission-attempts/{attempt_id}/grades",
+          {
+            params: {
+              path: { ...lessonPath(enrollmentId, lessonId), attempt_id: attemptId },
+              query: { limit: 25, cursor: pageParam },
+            },
+          },
+        ),
+      ),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
+    staleTime: 0,
   });
 
 export const SUBMISSION_TYPES = ["application/pdf", "image/png", "image/jpeg"] as const;
@@ -167,7 +212,13 @@ export function useSubmitAssignment(enrollmentId: string, lessonId: string) {
         }),
       );
     },
-    onSettled: () =>
-      qc.invalidateQueries({ queryKey: myAssignmentQuery(enrollmentId, lessonId).queryKey }),
+    onSettled: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: myAssignmentQuery(enrollmentId, lessonId).queryKey }),
+        qc.invalidateQueries({
+          queryKey: assignmentAttemptsQuery(enrollmentId, lessonId).queryKey,
+        }),
+      ]);
+    },
   });
 }

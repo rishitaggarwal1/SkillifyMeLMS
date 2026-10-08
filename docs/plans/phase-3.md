@@ -1,6 +1,6 @@
 # Phase 3 — Quizzes and full assignments
 
-**Status: approved (2026-10-04); steps 1-5 complete; step 6 local gates passed, awaiting pushed CI.** Decisions D1–D7 and
+**Status: approved (2026-10-04); steps 1-6 complete; step 7 local gates passed, pushed CI pending.** Decisions D1–D7 and
 the security repair below include the user's approved revisions.
 
 **Baseline:** `4f7d00826e368b9dbd7ce1635332a8b1d93dedb7`, the peeled
@@ -797,7 +797,7 @@ in section 9 were approved on 2026-10-06 before coding; steps 6 and 7 use its gu
 
 ## 14. Implementation record
 
-Steps 1-5 completed with green pushed CI. After each green pushed step, report its full SHA and
+Steps 1-6 completed with green pushed CI. After each green pushed step, report its full SHA and
 CI URL in the step summary; carry known commit/run records into this table in
 the next plan update. Do not invent a self-referential commit SHA or a CI URL
 before the commit/run exists. The close-out summary records its own final run.
@@ -809,8 +809,8 @@ before the commit/run exists. The close-out summary records its own final run.
 | 3    | Complete    | `c9aac0b02a9964ddee43c5ba5304d027fa7c7a0e` | [37355212064](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37355212064) |
 | 4    | Complete    | `c34ddc9b265b2865e5ade2a8eb1c89b8f7eb5cf0` | [37494612624](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37494612624) |
 | 5    | Complete    | `c17c0f02ef413ca6979ab92395b58897f552f3a8` | [37517763653](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37517763653) |
-| 6    | Awaiting CI | —                                          | —                                                                                        |
-| 7    | Not started | —                                          | —                                                                                        |
+| 6    | Complete    | c23fd8e71dd0300c6eb2133b0b7e30a1a2d761fe   | [37787315118](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37787315118) |
+| 7    | CI pending  | —                                          | —                                                                                        |
 | 8    | Not started | —                                          | —                                                                                        |
 | 9    | Not started | —                                          | —                                                                                        |
 
@@ -918,6 +918,12 @@ alongside the visual retrofit. Implemented through existing module services;
 no assessment authoring/attempt UI from steps 6/7 starts here. System-default
 manual themes and a semantic-token-only guard replace the original hex-only
 guard. The beat-schedule registration regression is explicitly approved.
+
+Step 7: no product or architecture deviation. The user additionally requested
+before/after student bundle measurements and proof that authoring dependencies
+are absent; the production audit also runs in CI. Verification findings and
+new-test setup corrections are listed in the Step 7 implementation record.
+Existing assertions and timeouts are unchanged.
 
 ### Security repairs
 
@@ -1242,6 +1248,94 @@ guard. The beat-schedule registration regression is explicitly approved.
 - Local gates alone do not complete Step 6. Its exact full SHA, push result
   and CI run URL are reported in the step summary and carried into the table
   at the next authorized plan update. No later step has started.
+
+### Step 7 implementation (2026-10-08)
+
+- Authorized by the user's continue after Step 6. Step 6's exact pushed commit
+  and all-six-jobs green run are carried into the table above. No Step 8 work
+  is authorized.
+- Reuse student quiz/attempt/result and assignment/history endpoints. Deliver
+  quiz start/resume, serialized ten-second Postgres autosave, monotonic display
+  of the server deadline, expiry submission, reveal-aware results and cursor
+  history inside the existing lesson route. Preserve entered answers on network
+  failure; stale revisions require explicit refresh rather than overwriting
+  another device. Submission and scoring remain server authoritative.
+- Extend the existing assignment page with authorized instructions images,
+  current late/closed preview, accepted frozen lateness, rubric/penalty grades
+  and cursor attempt/grade histories; retain text/file and If-Match contracts.
+  Reuse the Step 5/6 shared patterns. Added unit and full desktop/360px journeys,
+  including autosave/reload/expiry, fail/pass, late work, grading, 100% progress,
+  revoked/other-batch access and axe scans. The focused four browser cases passed
+  in both projects, including temporary connection failure, explicit conflict
+  refresh, delayed explanations, frozen instructions/images and grade polling.
+- Applied UI guidelines sections 1-8: semantic tokens/themes; responsive
+  type/spacing; the existing student shell and outline; Due soon/Recent results
+  refresh; shared loading/error/save/confirmation states; labelled fields,
+  cursor history and numeric progress; keyboard/touch/focus/live announcements
+  and axe; feature-only assessment rules. New shared components: none.
+  Reused PublishedContent, LateStatus, GradeBreakdown, FormField,
+  PageSkeleton, StatusBadge, LiveAnnouncement, ErrorAlert, ConfirmButton and
+  LoadMore. Quiz and assignment views use client-side dynamic imports.
+- No API endpoint, schema, permission, table or event changed. Existing MATRIX
+  and access-control rows cover every method used here. Runtime writes remain
+  covered by test_runtime_transactions.py's start/save/submit visibility-at-
+  headers cases; assignment submission/upload remain covered by
+  assignments/tests/test_transactions.py's separate-connection cases. The
+  full API gate runs these and their stale-header/failed-commit counterparts.
+- Verification repairs: cached background-rule/status failures now display
+  Retry while keeping the active quiz or assignment form mounted and retaining
+  unsaved work. New regressions prove both. Large valid answer batches use an
+  ordinary request instead of exceeding the bounded unload-request budget;
+  Zod validates answer bounds before writes. Serialization tests cover edits
+  during a save, returned revisions, forced expiry behind a pending save,
+  worker-finalized attempts, monotonic timing and retry backoff.
+  The sticky quiz timer clears the existing sticky app header while scrolling;
+  both viewport journeys assert it remains below the header and within the screen.
+  Results use the server's enrollment completion when a failed retake follows
+  an earlier pass; a new UI regression verifies both the failed result and the
+  retained completed lesson, with no client progress recomputation.
+- New browser setup corrections: the answer selector names the textbox exactly
+  because the existing submission-kind label also contains 'your answer';
+  question creation uses its actual body (marks belong to quiz selection,
+  skills use their separate links). Existing tests/assertions/timeouts were
+  not weakened or changed. New deadline tests use a normal 25-second published
+  quiz and delay a real PUT past expiry, preserving the 409 and exact score.
+- Additional approved evidence: measure every /learn route before/after and
+  prove no Tiptap/dnd-kit authoring code in any student bundle. The baseline
+  production build is the verified Step 6 build at c23fd8e. The new reproducible
+  student-bundles script reads Next 16.3.6 production route statistics and sums
+  per-file gzip level 9 (Node), including shared/runtime first-load JS. Next's
+  production analyzer graph independently audits every emitted client module,
+  including deferred chunks; server/SSR modules are excluded by output namespace.
+  Empty/missing audits fail except the two explicit server-only course redirects.
+  Baseline bytes and graph counts are in
+  docs/design/student-bundles-step7-before.json: /learn 1,196,527 raw /
+  341,632 gzip; enrollment/player 1,226,197 / 352,158; video 1,174,487 /
+  334,443. No Tiptap, dnd-kit or ProseMirror client module was present.
+  The after build reports /learn 1,197,452 raw / 341,751 gzip;
+  enrollment/player 1,207,162 / 345,419; video 1,174,487 / 334,442.
+  This is 333.6 → 333.7 KiB, 343.9 → 337.3 KiB and 326.6 → 326.6 KiB
+  respectively, including shared/runtime first-load JS. Deferred transfers
+  are excluded from first-load totals but included in the dependency audit.
+  All six route graphs remain free of authoring modules, including the quiz
+  and assignment entry/engine/history chunks. Exact evidence, methodology
+  and reproduction commands are in docs/design/student-bundles-step7.md
+  and its before/after JSON files.
+- Checks run personally: make gen-api, make lint (both apps' lint, format and
+  strict type-checks), the production web build and production bundle audit
+  passed. Full make test passed: API 1,714, Vitest 230, Playwright 61 passed /
+  7 existing intentional skips / 0 failures, against real Compose services and
+  the host production web server. The final retake-completion wording repair
+  was made while that browser run was active; afterward make lint, make
+  test-web (231 passed), a new production build/bundle audit and the full
+  make test-e2e (61 passed / 7 existing intentional skips / 0 failures) passed
+  on the final source. No API code changed after its full passing run.
+  All 31 renderable page routes have zero serious/critical axe violations;
+  all 16 shell baselines at 360px/1280px in light/dark themes passed.
+- Local gates alone do not complete Step 7. Its exact full SHA, push result
+  and CI URL are reported in the summary and carried into the table at the
+  next authorized plan update, following the convention above. Steps 8/9
+  remain unstarted.
 
 ### Open follow-ups / carried forward
 

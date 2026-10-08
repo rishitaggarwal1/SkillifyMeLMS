@@ -58,6 +58,25 @@ describe("resumeLessonId", () => {
     expect(resumeLessonId(outline, progress, null)).toBe("a");
     expect(resumeLessonId(readOutline({}), progress, null)).toBeNull();
   });
+
+  it("resumes a required quiz while lab placeholders remain excluded", () => {
+    const quizzes = readOutline({
+      modules: [
+        {
+          id: "m",
+          title: "Assessments",
+          position: 1,
+          lessons: [
+            lesson("lab", "lab"),
+            lesson("quiz", "quiz"),
+            lesson("assignment", "assignment"),
+          ],
+        },
+      ],
+    });
+    expect(resumeLessonId(quizzes, new Map(), null)).toBe("quiz");
+    expect(resumeLessonId(quizzes, progressByLesson([done("quiz")]), null)).toBe("assignment");
+  });
 });
 
 describe("neighbours", () => {

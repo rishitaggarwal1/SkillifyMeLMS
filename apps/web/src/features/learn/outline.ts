@@ -31,7 +31,7 @@ export type Outline = {
   modules: OutlineModule[];
 };
 
-export const PLACEHOLDER_TYPES: ReadonlySet<LessonType> = new Set(["quiz", "lab"]);
+export const PLACEHOLDER_TYPES: ReadonlySet<LessonType> = new Set(["lab"]);
 
 /** Read the snapshot defensively: it is typed as an open object in the API schema. */
 export function readOutline(raw: unknown): Outline {

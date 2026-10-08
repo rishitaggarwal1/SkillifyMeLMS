@@ -3,11 +3,13 @@
 import "@/styles/notes-code.css";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { PageSkeleton } from "@/components/patterns/states";
 import { errorMessage } from "@/features/admin/ui";
 import { EnrollmentVideo } from "@/features/video/enrollment-video";
 
@@ -18,10 +20,19 @@ import {
   useCompleteLesson,
   usePdfAccess,
 } from "./api";
-import { AssignmentLesson } from "./assignment-lesson";
 import { PLACEHOLDER_TYPES, type LessonProgress, type OutlineLesson } from "./outline";
 
 type Props = { enrollmentId: string; lesson: OutlineLesson; progress?: LessonProgress };
+
+const QuizLesson = dynamic(() => import("./quiz-lesson"), {
+  loading: () => <PageSkeleton kind="form" />,
+});
+const AssignmentLesson = dynamic(
+  () => import("./assignment-lesson").then((mod) => mod.AssignmentLesson),
+  {
+    loading: () => <PageSkeleton kind="form" />,
+  },
+);
 
 export function LessonView(props: Props) {
   if (PLACEHOLDER_TYPES.has(props.lesson.lesson_type)) return <PlaceholderLesson />;
@@ -33,7 +44,19 @@ export function LessonView(props: Props) {
     case "pdf":
       return <PdfLesson {...props} />;
     case "assignment":
-      return <AssignmentLesson {...props} />;
+      return <AssignmentLesson key={props.enrollmentId + props.lesson.id} {...props} />;
+    case "quiz":
+      // Published Phase 2 placeholders have no quiz definition.
+      return typeof props.lesson.content.quiz_id === "string" ? (
+        <QuizLesson
+          key={props.enrollmentId + props.lesson.id}
+          enrollmentId={props.enrollmentId}
+          lessonId={props.lesson.id}
+          completed={props.progress?.status === "completed"}
+        />
+      ) : (
+        <PlaceholderLesson />
+      );
     default:
       return <PlaceholderLesson />;
   }

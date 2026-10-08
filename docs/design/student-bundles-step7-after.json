@@ -1,0 +1,57 @@
+{
+  "git_head": "c23fd8e71dd0300c6eb2133b0b7e30a1a2d761fe",
+  "application_worktree_modified": true,
+  "next_version": "16.3.6",
+  "build_id": "PyCZgg1yvG0SobGERmSR1",
+  "measurement": "Production first-load JS including shared/runtime chunks; sum of per-file gzip level 9. Redirects have no separate first-load bundle. Dependency audit covers all emitted browser chunks in each route graph, including deferred chunks.",
+  "routes": [
+    {
+      "route": "/learn",
+      "first_load_raw_bytes": 1197452,
+      "first_load_gzip_bytes": 341751,
+      "first_load_chunks": 14,
+      "audited_client_sources": 553,
+      "authoring_dependencies": []
+    },
+    {
+      "route": "/learn/courses/[courseId]",
+      "first_load_raw_bytes": null,
+      "first_load_gzip_bytes": null,
+      "first_load_chunks": 0,
+      "audited_client_sources": 0,
+      "authoring_dependencies": []
+    },
+    {
+      "route": "/learn/courses/[courseId]/lessons/[lessonId]",
+      "first_load_raw_bytes": null,
+      "first_load_gzip_bytes": null,
+      "first_load_chunks": 0,
+      "audited_client_sources": 0,
+      "authoring_dependencies": []
+    },
+    {
+      "route": "/learn/enrollments/[enrollmentId]",
+      "first_load_raw_bytes": 1207162,
+      "first_load_gzip_bytes": 345419,
+      "first_load_chunks": 15,
+      "audited_client_sources": 597,
+      "authoring_dependencies": []
+    },
+    {
+      "route": "/learn/enrollments/[enrollmentId]/lessons/[lessonId]",
+      "first_load_raw_bytes": 1207162,
+      "first_load_gzip_bytes": 345419,
+      "first_load_chunks": 15,
+      "audited_client_sources": 597,
+      "authoring_dependencies": []
+    },
+    {
+      "route": "/learn/enrollments/[enrollmentId]/video/[lessonId]",
+      "first_load_raw_bytes": 1174487,
+      "first_load_gzip_bytes": 334442,
+      "first_load_chunks": 13,
+      "audited_client_sources": 525,
+      "authoring_dependencies": []
+    }
+  ]
+}

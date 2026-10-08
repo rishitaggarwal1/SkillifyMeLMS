@@ -161,6 +161,11 @@ jobs:
       - name: Install Playwright browser
         working-directory: apps/web
         run: pnpm exec playwright install --with-deps chromium
+      - name: Audit student client bundles (including deferred chunks)
+        working-directory: apps/web
+        run: |
+          pnpm exec next experimental-analyze --output
+          node scripts/student-bundles.mjs
       - name: Playwright
         working-directory: apps/web
         # The production server gets the same settings as local dev (.env from .env.example), with
