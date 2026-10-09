@@ -1,6 +1,6 @@
 # Phase 3 — Quizzes and full assignments
 
-**Status: approved (2026-10-04); steps 1-6 complete; step 7 local gates passed, pushed CI pending.** Decisions D1–D7 and
+**Status: approved (2026-10-04); steps 1-7 complete; step 8 in progress.** Decisions D1–D7 and
 the security repair below include the user's approved revisions.
 
 **Baseline:** `4f7d00826e368b9dbd7ce1635332a8b1d93dedb7`, the peeled
@@ -797,7 +797,7 @@ in section 9 were approved on 2026-10-06 before coding; steps 6 and 7 use its gu
 
 ## 14. Implementation record
 
-Steps 1-6 completed with green pushed CI. After each green pushed step, report its full SHA and
+Steps 1-7 completed with green pushed CI. After each green pushed step, report its full SHA and
 CI URL in the step summary; carry known commit/run records into this table in
 the next plan update. Do not invent a self-referential commit SHA or a CI URL
 before the commit/run exists. The close-out summary records its own final run.
@@ -810,8 +810,8 @@ before the commit/run exists. The close-out summary records its own final run.
 | 4    | Complete    | `c34ddc9b265b2865e5ade2a8eb1c89b8f7eb5cf0` | [37494612624](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37494612624) |
 | 5    | Complete    | `c17c0f02ef413ca6979ab92395b58897f552f3a8` | [37517763653](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37517763653) |
 | 6    | Complete    | c23fd8e71dd0300c6eb2133b0b7e30a1a2d761fe   | [37787315118](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37787315118) |
-| 7    | CI pending  | —                                          | —                                                                                        |
-| 8    | Not started | —                                          | —                                                                                        |
+| 7    | Complete    | `a79fc494469e0e58f4c44fc38229f6a578f98f28` | [37811946835](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37811946835) |
+| 8    | In progress | —                                          | —                                                                                        |
 | 9    | Not started | —                                          | —                                                                                        |
 
 ### Deviations
@@ -924,6 +924,26 @@ before/after student bundle measurements and proof that authoring dependencies
 are absent; the production audit also runs in CI. Verification findings and
 new-test setup corrections are listed in the Step 7 implementation record.
 Existing assertions and timeouts are unchanged.
+
+Step 8: no product or architecture deviation. The user additionally requested
+the production shared-module breakdown, a reduction plan toward 200 KiB and
+current-baseline regression budgets. These ship as analysis/CI tooling only;
+no application bundle reduction or dependency change is made in this step.
+Seed repairs: await registered async cache callbacks after the CLI transaction
+commits, preserve the student's existing resume pointer on reruns, and remove
+only demo-scoped video buffers/dirty references on reset. Seed test scenarios now
+use independent course slugs like the repository's factory conventions, so fresh
+and legacy definitions cannot accidentally reuse one another. The approved demo
+percentage assertions change from six to seven required lessons (83% → 85% for
+Priya); new quiz assertions are stronger. Existing timeouts are unchanged. The
+new smoke opens the existing native mobile outline and waits/scopes its quiz
+link there; initial selector failures are verification repairs, not weakened
+assertions or application behavior changes.
+The first full API run exposed two new fixture leaks: a synthetic unrelated
+Redis dirty marker and an extra batch in the canonical demo organization.
+The new test now tears down only its own markers even on failure and uses
+the existing canonical ECE batch. Existing video and identity seed assertions
+and all timeouts remain unchanged; the full suite is rerun after these repairs.
 
 ### Security repairs
 
@@ -1337,6 +1357,75 @@ Existing assertions and timeouts are unchanged.
   next authorized plan update, following the convention above. Steps 8/9
   remain unstarted.
 
+### Step 8 implementation (2026-10-08 to 2026-10-09)
+
+- Step 7's exact SHA and green Actions run are carried into the table. Step 9
+  remains unstarted, including the candidate cheap bundle experiment.
+- Fresh Python Foundations 1.0 contains the existing stable six lessons plus
+  a seventh required quiz. Author the Python skill, bank, all three question
+  types, marks, timer, two-attempt limit and delayed explanation reveal through
+  the skills/assessments services. Quiz scoring, expiry and completion use the
+  normal services; only expiry time preparation is guarded CLI-only SQL.
+- Quiz fixtures: Priya 1/6 then 6/6, Aarav 6/6, Ananya 1/6 (multi-select partial
+  credit), Rohan expired at 0/6, the other four untouched. Existing video, notes
+  and PDF coverage remains. Progress is 85/100/42/28/57/14/0/0 percent for the
+  eight students in account order. No lab execution/completion is invented.
+- Fresh FizzBuzz definitions freeze the due date once, have a 6+4 rubric and
+  10% penalty per started late day. Aarav's raw 9.00 becomes 8.10 after one late
+  day; grade breakdown and accepted penalties are written by assignments.
+  Existing legacy submissions/grades keep their original frozen rules.
+- A normal six-lesson rerun reports `--upgrade-course` and leaves the course
+  and work intact. The guarded flag verifies the unedited legacy definition,
+  publishes 2.0 through courses and opts the **whole CSE batch** into it through
+  the college-admin enrollment service. It preserves original lesson IDs,
+  historical grades and passwords. Already upgraded/fresh runs are idempotent;
+  a partial upgrade can safely resume the whole-batch operation. Edited legacy
+  definitions require manual reconciliation. All risky flags retain nonlocal
+  confirmation and absolute production refusal.
+- Reset covers quiz answers/attempts, immutable assignment attempts/grades,
+  progress and only these demo enrollments' video cache/dirty references.
+  A normal run preserves unfinished human answers, original deadlines,
+  resubmission history and resume pointers. Password rotation remains separate.
+- Extended `test_seed_demo.py` and `test_cli_boundaries.py`: 26 focused cases
+  pass against real Postgres/Redis/Keycloak/MinIO. Separate connections verify
+  seeded scores/grades/due dates; compare reruns/reset, preserve human work,
+  reject edited upgrades, prove CSE members outside `USERS` move and another
+  assigned batch stays on major 1, and deny expiry preparation outside the
+  guarded context. New test fixture corrections retain exact math/assertions.
+  These and the previously affected video/identity seed tests pass together:
+  47 targeted tests after fixture cleanup.
+- Ran actual `make seed-demo`: detected the old local demo and left it intact.
+  Ran the approved `--upgrade-course`, then plain `make seed-demo` twice. Major
+  2.0 was published and all 11 existing CSE enrollments moved, including human
+  members beyond the eight demo students; the credentials file was byte-for-byte
+  unchanged in all three runs. No local reset or password rotation was performed.
+- README documents the richer demo, guarded upgrade/reset/rotation and old-work
+  behavior. The four-role mobile smoke passes and remains read-only: it also
+  reads Priya's failed/passed history and submitted result without starting,
+  answering, submitting or grading an assessment.
+- No endpoint, response schema, event, migration or module boundary changes.
+  Reused endpoint coverage remains in MATRIX/access-control. `make gen-api`
+  regenerated unchanged API types; no manual generated-schema edits.
+- Student bundle report and proposed savings are in
+  [the Step 8 analysis](../design/student-bundles-step8.md). Actual first-load
+  transfer remains unchanged from Step 7; module attribution uses analyzer
+  level-6 DEFLATE with gzip-wrapper accounting, independently from actual
+  whole-file gzip-9 totals. Exclude nomodule-only polyfills and all server output.
+  CI now enforces fixed whole-KiB baseline ceilings in the existing audit,
+  including the all-deferred-chunks authoring ban; the 200 KiB target is still
+  an open follow-up. A fresh production build/analyzer reproduces the exact
+  Step 7 transfer figures. Verified the audit passes current ceilings and
+  fails on an exceeded ceiling, then restored the fixed budgets unchanged.
+  No reduction is implemented in Step 8.
+- Local `make gen-api` and `make lint` passed (Ruff, format, mypy, ESLint,
+  Prettier, strict TypeScript). The final full `make test` passed against Compose
+  backing services and the fresh Windows host production web fallback:
+  **1,723 API**, **231 Vitest**, **61 Playwright**, **7 unchanged deliberate
+  skips**, **0 failures**. Both-width/theme shell screenshots and route axe
+  scans passed, as did the read-only four-role demo. Local gates alone do not complete this step;
+  its own full SHA, pushed green CI and URL go in the summary and are carried
+  into the table at the next authorized plan update.
+
 ### Open follow-ups / carried forward
 
 - Plagiarism detection, AI feedback and coding labs remain outside this brief;
@@ -1350,6 +1439,18 @@ Existing assertions and timeouts are unchanged.
 - Automatic regrading/attempt refunds after grading-key corrections, retakes
   after assignment grading and individual deadline accommodations need separate
   product decisions; this phase preserves the established completion rules.
+- Student first-load performance: **under 200 KiB gzip on every `/learn` route**
+  is the target. Step 8 makes no application bundle reductions. See the
+  [shared top-15 analysis and estimated reduction sequence](../design/student-bundles-step8.md)
+  and its machine-readable production analyzer evidence. The largest player is
+  337.3 KiB; more than 137.3 KiB must be removed to meet the target. Try mechanical
+  named Zod imports in Step 9 only if safe, with before/after measurements and
+  all gates; larger Zod/mini, overlay, class-merging and toast changes remain a
+  Phase 3 follow-up. Estimated combined savings of 123–167 KiB are hypotheses,
+  not achieved results or a guarantee. The mandatory CI audit enforces fixed
+  current-baseline whole-KiB ceilings (334/338/338/327 KiB), never automatically
+  raises them, and must tighten after verified improvements. Preserve runtime
+  validation, shared component accessibility and the authoring-dependency ban.
 
 ### Planning verification
 

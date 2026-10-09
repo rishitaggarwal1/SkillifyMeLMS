@@ -1,0 +1,138 @@
+{
+  "next_version": "16.3.6",
+  "build_id": "GthOS0BBWp3W91gUDnEV1",
+  "method": "Shared = intersection of the four student browser graphs. Ranking uses production analyzer compressed_size: level 6 DEFLATE plus an 18-byte gzip wrapper per module part. Per-module gzip equivalents do not add to whole-file gzip. Analyzer recompiles in production mode with analyze-build IDs, so its filenames differ from production first-load stats. Whole first-load/shared totals independently sum actual transferred files at gzip level 9. Exclude the analyzer-only nomodule polyfill and all SSR/server/non-JS outputs.",
+  "compression_source": "https://github.com/vercel/next.js/blob/canary/turbopack/crates/turbopack-analyze/src/compressed_size.rs",
+  "learn_first_load_gzip_bytes": 341751,
+  "shared_first_load_gzip_bytes": 334442,
+  "shared_first_load_chunks": 13,
+  "top_15": [
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.production.js",
+      "raw_bytes": 200702,
+      "analyzer_deflate_bytes": 63195,
+      "parts": 1,
+      "gzip_equivalent_bytes": 63213
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/schemas.js",
+      "raw_bytes": 43441,
+      "analyzer_deflate_bytes": 11574,
+      "parts": 1,
+      "gzip_equivalent_bytes": 11592
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/sonner@2.0.8_@types+react@1_919e9036f48c64786ce2f890b5542f07/node_modules/sonner/dist/index.mjs",
+      "raw_bytes": 35219,
+      "analyzer_deflate_bytes": 9420,
+      "parts": 1,
+      "gzip_equivalent_bytes": 9438
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/compile.js",
+      "raw_bytes": 55748,
+      "analyzer_deflate_bytes": 7775,
+      "parts": 1,
+      "gzip_equivalent_bytes": 7793
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/compiled/react-server-dom-turbopack/cjs/react-server-dom-turbopack-client.browser.production.js",
+      "raw_bytes": 23169,
+      "analyzer_deflate_bytes": 7483,
+      "parts": 1,
+      "gzip_equivalent_bytes": 7501
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/segment-cache/cache.js",
+      "raw_bytes": 23067,
+      "analyzer_deflate_bytes": 7168,
+      "parts": 1,
+      "gzip_equivalent_bytes": 7186
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/classic/schemas.js",
+      "raw_bytes": 25556,
+      "analyzer_deflate_bytes": 6638,
+      "parts": 1,
+      "gzip_equivalent_bytes": 6656
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/cn@0.4.0/node_modules/cn/dist/engine.js",
+      "raw_bytes": 13563,
+      "analyzer_deflate_bytes": 5735,
+      "parts": 1,
+      "gzip_equivalent_bytes": 5753
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/cn@0.4.0/node_modules/cn/dist/tables.js",
+      "raw_bytes": 11979,
+      "analyzer_deflate_bytes": 4861,
+      "parts": 1,
+      "gzip_equivalent_bytes": 4879
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/json-schema-processors.js",
+      "raw_bytes": 14150,
+      "analyzer_deflate_bytes": 4741,
+      "parts": 1,
+      "gzip_equivalent_bytes": 4759
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/util.js",
+      "raw_bytes": 13499,
+      "analyzer_deflate_bytes": 4726,
+      "parts": 1,
+      "gzip_equivalent_bytes": 4744
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/router-reducer/ppr-navigations.js",
+      "raw_bytes": 10397,
+      "analyzer_deflate_bytes": 4223,
+      "parts": 1,
+      "gzip_equivalent_bytes": 4241
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/classic/from-json-schema.js",
+      "raw_bytes": 12261,
+      "analyzer_deflate_bytes": 4080,
+      "parts": 1,
+      "gzip_equivalent_bytes": 4098
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/to-json-schema.js",
+      "raw_bytes": 10848,
+      "analyzer_deflate_bytes": 4070,
+      "parts": 1,
+      "gzip_equivalent_bytes": 4088
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/segment-cache/scheduler.js",
+      "raw_bytes": 13520,
+      "analyzer_deflate_bytes": 3951,
+      "parts": 1,
+      "gzip_equivalent_bytes": 3969
+    }
+  ],
+  "groups": {
+    "zod": {
+      "modules": 89,
+      "gzip_equivalent_bytes": 135583
+    },
+    "@base-ui/react": {
+      "modules": 142,
+      "gzip_equivalent_bytes": 68464
+    },
+    "@floating-ui": {
+      "modules": 5,
+      "gzip_equivalent_bytes": 8835
+    },
+    "sonner": {
+      "modules": 1,
+      "gzip_equivalent_bytes": 9438
+    },
+    "cn": {
+      "modules": 3,
+      "gzip_equivalent_bytes": 10741
+    }
+  }
+}

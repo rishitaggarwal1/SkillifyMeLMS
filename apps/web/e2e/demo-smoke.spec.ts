@@ -99,7 +99,27 @@ test.describe("demo logins", () => {
     await signInAs(page, "student");
     await page.waitForURL((url) => url.pathname.startsWith("/learn"));
     await expect(page.getByRole("link", { name: /Python Foundations/ })).toContainText(
-      "83% complete",
+      "85% complete",
+    );
+    await page
+      .getByRole("link", { name: /Python Foundations/ })
+      .first()
+      .click();
+    await page.getByText("Course outline", { exact: true }).first().click();
+    const outline = page.getByRole("list", { name: "Course outline", exact: true });
+    await expect(outline).toBeVisible();
+    await outline.getByRole("link", { name: /Python essentials/ }).click();
+    const history = page.getByRole("region", { name: "Quiz attempt history" });
+    await expect(history.getByRole("listitem")).toHaveCount(2);
+    await expect(history.getByRole("listitem").filter({ hasText: "Attempt 1" })).toContainText(
+      "1 / 6 · Not passed",
+    );
+    await expect(history.getByRole("listitem").filter({ hasText: "Attempt 2" })).toContainText(
+      "6 / 6 · Passed",
+    );
+    await history.getByRole("button", { name: "View result for attempt 2" }).click();
+    await expect(page.getByRole("region", { name: "Quiz result", exact: true })).toContainText(
+      "This lesson is complete.",
     );
   });
 });

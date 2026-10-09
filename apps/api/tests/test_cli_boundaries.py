@@ -12,7 +12,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.cli import demo_progress
+from app.cli import demo_assessments, demo_progress
 
 APP = Path(__file__).resolve().parents[1] / "app"
 
@@ -62,3 +62,11 @@ def test_watched_bitmap_covers_every_segment() -> None:
     assert demo_progress.watched_bitmap(12) == bytes([0b11100000])  # 3 segments
     assert demo_progress.watched_bitmap(40) == bytes([0xFF])  # 8 segments
     assert demo_progress.watched_bitmap(41) == bytes([0xFF, 0b10000000])  # 9 segments
+
+
+async def test_expiry_preparation_refuses_outside_seed(
+    monkeypatch: pytest.MonkeyPatch, db_session: AsyncSession
+) -> None:
+    monkeypatch.setattr(demo_progress, "get_settings", _Staging)
+    with pytest.raises(demo_progress.SeedOnlyError):
+        await demo_assessments.prepare_expired_attempt(db_session, uuid4(), uuid4())

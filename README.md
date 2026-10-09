@@ -105,16 +105,38 @@ single-role user to their area.
 | Platform admin | `demo.platform-admin@skillifyme.co.in` | `/platform`: platform counts, organizations and users |
 | College admin | `demo.admin@skillifyme.co.in` | `/admin`: batches; `/admin/courses` shows granted courses and distribution |
 | Instructor | `demo.instructor@skillifyme.co.in` | `/teach`: assigned courses, submissions to grade and batch progress |
-| Student | `demo.student@skillifyme.co.in` | `/learn`: Python Foundations, 83% complete |
+| Student | `demo.student@skillifyme.co.in` | `/learn`: Python Foundations, 85% complete; quiz failed then passed |
 
 `demo.author@skillifyme.co.in` is the instructor in the SkillifyMe publisher org who owns and
 edits the course. The other students are `demo.student2@skillifyme.co.in` through
 `demo.student8@skillifyme.co.in`, all in Demo College's CSE 2026 batch.
 
-The seed publishes **Python Foundations** (two modules, six lessons, including an assignment),
-grants it to Demo College and assigns it to CSE 2026. Students range from 0% to 100%, with three
-submissions and one grade. A normal rerun creates missing data and keeps users' changes and
-existing passwords.
+The seed publishes **Python Foundations** (two modules, seven required lessons: two videos,
+two notes lessons, a PDF, a FizzBuzz assignment and the Python essentials quiz), grants it to
+Demo College and assigns it to CSE 2026. The quiz has all three question types, Python skill
+tags, a ten-minute timer, two attempts and explanations revealed after attempts are exhausted.
+Priya fails then passes, Aarav passes, Ananya fails, Rohan expires without answering and the
+other students have not started. Students range from 0% to 100%, with three submissions and
+one grade. Fresh assignments have a correctness/readability rubric (6 + 4 marks), a due date
+frozen when authored, and a 10% penalty per started late day. Aarav's initial raw grade is
+9/10, reduced to 8.10/10 for one late day. Reruns do not move the due date, alter accepted
+penalties, replace existing attempts/grades or rotate passwords.
+
+An existing Phase 2.5 six-lesson demo is left intact by a normal run, which reports the
+required upgrade. To add the assessments, run:
+
+```bash
+make seed-demo args=--upgrade-course
+make seed-demo
+make seed-demo
+```
+
+The guarded upgrade publishes **2.0**, preserves the first six lesson IDs and existing work,
+and opts the **whole CSE 2026 batch** into the new major through the college-admin service.
+Other batches stay on their existing major. It refuses to overwrite an edited legacy
+definition: reconcile that definition manually first. Existing submissions/grades retain
+their historical rules; `--reset` creates the fresh rubric/late examples if a local operator
+wants to restore the demo. No lab execution is fabricated; labs remain Phase 4.
 
 Random passwords are written only to **`.secrets/demo-credentials.txt`**, which stays out of git;
 they are never printed or logged. Compose mounts `./.secrets` at `/secrets` and writes
@@ -127,10 +149,12 @@ make seed-demo args=--reset             # restore demo progress and submissions
 make seed-demo args=--rotate-passwords  # issue new passwords for every demo login
 ```
 
-Both flags refuse outside `ENVIRONMENT=local` unless you explicitly add
+All three flags (`--reset`, `--rotate-passwords`, `--upgrade-course`) refuse outside
+`ENVIRONMENT=local` unless you explicitly add
 `--i-know-this-is-not-local`. **Production always refuses the demo seed**, including with that
 override. The read-only `apps/web/e2e/demo-smoke.spec.ts` checks the four demo logins and their
-landings at 360px, without submitting or grading anything; it reads the credentials file and
+landings and seeded quiz history/results at 360px, without submitting or grading anything;
+it reads the credentials file and
 disables tracing.
 
 ## Windows development

@@ -3,13 +3,14 @@
     python -m app.cli.seed_demo                     # create whatever is missing
     python -m app.cli.seed_demo --reset             # back to the demo state (local only)
     python -m app.cli.seed_demo --rotate-passwords  # new passwords for every login (local only)
+    python -m app.cli.seed_demo --upgrade-course    # guarded major upgrade of the old demo
 
 Creates, through the same services the API uses (so every rule and check applies):
 - demo logins `demo.<role>@skillifyme.co.in` in Keycloak and the database: a platform admin, the
   publisher's author, Demo College's admin and instructor, and 8 CSE 2026 students;
-- "Python Foundations" (SkillifyMe): 2 modules, 6 lessons (two videos, notes with code, a PDF, an
-  assignment), published 1.0, granted to Demo College and assigned to CSE 2026;
-- varied progress: 0%, partial and complete; three submissions, one graded.
+- "Python Foundations": 2 modules, 7 required lessons, including a three-type quiz and a
+  rubric assignment with a frozen due date/late policy; granted to Demo College/CSE 2026;
+- varied progress, failed/passed/expired quizzes; three submissions, one graded.
 
 **Passwords** are random (20 characters), generated here and written only to
 `DEMO_CREDENTIALS_FILE` (default `.secrets/demo-credentials.txt`, mode 0600, gitignored). They are
@@ -29,6 +30,8 @@ import sys
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -39,7 +42,7 @@ from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.cli import demo_progress
+from app.cli import demo_assessments, demo_progress
 from app.cli.seed import SeedOrg, _upsert_batch, _upsert_org
 from app.core.config import Settings, get_settings
 from app.core.pagination import CursorParams
@@ -47,25 +50,56 @@ from app.core.redis import create_redis
 from app.core.storage import ObjectStorage
 from app.db.base import new_id
 from app.db.session import create_engine, create_sessionmaker
-from app.db.tenancy import set_tenant_context
+from app.db.tenancy import set_tenant_context, system_transaction
+from app.modules.assessments import service as assessments
+from app.modules.assessments.models import QuizAttempt
+from app.modules.assessments.schemas import (
+    AnswerBatch,
+    AnswerInput,
+    AnswerKey,
+    BankCreate,
+    ManualSelection,
+    QuestionBody,
+    QuestionMarks,
+    QuestionOption,
+    QuestionSkills,
+    QuizBody,
+    SavedAnswer,
+)
 from app.modules.assignments import service as assignments
 from app.modules.assignments.models import AssignmentGrade, AssignmentSubmission
-from app.modules.assignments.schemas import AssignmentUpsert, GradeBody, SubmitBody, SubmitText
+from app.modules.assignments.schemas import (
+    AssignmentUpsert,
+    CriterionScore,
+    GradeBody,
+    LatePolicy,
+    Rubric,
+    RubricCriterion,
+    SubmitBody,
+    SubmitText,
+)
 from app.modules.audit.service import AuditActor
 from app.modules.courses import service as courses
 from app.modules.courses.models import Course, LessonType, ReleaseType
 from app.modules.courses.schemas import AssignmentCreate, CourseCreate, LessonCreate, PublishRequest
 from app.modules.enrollments import service as enrollments
 from app.modules.enrollments.models import Enrollment, LessonProgress
+from app.modules.enrollments.schemas import UpgradeRequest
 from app.modules.enrollments.tasks import run_reconcile_course_org
 from app.modules.identity.authz import Principal
 from app.modules.identity.dependencies import RequestContext
 from app.modules.identity.keycloak_admin import KeycloakAdmin, NewUser
 from app.modules.identity.models import BatchMember, Membership, Organization, OrgRole, User
 from app.modules.media import service as media
+from app.modules.skills import service as skills
+from app.modules.skills.schemas import SkillCreate
 
 DOMAIN = "skillifyme.co.in"
 COURSE_SLUG = "python-foundations"
+ASSIGNMENT_MAX_MARKS = 10
+COURSE_DESCRIPTION = (
+    "Start programming in Python: values, loops and functions, with a small project at the end."
+)
 ASSETS = Path(__file__).resolve().parent / "demo_assets"
 NOT_LOCAL_FLAG = "--i-know-this-is-not-local"
 
@@ -201,6 +235,40 @@ LESSONS: tuple[tuple[int, str, LessonType], ...] = (
     (1, "Functions", LessonType.VIDEO),
     (1, "Mini project: FizzBuzz", LessonType.ASSIGNMENT),
 )
+QUIZ_TITLE = "Python essentials"
+RUBRIC = Rubric(
+    criteria=[
+        RubricCriterion(id="correctness", label="Correctness", max_marks=Decimal(6)),
+        RubricCriterion(id="readability", label="Readability", max_marks=Decimal(4)),
+    ]
+)
+QUIZ_QUESTIONS = (
+    QuestionBody(
+        question_type="mcq_single",
+        prompt="What is the type of 42?",
+        options=[QuestionOption(id="int", text="int"), QuestionOption(id="str", text="str")],
+        answer_key=AnswerKey(correct_option_ids=["int"]),
+        explanation="A whole number literal is an int.",
+    ),
+    QuestionBody(
+        question_type="mcq_multi",
+        prompt="Which statements create loops in Python?",
+        options=[
+            QuestionOption(id="for", text="for"),
+            QuestionOption(id="while", text="while"),
+            QuestionOption(id="if", text="if"),
+            QuestionOption(id="def", text="def"),
+        ],
+        answer_key=AnswerKey(correct_option_ids=["for", "while"]),
+        explanation="for iterates a sequence; while repeats while a condition holds.",
+    ),
+    QuestionBody(
+        question_type="fill_blank",
+        prompt="Which keyword defines a function?",
+        answer_key=AnswerKey(accepted_answers=["def"], case_sensitive=True),
+        explanation="def introduces a function definition.",
+    ),
+)
 ANSWERS = {
     "student": "for i in range(1, 101):\n    print(i)",
     "student2": (
@@ -315,6 +383,10 @@ class Seeder:
             )
             actor = AuditActor(user.id, org_id, demo.platform_admin, None, "seed-demo")
             yield RequestContext(session, principal, actor, jobs, self.redis)
+        # CLI sessions must await the same registered post-commit cache callbacks
+        # as the request dependency. Never fire these on rollback.
+        for callback in session.info.pop("async_after_commit_callbacks", []):
+            await callback()
 
 
 def by_local(local: str) -> DemoUser:
@@ -407,7 +479,9 @@ async def _org(session: AsyncSession, slug: str) -> Organization:
     return (await session.scalars(select(Organization).where(Organization.slug == slug))).one()
 
 
-async def ensure_course(s: Seeder, log: Callable[[str], None]) -> tuple[UUID, list[UUID]]:
+async def ensure_course(
+    s: Seeder, log: Callable[[str], None], *, upgrade: bool = False
+) -> tuple[UUID, list[UUID]]:
     """The published course (built once), granted to Demo College and assigned to CSE 2026."""
     author, admin = by_local("author"), by_local("admin")
     async with s.owner() as session:
@@ -420,9 +494,35 @@ async def ensure_course(s: Seeder, log: Callable[[str], None]) -> tuple[UUID, li
         course_id = await build_course(s)
         log("Built and published Python Foundations 1.0")
     async with s.acting(author) as ctx:
-        version = await courses.resolve_version(ctx.session, course_id, 1)
+        major = await courses.latest_major(ctx.session, course_id)
+        version = await courses.resolve_version(ctx.session, course_id, major or 1)
         assert version is not None  # noqa: S101 - built and published above
         lesson_ids = [UUID(lesson["id"]) for _m, lesson in courses.outline_lessons(version)]
+        if len(lesson_ids) == len(LESSONS):
+            if not upgrade:
+                log(
+                    "Existing six-lesson demo: run make seed-demo args=--upgrade-course; "
+                    "course and student work left intact."
+                )
+                return course_id, []
+            await validate_legacy_course(ctx, course_id)
+            draft = await courses.get_draft(ctx, course_id)
+            await extend_assessments(ctx, course_id, draft.modules[1].id, lesson_ids[5])
+            version_out = await courses.publish(
+                ctx,
+                course_id,
+                PublishRequest(
+                    release_type=ReleaseType.MAJOR, release_notes="Phase 3 demo assessments"
+                ),
+                (await courses.get_course(ctx, course_id)).revision,
+            )
+            major = version_out.major
+            version = await courses.resolve_version(ctx.session, course_id, major)
+            assert version is not None  # noqa: S101
+            lesson_ids = [UUID(x["id"]) for _m, x in courses.outline_lessons(version)]
+            log(f"Published guarded demo major upgrade {major}.0; existing work retained")
+        if len(lesson_ids) != len(LESSONS) + 1:
+            raise RuntimeError("Demo outline was edited; reconcile it manually before seeding.")
         await courses.create_assignments(
             ctx, course_id, AssignmentCreate(organization_id=s.orgs["demo-college"])
         )
@@ -430,9 +530,143 @@ async def ensure_course(s: Seeder, log: Callable[[str], None]) -> tuple[UUID, li
         await courses.create_assignments(
             ctx, course_id, AssignmentCreate(batch_ids=[s.orgs["cse"]])
         )
+        if upgrade and (major or 1) > 1:
+            await enrollments.request_upgrade(
+                ctx, course_id, UpgradeRequest(to_major=major or 1, batch_ids=[s.orgs["cse"]])
+            )
+    if upgrade and (major or 1) > 1:
+        await enrollments.run_upgrade(
+            s.app,
+            course_id=course_id,
+            organization_id=s.orgs["demo-college"],
+            user_id=s.users[admin.email].id,
+            to_major=major or 1,
+            batch_ids=[s.orgs["cse"]],
+        )
     # Enroll the batch (what the worker does after an assignment); safe to repeat.
     await run_reconcile_course_org(s.app, course_id, s.orgs["demo-college"])
     return course_id, lesson_ids
+
+
+async def validate_legacy_course(ctx: RequestContext, course_id: UUID) -> None:
+    """Refuse to overwrite any noncanonical legacy draft or published definition."""
+    draft = await courses.get_draft(ctx, course_id)
+    course = draft.course
+    actual = [(i, x.title, x.lesson_type) for i, m in enumerate(draft.modules) for x in m.lessons]
+    canonical = (
+        course.title == "Python Foundations"
+        and course.description == COURSE_DESCRIPTION
+        and not course.is_public_catalog
+        and course.status == "active"
+        and course.current_version is not None
+        and course.current_version.version == "1.0"
+        and [m.title for m in draft.modules] == ["Getting started", "Control flow"]
+        and actual == list(LESSONS)
+    )
+    version = await courses.resolve_version(ctx.session, course_id, 1)
+    if not canonical or version is None:
+        raise RuntimeError(
+            "Demo definition was edited; reconcile it manually before --upgrade-course."
+        )
+    published = list(courses.outline_lessons(version))
+    for i, summary in enumerate(x for m in draft.modules for x in m.lessons):
+        lesson = await courses.get_lesson(ctx, course_id, summary.id)
+        previous = published[i][1]
+        if (
+            str(lesson.id) != previous["id"]
+            or lesson.title != previous["title"]
+            or not lesson.is_required
+            or lesson.skill_ids
+            or lesson.estimated_minutes is not None
+            or lesson.completion_threshold
+            != (
+                Decimal(str(previous["completion_threshold"]))
+                if previous["completion_threshold"] is not None
+                else None
+            )
+        ):
+            raise RuntimeError(
+                "Demo lesson was edited; reconcile it manually before --upgrade-course."
+            )
+        if lesson.lesson_type == LessonType.NOTES:
+            expected = VARIABLES if i == 1 else LOOPS
+            unchanged = lesson.content == {"doc": expected}
+        elif lesson.lesson_type in (LessonType.VIDEO, LessonType.PDF):
+            unchanged = lesson.content == previous["content"]
+        else:
+            definition = await assignments.get_draft(ctx, course_id, lesson.id)
+            unchanged = definition is not None and (
+                definition.title == "FizzBuzz"
+                and definition.instructions == FIZZBUZZ
+                and definition.max_marks == ASSIGNMENT_MAX_MARKS
+                and definition.submission_kinds == ["file", "text"]
+                and definition.due_at is None
+                and definition.rubric is None
+                and (definition.late_policy is None or definition.late_policy.mode == "accept")
+            )
+        if not unchanged:
+            raise RuntimeError(
+                "Demo content was edited; reconcile it manually before --upgrade-course."
+            )
+
+
+async def extend_assessments(
+    ctx: RequestContext, course_id: UUID, module_id: UUID, assignment_lesson: UUID
+) -> None:
+    """Author through the real services; the caller publishes in this transaction."""
+    await assignments.put_draft(
+        ctx,
+        course_id,
+        assignment_lesson,
+        AssignmentUpsert(
+            title="FizzBuzz",
+            instructions=FIZZBUZZ,
+            max_marks=10,
+            submission_kinds=["text", "file"],
+            rubric=RUBRIC,
+            due_at=datetime.now(UTC) - timedelta(hours=12),
+            late_policy=LatePolicy(mode="penalty", percent_per_day=Decimal(10)),
+        ),
+        (await courses.get_course(ctx, course_id)).revision,
+    )
+    bank = await assessments.create_bank(ctx, BankCreate(name="Python demo essentials"), 0)
+    python, _ = await skills.list_skills(
+        ctx.session, CursorParams(limit=100), under=None, q="Python"
+    )
+    skill_ids = [x.id for x in python if x.slug == "python"]
+    if not skill_ids:
+        skill_ids = [(await skills.create_skill(ctx, SkillCreate(name="Python", slug="python"))).id]
+    selections: list[QuestionMarks] = []
+    for body in QUIZ_QUESTIONS:
+        question = await assessments.create_question(ctx, bank.id, body, bank.revision)
+        question = await assessments.set_question_skills(
+            ctx, question.id, QuestionSkills(skill_ids=skill_ids), question.bank_revision
+        )
+        bank = await assessments.get_bank(ctx, bank.id)
+        selections.append(QuestionMarks(question_id=question.id, marks=Decimal(2)))
+    lesson = await courses.create_lesson(
+        ctx,
+        course_id,
+        module_id,
+        LessonCreate(title=QUIZ_TITLE, lesson_type=LessonType.QUIZ),
+        (await courses.get_course(ctx, course_id)).revision,
+    )
+    await assessments.put_quiz(
+        ctx,
+        course_id,
+        lesson.id,
+        QuizBody(
+            title=QUIZ_TITLE,
+            selection=ManualSelection(questions=selections),
+            pass_marks=Decimal(4),
+            time_limit_seconds=600,
+            attempts_allowed=2,
+            randomize_order=True,
+            reveal_mode="explanations",
+            reveal_timing="after_attempts_exhausted",
+        ),
+        lesson.course_revision,
+    )
 
 
 async def build_course(s: Seeder) -> UUID:
@@ -445,8 +679,7 @@ async def build_course(s: Seeder) -> UUID:
             CourseCreate(
                 title="Python Foundations",
                 slug=COURSE_SLUG,
-                description="Start programming in Python: values, loops and functions, with a "
-                "small project at the end.",
+                description=COURSE_DESCRIPTION,
             ),
         )
         modules = [
@@ -496,6 +729,7 @@ async def build_course(s: Seeder) -> UUID:
                     ),
                     draft.course_revision,
                 )
+        await extend_assessments(ctx, course.id, modules[1], lesson_ids[5])
         await courses.publish(
             ctx,
             course.id,
@@ -509,7 +743,6 @@ async def ensure_progress(
     s: Seeder, course_id: UUID, lesson_ids: list[UUID], log: Callable[[str], None]
 ) -> None:
     """Each student's planned progress; steps already done are skipped (idempotent)."""
-    pdf_ttl = s.settings.file_download_ttl_seconds
     submitted: dict[str, UUID] = {}
     for u in USERS:
         if not u.in_cse:
@@ -527,7 +760,8 @@ async def ensure_progress(
                 for p in (await enrollments.get_enrollment(ctx, eid)).progress
                 if p.status == "completed"
             }
-            await enrollments.visit_lesson(ctx, eid, lesson_ids[0])  # "active today"
+            if mine[0].last_accessed_at is None:
+                await enrollments.visit_lesson(ctx, eid, lesson_ids[0])  # first seed visit
             for index in u.lessons:
                 lesson_id = lesson_ids[index]
                 lesson_type = LESSONS[index][2]
@@ -555,14 +789,8 @@ async def ensure_progress(
                     continue
                 if lesson_id in done:
                     continue
-                await enrollments.visit_lesson(ctx, eid, lesson_id)
-                if lesson_type == LessonType.VIDEO:
-                    await demo_progress.mark_video_watched(ctx.session, eid, lesson_id)
-                elif lesson_type == LessonType.PDF:
-                    await enrollments.open_pdf(ctx, s.storage, eid, lesson_id, pdf_ttl)
-                    await enrollments.complete_lesson(ctx, eid, lesson_id)
-                else:
-                    await enrollments.complete_lesson(ctx, eid, lesson_id)
+                await complete_demo_lesson(s, ctx, eid, lesson_id, lesson_type)
+        await ensure_quiz_progress(s, u, eid, lesson_ids[-1])
     instructor = by_local("instructor")
     for local, submission_id in submitted.items():
         async with s.acting(instructor) as ctx:
@@ -573,17 +801,84 @@ async def ensure_progress(
                 s.settings,
                 submission_id=submission_id,
                 body=GradeBody(
-                    score=by_local(local).grade or "0",  # type: ignore[arg-type]
+                    criterion_scores=(
+                        [
+                            CriterionScore(criterion_id="correctness", score=Decimal(6)),
+                            CriterionScore(criterion_id="readability", score=Decimal(3)),
+                        ]
+                        if detail.assignment.rubric
+                        else None
+                    ),
+                    score=(
+                        None if detail.assignment.rubric else Decimal(by_local(local).grade or "0")
+                    ),
                     feedback="Correct and tidy. Try a version with a function next.",
                 ),
                 if_match=detail.submission.revision,
             )
-    log("Progress: 8 CSE students (0%, partial, complete); 3 submissions, 1 graded")
+    log(
+        "Progress: 8 CSE students (0%, partial, complete); 3 submissions, 1 graded; "
+        "quiz examples: untouched, failed, failed then passed, passed, expired"
+    )
+
+
+async def complete_demo_lesson(
+    s: Seeder, ctx: RequestContext, eid: UUID, lesson_id: UUID, lesson_type: LessonType
+) -> None:
+    await enrollments.visit_lesson(ctx, eid, lesson_id)
+    if lesson_type == LessonType.VIDEO:
+        await demo_progress.mark_video_watched(ctx.session, eid, lesson_id)
+    elif lesson_type == LessonType.PDF:
+        await enrollments.open_pdf(
+            ctx, s.storage, eid, lesson_id, s.settings.file_download_ttl_seconds
+        )
+        await enrollments.complete_lesson(ctx, eid, lesson_id)
+    else:
+        await enrollments.complete_lesson(ctx, eid, lesson_id)
+
+
+async def ensure_quiz_progress(s: Seeder, u: DemoUser, eid: UUID, lesson_id: UUID) -> None:
+    if u.local not in {"student", "student2", "student3", "student4"}:
+        return
+    expired: UUID | None = None
+    async with s.acting(u) as ctx:
+        quiz = await assessments.get_student_quiz(ctx, eid, lesson_id)
+        if quiz.attempts_used:
+            return  # Preserve all existing work, including unfinished human attempts.
+        passes = {
+            "student": (False, True),
+            "student2": (True,),
+            "student3": (False,),
+            "student4": (),
+        }[u.local]
+        if not passes:
+            expired = (await assessments.start_attempt(ctx, eid, lesson_id, quiz.revision)).id
+        for passed in passes:
+            rules = await assessments.get_student_quiz(ctx, eid, lesson_id)
+            attempt = await assessments.start_attempt(ctx, eid, lesson_id, rules.revision)
+            answers = []
+            for question in attempt.questions:
+                if question.question_type == "fill_blank":
+                    answer = SavedAnswer(text="def" if passed else "function")
+                elif question.question_type == "mcq_single":
+                    answer = SavedAnswer(option_ids=["int" if passed else "str"])
+                else:
+                    answer = SavedAnswer(option_ids=["for", "while"] if passed else ["for"])
+                answers.append(AnswerInput(question_id=question.id, answer=answer))
+            await assessments.submit_attempt(
+                ctx, attempt.id, AnswerBatch(answers=answers), attempt.revision
+            )
+    if expired is not None:
+        async with s.owner() as session, session.begin():
+            await demo_assessments.prepare_expired_attempt(session, expired, eid)
+        async with system_transaction(s.app, organization_id=s.orgs["demo-college"]) as session:
+            await assessments.finalize_due(session, expired)
 
 
 async def reset_progress(s: Seeder, course_id: UUID) -> None:
     """Operator reset: the demo students' progress and submissions in the demo course."""
     student_ids = [s.users[u.email].id for u in USERS if u.in_cse]
+    demo_progress._require_seed()
     async with s.owner() as session, session.begin():
         enrollment_ids = list(
             await session.scalars(
@@ -594,6 +889,9 @@ async def reset_progress(s: Seeder, course_id: UUID) -> None:
         )
         submission_ids = select(AssignmentSubmission.id).where(
             AssignmentSubmission.enrollment_id.in_(enrollment_ids)
+        )
+        await session.execute(
+            delete(QuizAttempt).where(QuizAttempt.enrollment_id.in_(enrollment_ids))
         )
         await session.execute(
             delete(AssignmentGrade).where(AssignmentGrade.submission_id.in_(submission_ids))
@@ -617,6 +915,15 @@ async def reset_progress(s: Seeder, course_id: UUID) -> None:
                 updated_at=func.now(),
             )
         )
+    # Clear only these demo enrollments' video buffers and authorization checks.
+    # Quiz answers have no Redis layer. Never flush shared Redis databases.
+    for eid in enrollment_ids:
+        keys = [key async for key in s.redis.scan_iter(match=f"progress:video:{eid}:*")]
+        checks = [key async for key in s.redis.scan_iter(match=f"hb:check:{eid}:*")]
+        if keys:
+            await s.redis.srem("progress:dirty", *keys)
+        if keys or checks:
+            await s.redis.delete(*keys, *checks)
 
 
 # ============================================================================ entry point
@@ -629,10 +936,15 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "--rotate-passwords", action="store_true", help="new passwords for every demo login"
     )
     parser.add_argument(
+        "--upgrade-course",
+        action="store_true",
+        help="major upgrade of an unedited six-lesson demo; move the whole CSE batch",
+    )
+    parser.add_argument(
         NOT_LOCAL_FLAG,
         dest="not_local_ok",
         action="store_true",
-        help="allow --reset / --rotate-passwords outside ENVIRONMENT=local",
+        help="allow --reset / --rotate-passwords / --upgrade-course outside ENVIRONMENT=local",
     )
     return parser.parse_args(argv)
 
@@ -641,10 +953,11 @@ def refusal(settings: Settings, args: argparse.Namespace) -> str | None:
     """Why this run must not proceed, or None."""
     if settings.environment == "production":
         return "Refusing to seed demo data in production."
-    risky = args.reset or args.rotate_passwords
+    risky = args.reset or args.rotate_passwords or args.upgrade_course
     if risky and settings.environment != "local" and not args.not_local_ok:
         return (
-            f"--reset and --rotate-passwords change data people may be using; ENVIRONMENT is "
+            "--reset, --rotate-passwords and --upgrade-course change data people may be using; "
+            "ENVIRONMENT is "
             f"{settings.environment!r}, not 'local'. Add {NOT_LOCAL_FLAG} if you mean it."
         )
     return None
@@ -667,11 +980,14 @@ async def run(settings: Settings, args: argparse.Namespace, log: Callable[[str],
             async with seeder.owner() as session:
                 await session.execute(text("SELECT 1"))
             await ensure_accounts(seeder, rotate=args.rotate_passwords, log=log)
-            course_id, lesson_ids = await ensure_course(seeder, log)
-            if args.reset:
-                await reset_progress(seeder, course_id)
-                log("Reset the demo students' progress")
-            await ensure_progress(seeder, course_id, lesson_ids, log)
+            course_id, lesson_ids = await ensure_course(seeder, log, upgrade=args.upgrade_course)
+            if not lesson_ids:
+                return
+            with demo_progress.seed_context():
+                if args.reset:
+                    await reset_progress(seeder, course_id)
+                    log("Reset the demo students' progress")
+                await ensure_progress(seeder, course_id, lesson_ids, log)
     finally:
         await redis.aclose()
         await app_engine.dispose()

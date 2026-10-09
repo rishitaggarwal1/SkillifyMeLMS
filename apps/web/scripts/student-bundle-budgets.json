@@ -1,0 +1,10 @@
+{
+  "description": "Step 7 production baseline, rounded up to whole KiB ceilings. Tighten after verified reductions; never raise automatically. First-load gzip level 9 includes shared/runtime scripts.",
+  "target_gzip_bytes": 204800,
+  "routes": {
+    "/learn": 342016,
+    "/learn/enrollments/[enrollmentId]": 346112,
+    "/learn/enrollments/[enrollmentId]/lessons/[lessonId]": 346112,
+    "/learn/enrollments/[enrollmentId]/video/[lessonId]": 334848
+  }
+}

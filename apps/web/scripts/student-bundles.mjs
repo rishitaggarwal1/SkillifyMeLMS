@@ -22,6 +22,9 @@ function header(path) {
 const stats = JSON.parse(
   readFileSync(join(dist, "diagnostics", "route-bundle-stats.json"), "utf8"),
 );
+const budgets = JSON.parse(
+  readFileSync(join(root, "scripts", "student-bundle-budgets.json"), "utf8"),
+);
 const redirects = new Set([
   "/learn/courses/[courseId]",
   "/learn/courses/[courseId]/lessons/[lessonId]",
@@ -71,17 +74,38 @@ const rows = routes.sort().map((route) => {
   const buffers = files.map((p) => readFileSync(p));
   const raw = buffers.reduce((n, bytes) => n + bytes.length, 0);
   if (first) assert.equal(raw, first.firstLoadUncompressedJsBytes, "Stale build statistics");
+  const gzip = first
+    ? buffers.reduce((n, bytes) => n + gzipSync(bytes, { level: 9 }).length, 0)
+    : null;
+  if (gzip !== null) {
+    assert(Number.isInteger(budgets.routes[route]), "Missing student bundle budget: " + route);
+    assert(
+      gzip <= budgets.routes[route],
+      "Student bundle regression: " +
+        route +
+        " (" +
+        gzip +
+        " > " +
+        budgets.routes[route] +
+        " gzip bytes)",
+    );
+  }
   return {
     route,
     first_load_raw_bytes: first ? raw : null,
-    first_load_gzip_bytes: first
-      ? buffers.reduce((n, bytes) => n + gzipSync(bytes, { level: 9 }).length, 0)
-      : null,
+    first_load_gzip_bytes: gzip,
+    budget_gzip_bytes: gzip === null ? null : budgets.routes[route],
     first_load_chunks: files.length,
     audited_client_sources: clientSources.size,
     authoring_dependencies: forbidden,
   };
 });
+for (const route of Object.keys(budgets.routes)) {
+  assert(
+    rows.some((row) => row.route === route && row.first_load_gzip_bytes !== null),
+    "Budgeted route missing from production build: " + route,
+  );
+}
 const report = {
   git_head: execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim(),
   application_worktree_modified:
