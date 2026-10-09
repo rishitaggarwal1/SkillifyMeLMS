@@ -72,6 +72,10 @@ const rows = routes.sort().map((route) => {
     ? [...new Set(first.firstLoadChunkPaths)].map((p) => join(root, p.replaceAll("\\", "/")))
     : [];
   const buffers = files.map((p) => readFileSync(p));
+  assert(
+    !buffers.some((bytes) => bytes.includes("data-sonner-toast")),
+    "Sonner must load on first use, not student first load: " + route,
+  );
   const raw = buffers.reduce((n, bytes) => n + bytes.length, 0);
   if (first) assert.equal(raw, first.firstLoadUncompressedJsBytes, "Stale build statistics");
   const gzip = first

@@ -6,7 +6,7 @@
  */
 import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/react";
 import { useRef, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { NativeSelect } from "@/components/native-select";
 import { Button } from "@/components/ui/button";

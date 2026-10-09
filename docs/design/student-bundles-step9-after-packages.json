@@ -1,0 +1,3393 @@
+{
+  "next_version": "16.3.6",
+  "build_id": "yRQp-xTUgYieyrSMA_ZOI",
+  "method": "Shared = intersection of synchronous file candidates in the four student browser graphs. Follow module_dependencies from each route's app-page entry and the client bootstrap, excluding app-ssr and async edges. A repeated library source does not promote a chunk whose async entry is unreachable and has no synchronous application entry. Shared-file count is reconciled with actual production shared first-load stats; route-only SSR preload extras do not enter this shared inventory. Count every module in each selected shared file. Ranking uses production analyzer compressed_size: level 6 DEFLATE plus an 18-byte gzip wrapper per module part. Per-module gzip equivalents do not add to whole-file gzip. Analyzer recompiles in production mode with analyze-build IDs, so its filenames differ from production first-load stats. Whole first-load/shared totals independently sum actual transferred files at gzip level 9. Exclude deferred-only files, analyzer-only nomodule polyfill and all SSR/server/non-JS outputs.",
+  "compression_source": "https://github.com/vercel/next.js/blob/canary/turbopack/crates/turbopack-analyze/src/compressed_size.rs",
+  "learn_first_load_gzip_bytes": 266637,
+  "shared_first_load_gzip_bytes": 259328,
+  "shared_first_load_chunks": 12,
+  "top_15": [
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.production.js",
+      "raw_bytes": 200702,
+      "analyzer_deflate_bytes": 63195,
+      "parts": 1,
+      "gzip_equivalent_bytes": 63213
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/schemas.js",
+      "raw_bytes": 40933,
+      "analyzer_deflate_bytes": 10750,
+      "parts": 1,
+      "gzip_equivalent_bytes": 10768
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/compiled/react-server-dom-turbopack/cjs/react-server-dom-turbopack-client.browser.production.js",
+      "raw_bytes": 23169,
+      "analyzer_deflate_bytes": 7483,
+      "parts": 1,
+      "gzip_equivalent_bytes": 7501
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/segment-cache/cache.js",
+      "raw_bytes": 23067,
+      "analyzer_deflate_bytes": 7168,
+      "parts": 1,
+      "gzip_equivalent_bytes": 7186
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/cn@0.4.0/node_modules/cn/dist/engine.js",
+      "raw_bytes": 13553,
+      "analyzer_deflate_bytes": 5728,
+      "parts": 1,
+      "gzip_equivalent_bytes": 5746
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/cn@0.4.0/node_modules/cn/dist/tables.js",
+      "raw_bytes": 11976,
+      "analyzer_deflate_bytes": 4857,
+      "parts": 1,
+      "gzip_equivalent_bytes": 4875
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/util.js",
+      "raw_bytes": 13449,
+      "analyzer_deflate_bytes": 4695,
+      "parts": 1,
+      "gzip_equivalent_bytes": 4713
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/router-reducer/ppr-navigations.js",
+      "raw_bytes": 10397,
+      "analyzer_deflate_bytes": 4223,
+      "parts": 1,
+      "gzip_equivalent_bytes": 4241
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/segment-cache/scheduler.js",
+      "raw_bytes": 13520,
+      "analyzer_deflate_bytes": 3951,
+      "parts": 1,
+      "gzip_equivalent_bytes": 3969
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/components/FloatingFocusManager.mjs",
+      "raw_bytes": 8933,
+      "analyzer_deflate_bytes": 3102,
+      "parts": 1,
+      "gzip_equivalent_bytes": 3120
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@floating-ui+dom@1.8.0/node_modules/@floating-ui/dom/dist/floating-ui.dom.mjs",
+      "raw_bytes": 8207,
+      "analyzer_deflate_bytes": 3043,
+      "parts": 1,
+      "gzip_equivalent_bytes": 3061
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/compiled/react/cjs/react.production.js",
+      "raw_bytes": 7793,
+      "analyzer_deflate_bytes": 2976,
+      "parts": 1,
+      "gzip_equivalent_bytes": 2994
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/segment-cache/navigation.js",
+      "raw_bytes": 6492,
+      "analyzer_deflate_bytes": 2814,
+      "parts": 1,
+      "gzip_equivalent_bytes": 2832
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/api.js",
+      "raw_bytes": 13942,
+      "analyzer_deflate_bytes": 2664,
+      "parts": 1,
+      "gzip_equivalent_bytes": 2682
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@floating-ui+core@1.8.0/node_modules/@floating-ui/core/dist/floating-ui.core.mjs",
+      "raw_bytes": 6306,
+      "analyzer_deflate_bytes": 2655,
+      "parts": 1,
+      "gzip_equivalent_bytes": 2673
+    }
+  ],
+  "all_modules": [
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.production.js",
+      "raw_bytes": 200702,
+      "analyzer_deflate_bytes": 63195,
+      "parts": 1,
+      "gzip_equivalent_bytes": 63213
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/schemas.js",
+      "raw_bytes": 40933,
+      "analyzer_deflate_bytes": 10750,
+      "parts": 1,
+      "gzip_equivalent_bytes": 10768
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/compiled/react-server-dom-turbopack/cjs/react-server-dom-turbopack-client.browser.production.js",
+      "raw_bytes": 23169,
+      "analyzer_deflate_bytes": 7483,
+      "parts": 1,
+      "gzip_equivalent_bytes": 7501
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/segment-cache/cache.js",
+      "raw_bytes": 23067,
+      "analyzer_deflate_bytes": 7168,
+      "parts": 1,
+      "gzip_equivalent_bytes": 7186
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/cn@0.4.0/node_modules/cn/dist/engine.js",
+      "raw_bytes": 13553,
+      "analyzer_deflate_bytes": 5728,
+      "parts": 1,
+      "gzip_equivalent_bytes": 5746
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/cn@0.4.0/node_modules/cn/dist/tables.js",
+      "raw_bytes": 11976,
+      "analyzer_deflate_bytes": 4857,
+      "parts": 1,
+      "gzip_equivalent_bytes": 4875
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/util.js",
+      "raw_bytes": 13449,
+      "analyzer_deflate_bytes": 4695,
+      "parts": 1,
+      "gzip_equivalent_bytes": 4713
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/router-reducer/ppr-navigations.js",
+      "raw_bytes": 10397,
+      "analyzer_deflate_bytes": 4223,
+      "parts": 1,
+      "gzip_equivalent_bytes": 4241
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/segment-cache/scheduler.js",
+      "raw_bytes": 13520,
+      "analyzer_deflate_bytes": 3951,
+      "parts": 1,
+      "gzip_equivalent_bytes": 3969
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/components/FloatingFocusManager.mjs",
+      "raw_bytes": 8933,
+      "analyzer_deflate_bytes": 3102,
+      "parts": 1,
+      "gzip_equivalent_bytes": 3120
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@floating-ui+dom@1.8.0/node_modules/@floating-ui/dom/dist/floating-ui.dom.mjs",
+      "raw_bytes": 8207,
+      "analyzer_deflate_bytes": 3043,
+      "parts": 1,
+      "gzip_equivalent_bytes": 3061
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/compiled/react/cjs/react.production.js",
+      "raw_bytes": 7793,
+      "analyzer_deflate_bytes": 2976,
+      "parts": 1,
+      "gzip_equivalent_bytes": 2994
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/segment-cache/navigation.js",
+      "raw_bytes": 6492,
+      "analyzer_deflate_bytes": 2814,
+      "parts": 1,
+      "gzip_equivalent_bytes": 2832
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/api.js",
+      "raw_bytes": 13942,
+      "analyzer_deflate_bytes": 2664,
+      "parts": 1,
+      "gzip_equivalent_bytes": 2682
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@floating-ui+core@1.8.0/node_modules/@floating-ui/core/dist/floating-ui.core.mjs",
+      "raw_bytes": 6306,
+      "analyzer_deflate_bytes": 2655,
+      "parts": 1,
+      "gzip_equivalent_bytes": 2673
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/hooks/useListNavigation.mjs",
+      "raw_bytes": 6995,
+      "analyzer_deflate_bytes": 2650,
+      "parts": 1,
+      "gzip_equivalent_bytes": 2668
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/root/MenuRoot.mjs",
+      "raw_bytes": 6540,
+      "analyzer_deflate_bytes": 2607,
+      "parts": 1,
+      "gzip_equivalent_bytes": 2625
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/hooks/useDismiss.mjs",
+      "raw_bytes": 7023,
+      "analyzer_deflate_bytes": 2571,
+      "parts": 1,
+      "gzip_equivalent_bytes": 2589
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/openapi-fetch@0.17.0/node_modules/openapi-fetch/dist/index.mjs",
+      "raw_bytes": 6404,
+      "analyzer_deflate_bytes": 2505,
+      "parts": 1,
+      "gzip_equivalent_bytes": 2523
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/internals/useAnchorPositioning.mjs",
+      "raw_bytes": 5510,
+      "analyzer_deflate_bytes": 2458,
+      "parts": 1,
+      "gzip_equivalent_bytes": 2476
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+query-core@5.103.2/node_modules/@tanstack/query-core/build/modern/queryObserver.js",
+      "raw_bytes": 6977,
+      "analyzer_deflate_bytes": 2400,
+      "parts": 1,
+      "gzip_equivalent_bytes": 2418
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/regexes.js",
+      "raw_bytes": 6242,
+      "analyzer_deflate_bytes": 2395,
+      "parts": 1,
+      "gzip_equivalent_bytes": 2413
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/lib/constants.js",
+      "raw_bytes": 6561,
+      "analyzer_deflate_bytes": 2307,
+      "parts": 1,
+      "gzip_equivalent_bytes": 2325
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+query-core@5.103.2/node_modules/@tanstack/query-core/build/modern/query.js",
+      "raw_bytes": 6575,
+      "analyzer_deflate_bytes": 2273,
+      "parts": 1,
+      "gzip_equivalent_bytes": 2291
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/router-reducer/reducers/server-action-reducer.js",
+      "raw_bytes": 4682,
+      "analyzer_deflate_bytes": 2239,
+      "parts": 1,
+      "gzip_equivalent_bytes": 2257
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/layout-router.js",
+      "raw_bytes": 5266,
+      "analyzer_deflate_bytes": 2171,
+      "parts": 1,
+      "gzip_equivalent_bytes": 2189
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/app-router.js",
+      "raw_bytes": 5548,
+      "analyzer_deflate_bytes": 2106,
+      "parts": 1,
+      "gzip_equivalent_bytes": 2124
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/checks.js",
+      "raw_bytes": 8240,
+      "analyzer_deflate_bytes": 2059,
+      "parts": 1,
+      "gzip_equivalent_bytes": 2077
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/router-reducer/fetch-server-response.js",
+      "raw_bytes": 4296,
+      "analyzer_deflate_bytes": 1932,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1950
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/segment-cache/optimistic-routes.js",
+      "raw_bytes": 5382,
+      "analyzer_deflate_bytes": 1901,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1919
+    },
+    {
+      "source": "[turbopack]/shared/runtime/runtime-utils.ts",
+      "raw_bytes": 4372,
+      "analyzer_deflate_bytes": 1848,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1866
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/popups/popupStoreUtils.mjs",
+      "raw_bytes": 4715,
+      "analyzer_deflate_bytes": 1726,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1744
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/trigger/MenuTrigger.mjs",
+      "raw_bytes": 3632,
+      "analyzer_deflate_bytes": 1717,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1735
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/hooks/useHoverReferenceInteraction.mjs",
+      "raw_bytes": 4986,
+      "analyzer_deflate_bytes": 1707,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1725
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/positioner/MenuPositioner.mjs",
+      "raw_bytes": 4132,
+      "analyzer_deflate_bytes": 1680,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1698
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/app-router-instance.js",
+      "raw_bytes": 4608,
+      "analyzer_deflate_bytes": 1676,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1694
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/app-dir/link.js",
+      "raw_bytes": 3391,
+      "analyzer_deflate_bytes": 1668,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1686
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/app-index.js",
+      "raw_bytes": 3714,
+      "analyzer_deflate_bytes": 1616,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1634
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/useScrollLock.mjs",
+      "raw_bytes": 3984,
+      "analyzer_deflate_bytes": 1505,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1523
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+query-core@5.103.2/node_modules/@tanstack/query-core/build/modern/queryClient.js",
+      "raw_bytes": 4706,
+      "analyzer_deflate_bytes": 1505,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1523
+    },
+    {
+      "source": "[project]/src/components/patterns/role-frame.tsx",
+      "raw_bytes": 4177,
+      "analyzer_deflate_bytes": 1494,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1512
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+query-core@5.103.2/node_modules/@tanstack/query-core/build/modern/utils.js",
+      "raw_bytes": 3459,
+      "analyzer_deflate_bytes": 1482,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1500
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/compiled/scheduler/cjs/scheduler.production.js",
+      "raw_bytes": 3460,
+      "analyzer_deflate_bytes": 1465,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1483
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next-themes@0.4.6_react-dom_fd3d756ec9892b4be61b4e6df38c5329/node_modules/next-themes/dist/index.mjs",
+      "raw_bytes": 3292,
+      "analyzer_deflate_bytes": 1458,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1476
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/compiled/react-dom/cjs/react-dom.production.js",
+      "raw_bytes": 3660,
+      "analyzer_deflate_bytes": 1279,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1297
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/usePopupViewport.mjs",
+      "raw_bytes": 2936,
+      "analyzer_deflate_bytes": 1234,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1252
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/links.js",
+      "raw_bytes": 3188,
+      "analyzer_deflate_bytes": 1229,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1247
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@floating-ui+react-dom@2.1._735e95704ae5cf22d7cb7c1194888638/node_modules/@floating-ui/react-dom/dist/floating-ui.react-dom.mjs",
+      "raw_bytes": 2676,
+      "analyzer_deflate_bytes": 1210,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1228
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/utils/tabbable.mjs",
+      "raw_bytes": 3098,
+      "analyzer_deflate_bytes": 1206,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1224
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/builtin/error-styles.js",
+      "raw_bytes": 2885,
+      "analyzer_deflate_bytes": 1198,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1216
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+query-core@5.103.2/node_modules/@tanstack/query-core/build/modern/mutation.js",
+      "raw_bytes": 3530,
+      "analyzer_deflate_bytes": 1192,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1210
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/submenu-trigger/MenuSubmenuTrigger.mjs",
+      "raw_bytes": 2156,
+      "analyzer_deflate_bytes": 1183,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1201
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/router-reducer/create-initial-router-state.js",
+      "raw_bytes": 2269,
+      "analyzer_deflate_bytes": 1154,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1172
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@floating-ui+utils@0.2.12/node_modules/@floating-ui/utils/dist/floating-ui.utils.dom.mjs",
+      "raw_bytes": 2646,
+      "analyzer_deflate_bytes": 1153,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1171
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/utils.js",
+      "raw_bytes": 2382,
+      "analyzer_deflate_bytes": 1136,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1154
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/hooks/useHoverFloatingInteraction.mjs",
+      "raw_bytes": 2633,
+      "analyzer_deflate_bytes": 1136,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1154
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/internals/composite/list/CompositeList.mjs",
+      "raw_bytes": 2648,
+      "analyzer_deflate_bytes": 1124,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1142
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/safePolygon.mjs",
+      "raw_bytes": 2583,
+      "analyzer_deflate_bytes": 1123,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1141
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/errors.js",
+      "raw_bytes": 3195,
+      "analyzer_deflate_bytes": 1123,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1141
+    },
+    {
+      "source": "[project]/src/components/patterns/states.tsx",
+      "raw_bytes": 2754,
+      "analyzer_deflate_bytes": 1120,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1138
+    },
+    {
+      "source": "[turbopack]/browser/runtime/dom/runtime-backend-dom.ts",
+      "raw_bytes": 2717,
+      "analyzer_deflate_bytes": 1097,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1115
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/router-reducer/compute-changed-path.js",
+      "raw_bytes": 2607,
+      "analyzer_deflate_bytes": 1093,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1111
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/components/FloatingPortal.mjs",
+      "raw_bytes": 2233,
+      "analyzer_deflate_bytes": 1077,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1095
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/parse.js",
+      "raw_bytes": 3143,
+      "analyzer_deflate_bytes": 1065,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1083
+    },
+    {
+      "source": "[turbopack]/browser/runtime/base/runtime-base.ts",
+      "raw_bytes": 2071,
+      "analyzer_deflate_bytes": 1049,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1067
+    },
+    {
+      "source": "[project]/src/features/auth/site-header.tsx",
+      "raw_bytes": 2304,
+      "analyzer_deflate_bytes": 1048,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1066
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/store/MenuStore.mjs",
+      "raw_bytes": 2879,
+      "analyzer_deflate_bytes": 1043,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1061
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/route-params.js",
+      "raw_bytes": 2258,
+      "analyzer_deflate_bytes": 1012,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1030
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/flight-data-helpers.js",
+      "raw_bytes": 1945,
+      "analyzer_deflate_bytes": 994,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1012
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/navigation.js",
+      "raw_bytes": 2730,
+      "analyzer_deflate_bytes": 985,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1003
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/segment-cache/cache-map.js",
+      "raw_bytes": 2440,
+      "analyzer_deflate_bytes": 982,
+      "parts": 1,
+      "gzip_equivalent_bytes": 1000
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/hooks/useFocus.mjs",
+      "raw_bytes": 2297,
+      "analyzer_deflate_bytes": 947,
+      "parts": 1,
+      "gzip_equivalent_bytes": 965
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/popup/MenuPopup.mjs",
+      "raw_bytes": 1821,
+      "analyzer_deflate_bytes": 914,
+      "parts": 1,
+      "gzip_equivalent_bytes": 932
+    },
+    {
+      "source": "[project]/src/components/ui/button.tsx",
+      "raw_bytes": 2732,
+      "analyzer_deflate_bytes": 902,
+      "parts": 1,
+      "gzip_equivalent_bytes": 920
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/internals/use-button/useButton.mjs",
+      "raw_bytes": 1865,
+      "analyzer_deflate_bytes": 901,
+      "parts": 1,
+      "gzip_equivalent_bytes": 919
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/compiled/process/browser.js",
+      "raw_bytes": 1989,
+      "analyzer_deflate_bytes": 878,
+      "parts": 1,
+      "gzip_equivalent_bytes": 896
+    },
+    {
+      "source": "[project]/src/components/ui/dialog.tsx",
+      "raw_bytes": 2336,
+      "analyzer_deflate_bytes": 868,
+      "parts": 1,
+      "gzip_equivalent_bytes": 886
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/core.js",
+      "raw_bytes": 1783,
+      "analyzer_deflate_bytes": 852,
+      "parts": 1,
+      "gzip_equivalent_bytes": 870
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/hooks/useTypeahead.mjs",
+      "raw_bytes": 1747,
+      "analyzer_deflate_bytes": 841,
+      "parts": 1,
+      "gzip_equivalent_bytes": 859
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/usePopupAutoResize.mjs",
+      "raw_bytes": 1832,
+      "analyzer_deflate_bytes": 828,
+      "parts": 1,
+      "gzip_equivalent_bytes": 846
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/hooks/useClick.mjs",
+      "raw_bytes": 1577,
+      "analyzer_deflate_bytes": 817,
+      "parts": 1,
+      "gzip_equivalent_bytes": 835
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/error-boundary.js",
+      "raw_bytes": 1745,
+      "analyzer_deflate_bytes": 793,
+      "parts": 1,
+      "gzip_equivalent_bytes": 811
+    },
+    {
+      "source": "[project]/src/components/ui/dropdown-menu.tsx",
+      "raw_bytes": 2007,
+      "analyzer_deflate_bytes": 774,
+      "parts": 1,
+      "gzip_equivalent_bytes": 792
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/http-access-fallback/error-boundary.js",
+      "raw_bytes": 1745,
+      "analyzer_deflate_bytes": 764,
+      "parts": 1,
+      "gzip_equivalent_bytes": 782
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/instant-messages.js",
+      "raw_bytes": 1634,
+      "analyzer_deflate_bytes": 760,
+      "parts": 1,
+      "gzip_equivalent_bytes": 778
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/utils/markOthers.mjs",
+      "raw_bytes": 1558,
+      "analyzer_deflate_bytes": 750,
+      "parts": 1,
+      "gzip_equivalent_bytes": 768
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/segment-cache/vary-path.js",
+      "raw_bytes": 2577,
+      "analyzer_deflate_bytes": 748,
+      "parts": 1,
+      "gzip_equivalent_bytes": 766
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+query-core@5.103.2/node_modules/@tanstack/query-core/build/modern/retryer.js",
+      "raw_bytes": 1444,
+      "analyzer_deflate_bytes": 737,
+      "parts": 1,
+      "gzip_equivalent_bytes": 755
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/app-router-announcer.js",
+      "raw_bytes": 1435,
+      "analyzer_deflate_bytes": 716,
+      "parts": 1,
+      "gzip_equivalent_bytes": 734
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/dialog/popup/DialogPopup.mjs",
+      "raw_bytes": 1308,
+      "analyzer_deflate_bytes": 702,
+      "parts": 1,
+      "gzip_equivalent_bytes": 720
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/dialog/root/useDialogRoot.mjs",
+      "raw_bytes": 1432,
+      "analyzer_deflate_bytes": 700,
+      "parts": 1,
+      "gzip_equivalent_bytes": 718
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/app-router-headers.js",
+      "raw_bytes": 1734,
+      "analyzer_deflate_bytes": 691,
+      "parts": 1,
+      "gzip_equivalent_bytes": 709
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+query-core@5.103.2/node_modules/@tanstack/query-core/build/modern/infiniteQueryBehavior.js",
+      "raw_bytes": 1473,
+      "analyzer_deflate_bytes": 691,
+      "parts": 1,
+      "gzip_equivalent_bytes": 709
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+query-core@5.103.2/node_modules/@tanstack/query-core/build/modern/mutationCache.js",
+      "raw_bytes": 1546,
+      "analyzer_deflate_bytes": 687,
+      "parts": 1,
+      "gzip_equivalent_bytes": 705
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/router/utils/interception-routes.js",
+      "raw_bytes": 1633,
+      "analyzer_deflate_bytes": 684,
+      "parts": 1,
+      "gzip_equivalent_bytes": 702
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/internals/useRenderElement.mjs",
+      "raw_bytes": 1275,
+      "analyzer_deflate_bytes": 681,
+      "parts": 1,
+      "gzip_equivalent_bytes": 699
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/hooks/useFloating.mjs",
+      "raw_bytes": 1781,
+      "analyzer_deflate_bytes": 680,
+      "parts": 1,
+      "gzip_equivalent_bytes": 698
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@floating-ui+utils@0.2.12/node_modules/@floating-ui/utils/dist/floating-ui.utils.mjs",
+      "raw_bytes": 1379,
+      "analyzer_deflate_bytes": 679,
+      "parts": 1,
+      "gzip_equivalent_bytes": 697
+    },
+    {
+      "source": "[project]/src/components/ui/badge.tsx",
+      "raw_bytes": 1445,
+      "analyzer_deflate_bytes": 665,
+      "parts": 1,
+      "gzip_equivalent_bytes": 683
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/router-reducer/reducers/restore-reducer.js",
+      "raw_bytes": 1249,
+      "analyzer_deflate_bytes": 659,
+      "parts": 1,
+      "gzip_equivalent_bytes": 677
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/dialog/store/DialogStore.mjs",
+      "raw_bytes": 1490,
+      "analyzer_deflate_bytes": 659,
+      "parts": 1,
+      "gzip_equivalent_bytes": 677
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/checkbox-item/MenuCheckboxItem.mjs",
+      "raw_bytes": 1063,
+      "analyzer_deflate_bytes": 658,
+      "parts": 1,
+      "gzip_equivalent_bytes": 676
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/router-reducer/reducers/refresh-reducer.js",
+      "raw_bytes": 1156,
+      "analyzer_deflate_bytes": 655,
+      "parts": 1,
+      "gzip_equivalent_bytes": 673
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/builtin/global-error.js",
+      "raw_bytes": 1534,
+      "analyzer_deflate_bytes": 651,
+      "parts": 1,
+      "gzip_equivalent_bytes": 669
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/errors/graceful-degrade-boundary.js",
+      "raw_bytes": 1252,
+      "analyzer_deflate_bytes": 647,
+      "parts": 1,
+      "gzip_equivalent_bytes": 665
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/segment-cache/bfcache.js",
+      "raw_bytes": 1437,
+      "analyzer_deflate_bytes": 646,
+      "parts": 1,
+      "gzip_equivalent_bytes": 664
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/redirect-boundary.js",
+      "raw_bytes": 1334,
+      "analyzer_deflate_bytes": 632,
+      "parts": 1,
+      "gzip_equivalent_bytes": 650
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/store/useStore.mjs",
+      "raw_bytes": 1376,
+      "analyzer_deflate_bytes": 626,
+      "parts": 1,
+      "gzip_equivalent_bytes": 644
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/router/utils/format-url.js",
+      "raw_bytes": 1036,
+      "analyzer_deflate_bytes": 624,
+      "parts": 1,
+      "gzip_equivalent_bytes": 642
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/merge-props/mergeProps.mjs",
+      "raw_bytes": 1362,
+      "analyzer_deflate_bytes": 621,
+      "parts": 1,
+      "gzip_equivalent_bytes": 639
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/dialog/trigger/DialogTrigger.mjs",
+      "raw_bytes": 985,
+      "analyzer_deflate_bytes": 617,
+      "parts": 1,
+      "gzip_equivalent_bytes": 635
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/mini/schemas.js",
+      "raw_bytes": 1434,
+      "analyzer_deflate_bytes": 607,
+      "parts": 1,
+      "gzip_equivalent_bytes": 625
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/redirect.js",
+      "raw_bytes": 1611,
+      "analyzer_deflate_bytes": 604,
+      "parts": 1,
+      "gzip_equivalent_bytes": 622
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/dialog/root/useRenderDialogRoot.mjs",
+      "raw_bytes": 1142,
+      "analyzer_deflate_bytes": 604,
+      "parts": 1,
+      "gzip_equivalent_bytes": 622
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/build/polyfills/polyfill-module.js",
+      "raw_bytes": 1535,
+      "analyzer_deflate_bytes": 594,
+      "parts": 1,
+      "gzip_equivalent_bytes": 612
+    },
+    {
+      "source": "[project]/src/features/auth/org-switcher.tsx",
+      "raw_bytes": 1205,
+      "analyzer_deflate_bytes": 594,
+      "parts": 1,
+      "gzip_equivalent_bytes": 612
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/hooks/useHoverInteractionSharedState.mjs",
+      "raw_bytes": 1670,
+      "analyzer_deflate_bytes": 584,
+      "parts": 1,
+      "gzip_equivalent_bytes": 602
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+react-query@5.103.2_react@19.2.8/node_modules/@tanstack/react-query/build/modern/useBaseQuery.js",
+      "raw_bytes": 1069,
+      "analyzer_deflate_bytes": 583,
+      "parts": 1,
+      "gzip_equivalent_bytes": 601
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/popups/popupHandle.mjs",
+      "raw_bytes": 1405,
+      "analyzer_deflate_bytes": 582,
+      "parts": 1,
+      "gzip_equivalent_bytes": 600
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/use-action-queue.js",
+      "raw_bytes": 1268,
+      "analyzer_deflate_bytes": 575,
+      "parts": 1,
+      "gzip_equivalent_bytes": 593
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/popups/store.mjs",
+      "raw_bytes": 1549,
+      "analyzer_deflate_bytes": 574,
+      "parts": 1,
+      "gzip_equivalent_bytes": 592
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/segment.js",
+      "raw_bytes": 1118,
+      "analyzer_deflate_bytes": 573,
+      "parts": 1,
+      "gzip_equivalent_bytes": 591
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/internals/useAnimationsFinished.mjs",
+      "raw_bytes": 1010,
+      "analyzer_deflate_bytes": 570,
+      "parts": 1,
+      "gzip_equivalent_bytes": 588
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/router-reducer/reducers/server-patch-reducer.js",
+      "raw_bytes": 997,
+      "analyzer_deflate_bytes": 561,
+      "parts": 1,
+      "gzip_equivalent_bytes": 579
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/shared/src/build/buildLucideIconNode.mjs",
+      "raw_bytes": 1106,
+      "analyzer_deflate_bytes": 561,
+      "parts": 1,
+      "gzip_equivalent_bytes": 579
+    },
+    {
+      "source": "[project]/src/components/ui/alert.tsx",
+      "raw_bytes": 1283,
+      "analyzer_deflate_bytes": 548,
+      "parts": 1,
+      "gzip_equivalent_bytes": 566
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/router-reducer/set-cache-busting-search-param.js",
+      "raw_bytes": 1203,
+      "analyzer_deflate_bytes": 546,
+      "parts": 1,
+      "gzip_equivalent_bytes": 564
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/radio-item/MenuRadioItem.mjs",
+      "raw_bytes": 866,
+      "analyzer_deflate_bytes": 543,
+      "parts": 1,
+      "gzip_equivalent_bytes": 561
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/segment-cache/lru.js",
+      "raw_bytes": 1132,
+      "analyzer_deflate_bytes": 542,
+      "parts": 1,
+      "gzip_equivalent_bytes": 560
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/store/ReactStore.mjs",
+      "raw_bytes": 1168,
+      "analyzer_deflate_bytes": 542,
+      "parts": 1,
+      "gzip_equivalent_bytes": 560
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/item/useMenuItemCommonProps.mjs",
+      "raw_bytes": 871,
+      "analyzer_deflate_bytes": 539,
+      "parts": 1,
+      "gzip_equivalent_bytes": 557
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/utils/composite.mjs",
+      "raw_bytes": 1046,
+      "analyzer_deflate_bytes": 535,
+      "parts": 1,
+      "gzip_equivalent_bytes": 553
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/http-access-fallback/http-access-fallback.js",
+      "raw_bytes": 1060,
+      "analyzer_deflate_bytes": 529,
+      "parts": 1,
+      "gzip_equivalent_bytes": 547
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/router-reducer/reducers/navigate-reducer.js",
+      "raw_bytes": 911,
+      "analyzer_deflate_bytes": 521,
+      "parts": 1,
+      "gzip_equivalent_bytes": 539
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/set-attributes-from-props.js",
+      "raw_bytes": 959,
+      "analyzer_deflate_bytes": 518,
+      "parts": 1,
+      "gzip_equivalent_bytes": 536
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/router-reducer/router-reducer.js",
+      "raw_bytes": 1150,
+      "analyzer_deflate_bytes": 515,
+      "parts": 1,
+      "gzip_equivalent_bytes": 533
+    },
+    {
+      "source": "[project]/src/components/ui/lazy-toaster.tsx",
+      "raw_bytes": 953,
+      "analyzer_deflate_bytes": 514,
+      "parts": 1,
+      "gzip_equivalent_bytes": 532
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/middleware/arrow.mjs",
+      "raw_bytes": 876,
+      "analyzer_deflate_bytes": 513,
+      "parts": 1,
+      "gzip_equivalent_bytes": 531
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/navigation.react-server.js",
+      "raw_bytes": 1111,
+      "analyzer_deflate_bytes": 510,
+      "parts": 1,
+      "gzip_equivalent_bytes": 528
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+query-core@5.103.2/node_modules/@tanstack/query-core/build/modern/queryCache.js",
+      "raw_bytes": 1131,
+      "analyzer_deflate_bytes": 506,
+      "parts": 1,
+      "gzip_equivalent_bytes": 524
+    },
+    {
+      "source": "[project]/src/features/auth/roles.ts",
+      "raw_bytes": 974,
+      "analyzer_deflate_bytes": 505,
+      "parts": 1,
+      "gzip_equivalent_bytes": 523
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/app-bootstrap.js",
+      "raw_bytes": 848,
+      "analyzer_deflate_bytes": 495,
+      "parts": 1,
+      "gzip_equivalent_bytes": 513
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/utils/element.mjs",
+      "raw_bytes": 942,
+      "analyzer_deflate_bytes": 490,
+      "parts": 1,
+      "gzip_equivalent_bytes": 508
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/app-router-types.js",
+      "raw_bytes": 1150,
+      "analyzer_deflate_bytes": 485,
+      "parts": 1,
+      "gzip_equivalent_bytes": 503
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/components/FloatingRootStore.mjs",
+      "raw_bytes": 1074,
+      "analyzer_deflate_bytes": 484,
+      "parts": 1,
+      "gzip_equivalent_bytes": 502
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/router/utils/cache-busting-search-param.js",
+      "raw_bytes": 884,
+      "analyzer_deflate_bytes": 483,
+      "parts": 1,
+      "gzip_equivalent_bytes": 501
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/react-client-callbacks/error-boundary-callbacks.js",
+      "raw_bytes": 955,
+      "analyzer_deflate_bytes": 482,
+      "parts": 1,
+      "gzip_equivalent_bytes": 500
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/segment-cache/segment-value-encoding.js",
+      "raw_bytes": 848,
+      "analyzer_deflate_bytes": 482,
+      "parts": 1,
+      "gzip_equivalent_bytes": 500
+    },
+    {
+      "source": "[project]/src/features/auth/queries.ts",
+      "raw_bytes": 750,
+      "analyzer_deflate_bytes": 479,
+      "parts": 1,
+      "gzip_equivalent_bytes": 497
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/useAnimationFrame.mjs",
+      "raw_bytes": 1096,
+      "analyzer_deflate_bytes": 471,
+      "parts": 1,
+      "gzip_equivalent_bytes": 489
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/hooks/useSyncedFloatingRootContext.mjs",
+      "raw_bytes": 911,
+      "analyzer_deflate_bytes": 468,
+      "parts": 1,
+      "gzip_equivalent_bytes": 486
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/app-router-utils.js",
+      "raw_bytes": 854,
+      "analyzer_deflate_bytes": 467,
+      "parts": 1,
+      "gzip_equivalent_bytes": 485
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/useMergedRefs.mjs",
+      "raw_bytes": 973,
+      "analyzer_deflate_bytes": 466,
+      "parts": 1,
+      "gzip_equivalent_bytes": 484
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/asset-prefix.js",
+      "raw_bytes": 959,
+      "analyzer_deflate_bytes": 454,
+      "parts": 1,
+      "gzip_equivalent_bytes": 472
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/router-reducer/reducers/find-head-in-cache.js",
+      "raw_bytes": 825,
+      "analyzer_deflate_bytes": 442,
+      "parts": 1,
+      "gzip_equivalent_bytes": 460
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/segment-cache/navigation-testing-lock.disabled.js",
+      "raw_bytes": 1131,
+      "analyzer_deflate_bytes": 440,
+      "parts": 1,
+      "gzip_equivalent_bytes": 458
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/segment-cache/types.js",
+      "raw_bytes": 863,
+      "analyzer_deflate_bytes": 438,
+      "parts": 1,
+      "gzip_equivalent_bytes": 456
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/router-reducer/router-reducer-types.js",
+      "raw_bytes": 873,
+      "analyzer_deflate_bytes": 436,
+      "parts": 1,
+      "gzip_equivalent_bytes": 454
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/client-page.js",
+      "raw_bytes": 818,
+      "analyzer_deflate_bytes": 435,
+      "parts": 1,
+      "gzip_equivalent_bytes": 453
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/internals/reason-parts.mjs",
+      "raw_bytes": 1049,
+      "analyzer_deflate_bytes": 435,
+      "parts": 1,
+      "gzip_equivalent_bytes": 453
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/use-sync-external-store@1.7.0_react@19.2.8/node_modules/use-sync-external-store/cjs/use-sync-external-store-shim/with-selector.production.js",
+      "raw_bytes": 792,
+      "analyzer_deflate_bytes": 431,
+      "parts": 1,
+      "gzip_equivalent_bytes": 449
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/adaptiveOriginMiddleware.mjs",
+      "raw_bytes": 782,
+      "analyzer_deflate_bytes": 426,
+      "parts": 1,
+      "gzip_equivalent_bytes": 444
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/redirect-error.js",
+      "raw_bytes": 760,
+      "analyzer_deflate_bytes": 421,
+      "parts": 1,
+      "gzip_equivalent_bytes": 439
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/nav-failure-handler.js",
+      "raw_bytes": 819,
+      "analyzer_deflate_bytes": 419,
+      "parts": 1,
+      "gzip_equivalent_bytes": 437
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/server-reference-info.js",
+      "raw_bytes": 747,
+      "analyzer_deflate_bytes": 417,
+      "parts": 1,
+      "gzip_equivalent_bytes": 435
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/router-reducer/is-navigating-to-new-root-layout.js",
+      "raw_bytes": 797,
+      "analyzer_deflate_bytes": 411,
+      "parts": 1,
+      "gzip_equivalent_bytes": 429
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/router/utils/querystring.js",
+      "raw_bytes": 776,
+      "analyzer_deflate_bytes": 409,
+      "parts": 1,
+      "gzip_equivalent_bytes": 427
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/utils/event.mjs",
+      "raw_bytes": 864,
+      "analyzer_deflate_bytes": 409,
+      "parts": 1,
+      "gzip_equivalent_bytes": 427
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/readonly-url-search-params.js",
+      "raw_bytes": 790,
+      "analyzer_deflate_bytes": 405,
+      "parts": 1,
+      "gzip_equivalent_bytes": 423
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
+      "raw_bytes": 627,
+      "analyzer_deflate_bytes": 399,
+      "parts": 1,
+      "gzip_equivalent_bytes": 417
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+query-core@5.103.2/node_modules/@tanstack/query-core/build/modern/focusManager.js",
+      "raw_bytes": 778,
+      "analyzer_deflate_bytes": 397,
+      "parts": 1,
+      "gzip_equivalent_bytes": 415
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/class-variance-authority@0.7.1/node_modules/class-variance-authority/dist/index.mjs",
+      "raw_bytes": 764,
+      "analyzer_deflate_bytes": 396,
+      "parts": 1,
+      "gzip_equivalent_bytes": 414
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/navigation-untracked.js",
+      "raw_bytes": 734,
+      "analyzer_deflate_bytes": 395,
+      "parts": 1,
+      "gzip_equivalent_bytes": 413
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/item/useMenuItem.mjs",
+      "raw_bytes": 622,
+      "analyzer_deflate_bytes": 382,
+      "parts": 1,
+      "gzip_equivalent_bytes": 400
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/use-sync-external-store@1.7.0_react@19.2.8/node_modules/use-sync-external-store/cjs/use-sync-external-store-shim.production.js",
+      "raw_bytes": 735,
+      "analyzer_deflate_bytes": 380,
+      "parts": 1,
+      "gzip_equivalent_bytes": 398
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/router-transition.js",
+      "raw_bytes": 706,
+      "analyzer_deflate_bytes": 379,
+      "parts": 1,
+      "gzip_equivalent_bytes": 397
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/segment-cache/cache-key.js",
+      "raw_bytes": 686,
+      "analyzer_deflate_bytes": 376,
+      "parts": 1,
+      "gzip_equivalent_bytes": 394
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/components/FloatingTree.mjs",
+      "raw_bytes": 725,
+      "analyzer_deflate_bytes": 376,
+      "parts": 1,
+      "gzip_equivalent_bytes": 394
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/link-item/MenuLinkItem.mjs",
+      "raw_bytes": 591,
+      "analyzer_deflate_bytes": 376,
+      "parts": 1,
+      "gzip_equivalent_bytes": 394
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/client-segment.js",
+      "raw_bytes": 664,
+      "analyzer_deflate_bytes": 375,
+      "parts": 1,
+      "gzip_equivalent_bytes": 393
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/errors/root-error-boundary.js",
+      "raw_bytes": 719,
+      "analyzer_deflate_bytes": 374,
+      "parts": 1,
+      "gzip_equivalent_bytes": 392
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/bfcache-state-manager.js",
+      "raw_bytes": 743,
+      "analyzer_deflate_bytes": 374,
+      "parts": 1,
+      "gzip_equivalent_bytes": 392
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/doc.js",
+      "raw_bytes": 794,
+      "analyzer_deflate_bytes": 373,
+      "parts": 1,
+      "gzip_equivalent_bytes": 391
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/dialog/store/DialogHandle.mjs",
+      "raw_bytes": 567,
+      "analyzer_deflate_bytes": 373,
+      "parts": 1,
+      "gzip_equivalent_bytes": 391
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/useOpenInteractionType.mjs",
+      "raw_bytes": 571,
+      "analyzer_deflate_bytes": 372,
+      "parts": 1,
+      "gzip_equivalent_bytes": 390
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/react-client-callbacks/on-recoverable-error.js",
+      "raw_bytes": 666,
+      "analyzer_deflate_bytes": 369,
+      "parts": 1,
+      "gzip_equivalent_bytes": 387
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/radio-group/MenuRadioGroup.mjs",
+      "raw_bytes": 602,
+      "analyzer_deflate_bytes": 366,
+      "parts": 1,
+      "gzip_equivalent_bytes": 384
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/Icon.mjs",
+      "raw_bytes": 631,
+      "analyzer_deflate_bytes": 359,
+      "parts": 1,
+      "gzip_equivalent_bytes": 377
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/use-merged-ref.js",
+      "raw_bytes": 766,
+      "analyzer_deflate_bytes": 358,
+      "parts": 1,
+      "gzip_equivalent_bytes": 376
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/internals/useTransitionStatus.mjs",
+      "raw_bytes": 814,
+      "analyzer_deflate_bytes": 356,
+      "parts": 1,
+      "gzip_equivalent_bytes": 374
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/lib/is-error.js",
+      "raw_bytes": 595,
+      "analyzer_deflate_bytes": 355,
+      "parts": 1,
+      "gzip_equivalent_bytes": 373
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/registries.js",
+      "raw_bytes": 745,
+      "analyzer_deflate_bytes": 349,
+      "parts": 1,
+      "gzip_equivalent_bytes": 367
+    },
+    {
+      "source": "[project]/src/lib/api/errors.ts",
+      "raw_bytes": 588,
+      "analyzer_deflate_bytes": 347,
+      "parts": 1,
+      "gzip_equivalent_bytes": 365
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/hooks-client-context.shared-runtime.js",
+      "raw_bytes": 680,
+      "analyzer_deflate_bytes": 346,
+      "parts": 1,
+      "gzip_equivalent_bytes": 364
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+query-core@5.103.2/node_modules/@tanstack/query-core/build/modern/onlineManager.js",
+      "raw_bytes": 700,
+      "analyzer_deflate_bytes": 346,
+      "parts": 1,
+      "gzip_equivalent_bytes": 364
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/popups/useTriggerFocusGuards.mjs",
+      "raw_bytes": 717,
+      "analyzer_deflate_bytes": 346,
+      "parts": 1,
+      "gzip_equivalent_bytes": 364
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/unauthorized.js",
+      "raw_bytes": 641,
+      "analyzer_deflate_bytes": 345,
+      "parts": 1,
+      "gzip_equivalent_bytes": 363
+    },
+    {
+      "source": "[project]/src/components/patterns/theme-control.tsx",
+      "raw_bytes": 586,
+      "analyzer_deflate_bytes": 345,
+      "parts": 1,
+      "gzip_equivalent_bytes": 363
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/forbidden.js",
+      "raw_bytes": 638,
+      "analyzer_deflate_bytes": 343,
+      "parts": 1,
+      "gzip_equivalent_bytes": 361
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/app-call-server.js",
+      "raw_bytes": 603,
+      "analyzer_deflate_bytes": 342,
+      "parts": 1,
+      "gzip_equivalent_bytes": 360
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/router/utils/html-bots.js",
+      "raw_bytes": 485,
+      "analyzer_deflate_bytes": 342,
+      "parts": 1,
+      "gzip_equivalent_bytes": 360
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/router-reducer/reducers/has-interception-route-in-current-tree.js",
+      "raw_bytes": 712,
+      "analyzer_deflate_bytes": 341,
+      "parts": 1,
+      "gzip_equivalent_bytes": 359
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/checkbox-item-indicator/MenuCheckboxItemIndicator.mjs",
+      "raw_bytes": 549,
+      "analyzer_deflate_bytes": 341,
+      "parts": 1,
+      "gzip_equivalent_bytes": 359
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/store/MenuHandle.mjs",
+      "raw_bytes": 554,
+      "analyzer_deflate_bytes": 339,
+      "parts": 1,
+      "gzip_equivalent_bytes": 357
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/item/MenuItem.mjs",
+      "raw_bytes": 538,
+      "analyzer_deflate_bytes": 336,
+      "parts": 1,
+      "gzip_equivalent_bytes": 354
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/internals/composite/list/useCompositeListItem.mjs",
+      "raw_bytes": 578,
+      "analyzer_deflate_bytes": 335,
+      "parts": 1,
+      "gzip_equivalent_bytes": 353
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/segment-cache/prefetch.js",
+      "raw_bytes": 606,
+      "analyzer_deflate_bytes": 332,
+      "parts": 1,
+      "gzip_equivalent_bytes": 350
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/backdrop/MenuBackdrop.mjs",
+      "raw_bytes": 534,
+      "analyzer_deflate_bytes": 332,
+      "parts": 1,
+      "gzip_equivalent_bytes": 350
+    },
+    {
+      "source": "[project]/src/components/native-select.tsx",
+      "raw_bytes": 489,
+      "analyzer_deflate_bytes": 331,
+      "parts": 1,
+      "gzip_equivalent_bytes": 349
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@swc+helpers@0.5.23/node_modules/@swc/helpers/cjs/_interop_require_wildcard.cjs",
+      "raw_bytes": 760,
+      "analyzer_deflate_bytes": 329,
+      "parts": 1,
+      "gzip_equivalent_bytes": 347
+    },
+    {
+      "source": "[project]/src/lib/toast-queue.ts",
+      "raw_bytes": 617,
+      "analyzer_deflate_bytes": 329,
+      "parts": 1,
+      "gzip_equivalent_bytes": 347
+    },
+    {
+      "source": "[turbopack]/browser/runtime/base/build-base.ts",
+      "raw_bytes": 604,
+      "analyzer_deflate_bytes": 324,
+      "parts": 1,
+      "gzip_equivalent_bytes": 342
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+react-query@5.103.2_react@19.2.8/node_modules/@tanstack/react-query/build/modern/errorBoundaryUtils.js",
+      "raw_bytes": 548,
+      "analyzer_deflate_bytes": 322,
+      "parts": 1,
+      "gzip_equivalent_bytes": 340
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/normalize-trailing-slash.js",
+      "raw_bytes": 557,
+      "analyzer_deflate_bytes": 320,
+      "parts": 1,
+      "gzip_equivalent_bytes": 338
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/radio-item-indicator/MenuRadioItemIndicator.mjs",
+      "raw_bytes": 525,
+      "analyzer_deflate_bytes": 316,
+      "parts": 1,
+      "gzip_equivalent_bytes": 334
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/unrecognized-action-error.js",
+      "raw_bytes": 620,
+      "analyzer_deflate_bytes": 315,
+      "parts": 1,
+      "gzip_equivalent_bytes": 333
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/dialog/backdrop/DialogBackdrop.mjs",
+      "raw_bytes": 503,
+      "analyzer_deflate_bytes": 313,
+      "parts": 1,
+      "gzip_equivalent_bytes": 331
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/fastHooks.mjs",
+      "raw_bytes": 505,
+      "analyzer_deflate_bytes": 312,
+      "parts": 1,
+      "gzip_equivalent_bytes": 330
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/not-found.js",
+      "raw_bytes": 568,
+      "analyzer_deflate_bytes": 311,
+      "parts": 1,
+      "gzip_equivalent_bytes": 329
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/dialog/viewport/DialogViewport.mjs",
+      "raw_bytes": 515,
+      "analyzer_deflate_bytes": 310,
+      "parts": 1,
+      "gzip_equivalent_bytes": 328
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/instant-validation/boundary.js",
+      "raw_bytes": 706,
+      "analyzer_deflate_bytes": 308,
+      "parts": 1,
+      "gzip_equivalent_bytes": 326
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/InternalBackdrop.mjs",
+      "raw_bytes": 503,
+      "analyzer_deflate_bytes": 307,
+      "parts": 1,
+      "gzip_equivalent_bytes": 325
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/lib/framework/boundary-components.js",
+      "raw_bytes": 737,
+      "analyzer_deflate_bytes": 306,
+      "parts": 1,
+      "gzip_equivalent_bytes": 324
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/assign-location.js",
+      "raw_bytes": 546,
+      "analyzer_deflate_bytes": 303,
+      "parts": 1,
+      "gzip_equivalent_bytes": 321
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/getPseudoElementBounds.mjs",
+      "raw_bytes": 569,
+      "analyzer_deflate_bytes": 303,
+      "parts": 1,
+      "gzip_equivalent_bytes": 321
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/dialog/close/DialogClose.mjs",
+      "raw_bytes": 439,
+      "analyzer_deflate_bytes": 303,
+      "parts": 1,
+      "gzip_equivalent_bytes": 321
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/instant-validation/impl.browser.js",
+      "raw_bytes": 603,
+      "analyzer_deflate_bytes": 302,
+      "parts": 1,
+      "gzip_equivalent_bytes": 320
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/router-reducer/create-router-cache-key.js",
+      "raw_bytes": 530,
+      "analyzer_deflate_bytes": 299,
+      "parts": 1,
+      "gzip_equivalent_bytes": 317
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/handle-isr-error.js",
+      "raw_bytes": 529,
+      "analyzer_deflate_bytes": 296,
+      "parts": 1,
+      "gzip_equivalent_bytes": 314
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/unstable-rethrow.browser.js",
+      "raw_bytes": 532,
+      "analyzer_deflate_bytes": 296,
+      "parts": 1,
+      "gzip_equivalent_bytes": 314
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/render-from-template-context.js",
+      "raw_bytes": 527,
+      "analyzer_deflate_bytes": 295,
+      "parts": 1,
+      "gzip_equivalent_bytes": 313
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/deployment-id.js",
+      "raw_bytes": 556,
+      "analyzer_deflate_bytes": 294,
+      "parts": 1,
+      "gzip_equivalent_bytes": 312
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/lazy-dynamic/bailout-to-csr.js",
+      "raw_bytes": 484,
+      "analyzer_deflate_bytes": 292,
+      "parts": 1,
+      "gzip_equivalent_bytes": 310
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/router/utils/is-bot.js",
+      "raw_bytes": 561,
+      "analyzer_deflate_bytes": 292,
+      "parts": 1,
+      "gzip_equivalent_bytes": 310
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/store/Store.mjs",
+      "raw_bytes": 634,
+      "analyzer_deflate_bytes": 292,
+      "parts": 1,
+      "gzip_equivalent_bytes": 310
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/shadowDom.mjs",
+      "raw_bytes": 496,
+      "analyzer_deflate_bytes": 286,
+      "parts": 1,
+      "gzip_equivalent_bytes": 304
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/client-boundary-params.browser.js",
+      "raw_bytes": 549,
+      "analyzer_deflate_bytes": 283,
+      "parts": 1,
+      "gzip_equivalent_bytes": 301
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/internals/constants.mjs",
+      "raw_bytes": 397,
+      "analyzer_deflate_bytes": 282,
+      "parts": 1,
+      "gzip_equivalent_bytes": 300
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/internals/composite/item/useCompositeItem.mjs",
+      "raw_bytes": 415,
+      "analyzer_deflate_bytes": 282,
+      "parts": 1,
+      "gzip_equivalent_bytes": 300
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/lib/javascript-url.js",
+      "raw_bytes": 547,
+      "analyzer_deflate_bytes": 281,
+      "parts": 1,
+      "gzip_equivalent_bytes": 299
+    },
+    {
+      "source": "[project]/src/features/learn/learn-shell.tsx",
+      "raw_bytes": 648,
+      "analyzer_deflate_bytes": 281,
+      "parts": 1,
+      "gzip_equivalent_bytes": 299
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/app-next-turbopack.js",
+      "raw_bytes": 458,
+      "analyzer_deflate_bytes": 279,
+      "parts": 1,
+      "gzip_equivalent_bytes": 297
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/FocusGuard.mjs",
+      "raw_bytes": 359,
+      "analyzer_deflate_bytes": 279,
+      "parts": 1,
+      "gzip_equivalent_bytes": 297
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/request/search-params.browser.prod.js",
+      "raw_bytes": 503,
+      "analyzer_deflate_bytes": 278,
+      "parts": 1,
+      "gzip_equivalent_bytes": 296
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/segment-cache/vary-params-decoding.js",
+      "raw_bytes": 441,
+      "analyzer_deflate_bytes": 277,
+      "parts": 1,
+      "gzip_equivalent_bytes": 295
+    },
+    {
+      "source": "[project]/src/app/providers.tsx",
+      "raw_bytes": 542,
+      "analyzer_deflate_bytes": 277,
+      "parts": 1,
+      "gzip_equivalent_bytes": 295
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/button/Button.mjs",
+      "raw_bytes": 552,
+      "analyzer_deflate_bytes": 276,
+      "parts": 1,
+      "gzip_equivalent_bytes": 294
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/router/utils/disable-smooth-scroll.js",
+      "raw_bytes": 455,
+      "analyzer_deflate_bytes": 275,
+      "parts": 1,
+      "gzip_equivalent_bytes": 293
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/is-next-router-error.js",
+      "raw_bytes": 491,
+      "analyzer_deflate_bytes": 274,
+      "parts": 1,
+      "gzip_equivalent_bytes": 292
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/request/params.browser.prod.js",
+      "raw_bytes": 497,
+      "analyzer_deflate_bytes": 273,
+      "parts": 1,
+      "gzip_equivalent_bytes": 291
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/redirect-status-code.js",
+      "raw_bytes": 521,
+      "analyzer_deflate_bytes": 271,
+      "parts": 1,
+      "gzip_equivalent_bytes": 289
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/add-base-path.js",
+      "raw_bytes": 485,
+      "analyzer_deflate_bytes": 270,
+      "parts": 1,
+      "gzip_equivalent_bytes": 288
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+query-core@5.103.2/node_modules/@tanstack/query-core/build/modern/notifyManager.js",
+      "raw_bytes": 421,
+      "analyzer_deflate_bytes": 270,
+      "parts": 1,
+      "gzip_equivalent_bytes": 288
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+query-core@5.103.2/node_modules/@tanstack/query-core/build/modern/removable.js",
+      "raw_bytes": 460,
+      "analyzer_deflate_bytes": 269,
+      "parts": 1,
+      "gzip_equivalent_bytes": 287
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/dialog/portal/DialogPortal.mjs",
+      "raw_bytes": 406,
+      "analyzer_deflate_bytes": 269,
+      "parts": 1,
+      "gzip_equivalent_bytes": 287
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/arrow/MenuArrow.mjs",
+      "raw_bytes": 389,
+      "analyzer_deflate_bytes": 268,
+      "parts": 1,
+      "gzip_equivalent_bytes": 286
+    },
+    {
+      "source": "[project]/src/lib/api/client.ts",
+      "raw_bytes": 328,
+      "analyzer_deflate_bytes": 264,
+      "parts": 1,
+      "gzip_equivalent_bytes": 282
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/invariant-error.js",
+      "raw_bytes": 399,
+      "analyzer_deflate_bytes": 261,
+      "parts": 1,
+      "gzip_equivalent_bytes": 279
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/useTimeout.mjs",
+      "raw_bytes": 465,
+      "analyzer_deflate_bytes": 261,
+      "parts": 1,
+      "gzip_equivalent_bytes": 279
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/useStableCallback.mjs",
+      "raw_bytes": 398,
+      "analyzer_deflate_bytes": 259,
+      "parts": 1,
+      "gzip_equivalent_bytes": 277
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/router-reducer/reducers/committed-state.js",
+      "raw_bytes": 503,
+      "analyzer_deflate_bytes": 257,
+      "parts": 1,
+      "gzip_equivalent_bytes": 275
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/navigation-build-id.js",
+      "raw_bytes": 501,
+      "analyzer_deflate_bytes": 257,
+      "parts": 1,
+      "gzip_equivalent_bytes": 275
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/is-plain-object.js",
+      "raw_bytes": 419,
+      "analyzer_deflate_bytes": 255,
+      "parts": 1,
+      "gzip_equivalent_bytes": 273
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/lib/framework/boundary-constants.js",
+      "raw_bytes": 460,
+      "analyzer_deflate_bytes": 254,
+      "parts": 1,
+      "gzip_equivalent_bytes": 272
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/router/utils/is-local-url.js",
+      "raw_bytes": 360,
+      "analyzer_deflate_bytes": 252,
+      "parts": 1,
+      "gzip_equivalent_bytes": 270
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/app-router-context.shared-runtime.js",
+      "raw_bytes": 551,
+      "analyzer_deflate_bytes": 251,
+      "parts": 1,
+      "gzip_equivalent_bytes": 269
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/server-async-storage.browser.js",
+      "raw_bytes": 495,
+      "analyzer_deflate_bytes": 248,
+      "parts": 1,
+      "gzip_equivalent_bytes": 266
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/match-segments.js",
+      "raw_bytes": 478,
+      "analyzer_deflate_bytes": 247,
+      "parts": 1,
+      "gzip_equivalent_bytes": 265
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/useFocusableWhenDisabled.mjs",
+      "raw_bytes": 357,
+      "analyzer_deflate_bytes": 247,
+      "parts": 1,
+      "gzip_equivalent_bytes": 265
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/hash.js",
+      "raw_bytes": 358,
+      "analyzer_deflate_bytes": 246,
+      "parts": 1,
+      "gzip_equivalent_bytes": 264
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/navigation-dynamic-rendering.browser.js",
+      "raw_bytes": 459,
+      "analyzer_deflate_bytes": 245,
+      "parts": 1,
+      "gzip_equivalent_bytes": 263
+    },
+    {
+      "source": "[project]/src/components/ui/label.tsx",
+      "raw_bytes": 388,
+      "analyzer_deflate_bytes": 245,
+      "parts": 1,
+      "gzip_equivalent_bytes": 263
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/router-reducer/create-href-from-url.js",
+      "raw_bytes": 444,
+      "analyzer_deflate_bytes": 243,
+      "parts": 1,
+      "gzip_equivalent_bytes": 261
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/react-client-callbacks/report-global-error.js",
+      "raw_bytes": 462,
+      "analyzer_deflate_bytes": 242,
+      "parts": 1,
+      "gzip_equivalent_bytes": 260
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/useMixedToggleClickHandler.mjs",
+      "raw_bytes": 344,
+      "analyzer_deflate_bytes": 242,
+      "parts": 1,
+      "gzip_equivalent_bytes": 260
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/has-base-path.js",
+      "raw_bytes": 437,
+      "analyzer_deflate_bytes": 241,
+      "parts": 1,
+      "gzip_equivalent_bytes": 259
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+react-query@5.103.2_react@19.2.8/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js",
+      "raw_bytes": 381,
+      "analyzer_deflate_bytes": 240,
+      "parts": 1,
+      "gzip_equivalent_bytes": 258
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/server-inserted-html.shared-runtime.js",
+      "raw_bytes": 356,
+      "analyzer_deflate_bytes": 239,
+      "parts": 1,
+      "gzip_equivalent_bytes": 257
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/router/utils/parse-path.js",
+      "raw_bytes": 369,
+      "analyzer_deflate_bytes": 239,
+      "parts": 1,
+      "gzip_equivalent_bytes": 257
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/viewport/MenuViewport.mjs",
+      "raw_bytes": 378,
+      "analyzer_deflate_bytes": 237,
+      "parts": 1,
+      "gzip_equivalent_bytes": 255
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+react-query@5.103.2_react@19.2.8/node_modules/@tanstack/react-query/build/modern/suspense.js",
+      "raw_bytes": 358,
+      "analyzer_deflate_bytes": 236,
+      "parts": 1,
+      "gzip_equivalent_bytes": 254
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/request/search-params.browser.js",
+      "raw_bytes": 449,
+      "analyzer_deflate_bytes": 236,
+      "parts": 1,
+      "gzip_equivalent_bytes": 254
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/compiled/react/cjs/react-jsx-runtime.production.js",
+      "raw_bytes": 347,
+      "analyzer_deflate_bytes": 232,
+      "parts": 1,
+      "gzip_equivalent_bytes": 250
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/request/params.browser.js",
+      "raw_bytes": 437,
+      "analyzer_deflate_bytes": 232,
+      "parts": 1,
+      "gzip_equivalent_bytes": 250
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/internals/createBaseUIEventDetails.mjs",
+      "raw_bytes": 316,
+      "analyzer_deflate_bytes": 231,
+      "parts": 1,
+      "gzip_equivalent_bytes": 249
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/utils/constants.mjs",
+      "raw_bytes": 341,
+      "analyzer_deflate_bytes": 230,
+      "parts": 1,
+      "gzip_equivalent_bytes": 248
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/icons/circle-check.mjs",
+      "raw_bytes": 458,
+      "analyzer_deflate_bytes": 230,
+      "parts": 1,
+      "gzip_equivalent_bytes": 248
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/portal/MenuPortal.mjs",
+      "raw_bytes": 309,
+      "analyzer_deflate_bytes": 229,
+      "parts": 1,
+      "gzip_equivalent_bytes": 247
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/register-deployment-id-global.js",
+      "raw_bytes": 365,
+      "analyzer_deflate_bytes": 228,
+      "parts": 1,
+      "gzip_equivalent_bytes": 246
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/icons/building-complex.mjs",
+      "raw_bytes": 394,
+      "analyzer_deflate_bytes": 224,
+      "parts": 1,
+      "gzip_equivalent_bytes": 242
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/popupStateMapping.mjs",
+      "raw_bytes": 383,
+      "analyzer_deflate_bytes": 223,
+      "parts": 1,
+      "gzip_equivalent_bytes": 241
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/remove-base-path.js",
+      "raw_bytes": 411,
+      "analyzer_deflate_bytes": 222,
+      "parts": 1,
+      "gzip_equivalent_bytes": 240
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/formatErrorMessage.mjs",
+      "raw_bytes": 280,
+      "analyzer_deflate_bytes": 222,
+      "parts": 1,
+      "gzip_equivalent_bytes": 240
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/router/utils/add-path-prefix.js",
+      "raw_bytes": 305,
+      "analyzer_deflate_bytes": 221,
+      "parts": 1,
+      "gzip_equivalent_bytes": 239
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/popups/popupTriggerMap.mjs",
+      "raw_bytes": 446,
+      "analyzer_deflate_bytes": 220,
+      "parts": 1,
+      "gzip_equivalent_bytes": 238
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/clsx@2.1.1/node_modules/clsx/dist/clsx.mjs",
+      "raw_bytes": 363,
+      "analyzer_deflate_bytes": 220,
+      "parts": 1,
+      "gzip_equivalent_bytes": 238
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/icons/file-question-mark.mjs",
+      "raw_bytes": 343,
+      "analyzer_deflate_bytes": 219,
+      "parts": 1,
+      "gzip_equivalent_bytes": 237
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/unresolved-thenable.js",
+      "raw_bytes": 401,
+      "analyzer_deflate_bytes": 218,
+      "parts": 1,
+      "gzip_equivalent_bytes": 236
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/icons/layers.mjs",
+      "raw_bytes": 424,
+      "analyzer_deflate_bytes": 217,
+      "parts": 1,
+      "gzip_equivalent_bytes": 235
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/useId.mjs",
+      "raw_bytes": 301,
+      "analyzer_deflate_bytes": 216,
+      "parts": 1,
+      "gzip_equivalent_bytes": 234
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/internals/useOpenChangeComplete.mjs",
+      "raw_bytes": 277,
+      "analyzer_deflate_bytes": 216,
+      "parts": 1,
+      "gzip_equivalent_bytes": 234
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/components/segment-cache/fetch.js",
+      "raw_bytes": 412,
+      "analyzer_deflate_bytes": 215,
+      "parts": 1,
+      "gzip_equivalent_bytes": 233
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/router/utils/path-has-prefix.js",
+      "raw_bytes": 295,
+      "analyzer_deflate_bytes": 214,
+      "parts": 1,
+      "gzip_equivalent_bytes": 232
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/popups/usePopupHandleStore.mjs",
+      "raw_bytes": 304,
+      "analyzer_deflate_bytes": 214,
+      "parts": 1,
+      "gzip_equivalent_bytes": 232
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/utils/nodes.mjs",
+      "raw_bytes": 308,
+      "analyzer_deflate_bytes": 212,
+      "parts": 1,
+      "gzip_equivalent_bytes": 230
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/utils/enqueueFocus.mjs",
+      "raw_bytes": 311,
+      "analyzer_deflate_bytes": 212,
+      "parts": 1,
+      "gzip_equivalent_bytes": 230
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/icons/graduation-cap.mjs",
+      "raw_bytes": 314,
+      "analyzer_deflate_bytes": 211,
+      "parts": 1,
+      "gzip_equivalent_bytes": 229
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/internals/composite/item/CompositeItem.mjs",
+      "raw_bytes": 317,
+      "analyzer_deflate_bytes": 210,
+      "parts": 1,
+      "gzip_equivalent_bytes": 228
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/app-find-source-map-url.js",
+      "raw_bytes": 380,
+      "analyzer_deflate_bytes": 206,
+      "parts": 1,
+      "gzip_equivalent_bytes": 224
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+query-core@5.103.2/node_modules/@tanstack/query-core/build/modern/timeoutManager.js",
+      "raw_bytes": 467,
+      "analyzer_deflate_bytes": 204,
+      "parts": 1,
+      "gzip_equivalent_bytes": 222
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/useAnchoredPopupScrollLock.mjs",
+      "raw_bytes": 262,
+      "analyzer_deflate_bytes": 204,
+      "parts": 1,
+      "gzip_equivalent_bytes": 222
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/hooks/useHoverShared.mjs",
+      "raw_bytes": 312,
+      "analyzer_deflate_bytes": 203,
+      "parts": 1,
+      "gzip_equivalent_bytes": 221
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/icons/film.mjs",
+      "raw_bytes": 389,
+      "analyzer_deflate_bytes": 202,
+      "parts": 1,
+      "gzip_equivalent_bytes": 220
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/action-revalidation-kind.js",
+      "raw_bytes": 323,
+      "analyzer_deflate_bytes": 199,
+      "parts": 1,
+      "gzip_equivalent_bytes": 217
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/group-label/MenuGroupLabel.mjs",
+      "raw_bytes": 253,
+      "analyzer_deflate_bytes": 198,
+      "parts": 1,
+      "gzip_equivalent_bytes": 216
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/visuallyHidden.mjs",
+      "raw_bytes": 266,
+      "analyzer_deflate_bytes": 197,
+      "parts": 1,
+      "gzip_equivalent_bytes": 215
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/icons/book-open.mjs",
+      "raw_bytes": 288,
+      "analyzer_deflate_bytes": 196,
+      "parts": 1,
+      "gzip_equivalent_bytes": 214
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/internals/useValueChanged.mjs",
+      "raw_bytes": 246,
+      "analyzer_deflate_bytes": 195,
+      "parts": 1,
+      "gzip_equivalent_bytes": 213
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/useValueAsRef.mjs",
+      "raw_bytes": 273,
+      "analyzer_deflate_bytes": 195,
+      "parts": 1,
+      "gzip_equivalent_bytes": 213
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/icons/scroll-text.mjs",
+      "raw_bytes": 331,
+      "analyzer_deflate_bytes": 195,
+      "parts": 1,
+      "gzip_equivalent_bytes": 213
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/dialog/description/DialogDescription.mjs",
+      "raw_bytes": 243,
+      "analyzer_deflate_bytes": 195,
+      "parts": 1,
+      "gzip_equivalent_bytes": 213
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/usePositioner.mjs",
+      "raw_bytes": 265,
+      "analyzer_deflate_bytes": 194,
+      "parts": 1,
+      "gzip_equivalent_bytes": 212
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/icons/clipboard-check.mjs",
+      "raw_bytes": 286,
+      "analyzer_deflate_bytes": 194,
+      "parts": 1,
+      "gzip_equivalent_bytes": 212
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/createLucideIcon.mjs",
+      "raw_bytes": 257,
+      "analyzer_deflate_bytes": 193,
+      "parts": 1,
+      "gzip_equivalent_bytes": 211
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/lib/metadata/generate/icon-mark.js",
+      "raw_bytes": 239,
+      "analyzer_deflate_bytes": 191,
+      "parts": 1,
+      "gzip_equivalent_bytes": 209
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/icons/house.mjs",
+      "raw_bytes": 280,
+      "analyzer_deflate_bytes": 190,
+      "parts": 1,
+      "gzip_equivalent_bytes": 208
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/platform/os.mjs",
+      "raw_bytes": 270,
+      "analyzer_deflate_bytes": 188,
+      "parts": 1,
+      "gzip_equivalent_bytes": 206
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/useControlled.mjs",
+      "raw_bytes": 377,
+      "analyzer_deflate_bytes": 187,
+      "parts": 1,
+      "gzip_equivalent_bytes": 205
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/group/MenuGroup.mjs",
+      "raw_bytes": 234,
+      "analyzer_deflate_bytes": 187,
+      "parts": 1,
+      "gzip_equivalent_bytes": 205
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/icons/users.mjs",
+      "raw_bytes": 288,
+      "analyzer_deflate_bytes": 186,
+      "parts": 1,
+      "gzip_equivalent_bytes": 204
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/router/utils/remove-trailing-slash.js",
+      "raw_bytes": 246,
+      "analyzer_deflate_bytes": 183,
+      "parts": 1,
+      "gzip_equivalent_bytes": 201
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/promise-with-resolvers.js",
+      "raw_bytes": 263,
+      "analyzer_deflate_bytes": 181,
+      "parts": 1,
+      "gzip_equivalent_bytes": 199
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/internals/composite/root/CompositeRootContext.mjs",
+      "raw_bytes": 241,
+      "analyzer_deflate_bytes": 181,
+      "parts": 1,
+      "gzip_equivalent_bytes": 199
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/hideMiddleware.mjs",
+      "raw_bytes": 260,
+      "analyzer_deflate_bytes": 179,
+      "parts": 1,
+      "gzip_equivalent_bytes": 197
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/dialog/title/DialogTitle.mjs",
+      "raw_bytes": 217,
+      "analyzer_deflate_bytes": 177,
+      "parts": 1,
+      "gzip_equivalent_bytes": 195
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/icons/monitor.mjs",
+      "raw_bytes": 258,
+      "analyzer_deflate_bytes": 174,
+      "parts": 1,
+      "gzip_equivalent_bytes": 192
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/client/app-globals.js",
+      "raw_bytes": 305,
+      "analyzer_deflate_bytes": 172,
+      "parts": 1,
+      "gzip_equivalent_bytes": 190
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/head-manager-context.shared-runtime.js",
+      "raw_bytes": 223,
+      "analyzer_deflate_bytes": 169,
+      "parts": 1,
+      "gzip_equivalent_bytes": 187
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/is-thenable.js",
+      "raw_bytes": 247,
+      "analyzer_deflate_bytes": 167,
+      "parts": 1,
+      "gzip_equivalent_bytes": 185
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/platform/media-query.mjs",
+      "raw_bytes": 217,
+      "analyzer_deflate_bytes": 167,
+      "parts": 1,
+      "gzip_equivalent_bytes": 185
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+query-core@5.103.2/node_modules/@tanstack/query-core/build/modern/subscribable.js",
+      "raw_bytes": 307,
+      "analyzer_deflate_bytes": 166,
+      "parts": 1,
+      "gzip_equivalent_bytes": 184
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/platform/engine.mjs",
+      "raw_bytes": 211,
+      "analyzer_deflate_bytes": 161,
+      "parts": 1,
+      "gzip_equivalent_bytes": 179
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/submenu-root/MenuSubmenuRoot.mjs",
+      "raw_bytes": 206,
+      "analyzer_deflate_bytes": 161,
+      "parts": 1,
+      "gzip_equivalent_bytes": 179
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/shared/lib/page-path/ensure-leading-slash.js",
+      "raw_bytes": 215,
+      "analyzer_deflate_bytes": 160,
+      "parts": 1,
+      "gzip_equivalent_bytes": 178
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/getCssDimensions.mjs",
+      "raw_bytes": 225,
+      "analyzer_deflate_bytes": 160,
+      "parts": 1,
+      "gzip_equivalent_bytes": 178
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/compiled/react-dom/index.js",
+      "raw_bytes": 246,
+      "analyzer_deflate_bytes": 159,
+      "parts": 1,
+      "gzip_equivalent_bytes": 177
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/useEnhancedClickHandler.mjs",
+      "raw_bytes": 243,
+      "analyzer_deflate_bytes": 159,
+      "parts": 1,
+      "gzip_equivalent_bytes": 177
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/separator/Separator.mjs",
+      "raw_bytes": 218,
+      "analyzer_deflate_bytes": 159,
+      "parts": 1,
+      "gzip_equivalent_bytes": 177
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/compiled/react-dom/client.js",
+      "raw_bytes": 246,
+      "analyzer_deflate_bytes": 158,
+      "parts": 1,
+      "gzip_equivalent_bytes": 176
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/icons/circle.mjs",
+      "raw_bytes": 200,
+      "analyzer_deflate_bytes": 158,
+      "parts": 1,
+      "gzip_equivalent_bytes": 176
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/icons/check.mjs",
+      "raw_bytes": 178,
+      "analyzer_deflate_bytes": 157,
+      "parts": 1,
+      "gzip_equivalent_bytes": 175
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/components/FloatingTreeStore.mjs",
+      "raw_bytes": 228,
+      "analyzer_deflate_bytes": 157,
+      "parts": 1,
+      "gzip_equivalent_bytes": 175
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/internals/getStateAttributesProps.mjs",
+      "raw_bytes": 213,
+      "analyzer_deflate_bytes": 155,
+      "parts": 1,
+      "gzip_equivalent_bytes": 173
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/CommonPopupDataAttributes.mjs",
+      "raw_bytes": 242,
+      "analyzer_deflate_bytes": 148,
+      "parts": 1,
+      "gzip_equivalent_bytes": 166
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/dispatchClickWithModifiers.mjs",
+      "raw_bytes": 215,
+      "analyzer_deflate_bytes": 147,
+      "parts": 1,
+      "gzip_equivalent_bytes": 165
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/icons/ellipsis.mjs",
+      "raw_bytes": 236,
+      "analyzer_deflate_bytes": 146,
+      "parts": 1,
+      "gzip_equivalent_bytes": 164
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/utils/createEventEmitter.mjs",
+      "raw_bytes": 194,
+      "analyzer_deflate_bytes": 145,
+      "parts": 1,
+      "gzip_equivalent_bytes": 163
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/internals/stateAttributesMapping.mjs",
+      "raw_bytes": 193,
+      "analyzer_deflate_bytes": 143,
+      "parts": 1,
+      "gzip_equivalent_bytes": 161
+    },
+    {
+      "source": "[project]/src/components/ui/skeleton.tsx",
+      "raw_bytes": 220,
+      "analyzer_deflate_bytes": 140,
+      "parts": 1,
+      "gzip_equivalent_bytes": 158
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/shared/src/build/defaultAttributes.mjs",
+      "raw_bytes": 180,
+      "analyzer_deflate_bytes": 132,
+      "parts": 1,
+      "gzip_equivalent_bytes": 150
+    },
+    {
+      "source": "[project]/src/lib/toast.ts",
+      "raw_bytes": 240,
+      "analyzer_deflate_bytes": 131,
+      "parts": 1,
+      "gzip_equivalent_bytes": 149
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/platform/shared.mjs",
+      "raw_bytes": 253,
+      "analyzer_deflate_bytes": 131,
+      "parts": 1,
+      "gzip_equivalent_bytes": 149
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/icons/x.mjs",
+      "raw_bytes": 159,
+      "analyzer_deflate_bytes": 131,
+      "parts": 1,
+      "gzip_equivalent_bytes": 149
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/shared/src/utils/toLucideIconData.mjs",
+      "raw_bytes": 151,
+      "analyzer_deflate_bytes": 130,
+      "parts": 1,
+      "gzip_equivalent_bytes": 148
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/utils/findRootOwnerId.mjs",
+      "raw_bytes": 182,
+      "analyzer_deflate_bytes": 130,
+      "parts": 1,
+      "gzip_equivalent_bytes": 148
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+react-query@5.103.2_react@19.2.8/node_modules/@tanstack/react-query/build/modern/QueryErrorResetBoundary.js",
+      "raw_bytes": 162,
+      "analyzer_deflate_bytes": 128,
+      "parts": 1,
+      "gzip_equivalent_bytes": 146
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/useRefWithInit.mjs",
+      "raw_bytes": 150,
+      "analyzer_deflate_bytes": 127,
+      "parts": 1,
+      "gzip_equivalent_bytes": 145
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/internals/composite/composite.mjs",
+      "raw_bytes": 137,
+      "analyzer_deflate_bytes": 127,
+      "parts": 1,
+      "gzip_equivalent_bytes": 145
+    },
+    {
+      "source": "[project]/src/lib/api/unwrap.ts",
+      "raw_bytes": 186,
+      "analyzer_deflate_bytes": 127,
+      "parts": 1,
+      "gzip_equivalent_bytes": 145
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/getReactElementRef.mjs",
+      "raw_bytes": 138,
+      "analyzer_deflate_bytes": 126,
+      "parts": 1,
+      "gzip_equivalent_bytes": 144
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/build/polyfills/process.js",
+      "raw_bytes": 162,
+      "analyzer_deflate_bytes": 123,
+      "parts": 1,
+      "gzip_equivalent_bytes": 141
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/shared/src/build/buildLucideIconForReact.mjs",
+      "raw_bytes": 209,
+      "analyzer_deflate_bytes": 123,
+      "parts": 1,
+      "gzip_equivalent_bytes": 141
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/shared/src/utils/toCamelCase.mjs",
+      "raw_bytes": 154,
+      "analyzer_deflate_bytes": 123,
+      "parts": 1,
+      "gzip_equivalent_bytes": 141
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/useOnMount.mjs",
+      "raw_bytes": 118,
+      "analyzer_deflate_bytes": 123,
+      "parts": 1,
+      "gzip_equivalent_bytes": 141
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/dialog/root/DialogRootContext.mjs",
+      "raw_bytes": 144,
+      "analyzer_deflate_bytes": 119,
+      "parts": 1,
+      "gzip_equivalent_bytes": 137
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+react-query@5.103.2_react@19.2.8/node_modules/@tanstack/react-query/build/modern/useQuery.js",
+      "raw_bytes": 135,
+      "analyzer_deflate_bytes": 118,
+      "parts": 1,
+      "gzip_equivalent_bytes": 136
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/positioner/MenuPositionerContext.mjs",
+      "raw_bytes": 148,
+      "analyzer_deflate_bytes": 116,
+      "parts": 1,
+      "gzip_equivalent_bytes": 134
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/NullStore.mjs",
+      "raw_bytes": 123,
+      "analyzer_deflate_bytes": 114,
+      "parts": 1,
+      "gzip_equivalent_bytes": 132
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/checkbox-item/MenuCheckboxItemContext.mjs",
+      "raw_bytes": 133,
+      "analyzer_deflate_bytes": 112,
+      "parts": 1,
+      "gzip_equivalent_bytes": 130
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/useIsoLayoutEffect.mjs",
+      "raw_bytes": 124,
+      "analyzer_deflate_bytes": 112,
+      "parts": 1,
+      "gzip_equivalent_bytes": 130
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/inertValue.mjs",
+      "raw_bytes": 114,
+      "analyzer_deflate_bytes": 111,
+      "parts": 1,
+      "gzip_equivalent_bytes": 129
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/context-menu/root/ContextMenuRootContext.mjs",
+      "raw_bytes": 130,
+      "analyzer_deflate_bytes": 111,
+      "parts": 1,
+      "gzip_equivalent_bytes": 129
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/icons/chevron-right.mjs",
+      "raw_bytes": 113,
+      "analyzer_deflate_bytes": 111,
+      "parts": 1,
+      "gzip_equivalent_bytes": 129
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/cn@0.4.0/node_modules/cn/dist/index.js",
+      "raw_bytes": 105,
+      "analyzer_deflate_bytes": 110,
+      "parts": 1,
+      "gzip_equivalent_bytes": 128
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/dialog/utils/stateAttributesMapping.mjs",
+      "raw_bytes": 122,
+      "analyzer_deflate_bytes": 110,
+      "parts": 1,
+      "gzip_equivalent_bytes": 128
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/toolbar/root/ToolbarRootContext.mjs",
+      "raw_bytes": 126,
+      "analyzer_deflate_bytes": 109,
+      "parts": 1,
+      "gzip_equivalent_bytes": 127
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/root/MenuRootContext.mjs",
+      "raw_bytes": 120,
+      "analyzer_deflate_bytes": 107,
+      "parts": 1,
+      "gzip_equivalent_bytes": 125
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menubar/MenubarContext.mjs",
+      "raw_bytes": 122,
+      "analyzer_deflate_bytes": 106,
+      "parts": 1,
+      "gzip_equivalent_bytes": 124
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/internals/composite/list/CompositeListContext.mjs",
+      "raw_bytes": 130,
+      "analyzer_deflate_bytes": 104,
+      "parts": 1,
+      "gzip_equivalent_bytes": 122
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/radio-item/MenuRadioItemContext.mjs",
+      "raw_bytes": 120,
+      "analyzer_deflate_bytes": 103,
+      "parts": 1,
+      "gzip_equivalent_bytes": 121
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/empty.mjs",
+      "raw_bytes": 116,
+      "analyzer_deflate_bytes": 103,
+      "parts": 1,
+      "gzip_equivalent_bytes": 121
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+react-query@5.103.2_react@19.2.8/node_modules/@tanstack/react-query/build/modern/IsRestoringProvider.js",
+      "raw_bytes": 106,
+      "analyzer_deflate_bytes": 102,
+      "parts": 1,
+      "gzip_equivalent_bytes": 120
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/radio-group/MenuRadioGroupContext.mjs",
+      "raw_bytes": 115,
+      "analyzer_deflate_bytes": 101,
+      "parts": 1,
+      "gzip_equivalent_bytes": 119
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/group/MenuGroupContext.mjs",
+      "raw_bytes": 116,
+      "analyzer_deflate_bytes": 100,
+      "parts": 1,
+      "gzip_equivalent_bytes": 118
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/internals/getDisabledMountTransitionStyles.mjs",
+      "raw_bytes": 95,
+      "analyzer_deflate_bytes": 100,
+      "parts": 1,
+      "gzip_equivalent_bytes": 118
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/usePreviousValue.mjs",
+      "raw_bytes": 136,
+      "analyzer_deflate_bytes": 100,
+      "parts": 1,
+      "gzip_equivalent_bytes": 118
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/dialog/portal/DialogPortalContext.mjs",
+      "raw_bytes": 119,
+      "analyzer_deflate_bytes": 100,
+      "parts": 1,
+      "gzip_equivalent_bytes": 118
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/portal/MenuPortalContext.mjs",
+      "raw_bytes": 115,
+      "analyzer_deflate_bytes": 96,
+      "parts": 1,
+      "gzip_equivalent_bytes": 114
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/addEventListener.mjs",
+      "raw_bytes": 118,
+      "analyzer_deflate_bytes": 95,
+      "parts": 1,
+      "gzip_equivalent_bytes": 113
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/mergeObjects.mjs",
+      "raw_bytes": 95,
+      "analyzer_deflate_bytes": 92,
+      "parts": 1,
+      "gzip_equivalent_bytes": 110
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/utils/stateAttributesMapping.mjs",
+      "raw_bytes": 80,
+      "analyzer_deflate_bytes": 85,
+      "parts": 1,
+      "gzip_equivalent_bytes": 103
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/dialog/root/DialogRoot.mjs",
+      "raw_bytes": 85,
+      "analyzer_deflate_bytes": 84,
+      "parts": 1,
+      "gzip_equivalent_bytes": 102
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/platform/env.mjs",
+      "raw_bytes": 86,
+      "analyzer_deflate_bytes": 83,
+      "parts": 1,
+      "gzip_equivalent_bytes": 101
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@swc+helpers@0.5.23/node_modules/@swc/helpers/cjs/_interop_require_default.cjs",
+      "raw_bytes": 225,
+      "analyzer_deflate_bytes": 82,
+      "parts": 1,
+      "gzip_equivalent_bytes": 100
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/mergeCleanups.mjs",
+      "raw_bytes": 83,
+      "analyzer_deflate_bytes": 82,
+      "parts": 1,
+      "gzip_equivalent_bytes": 100
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/internals/direction-context/DirectionContext.mjs",
+      "raw_bytes": 95,
+      "analyzer_deflate_bytes": 82,
+      "parts": 1,
+      "gzip_equivalent_bytes": 100
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+query-core@5.103.2/node_modules/@tanstack/query-core/build/modern/environmentManager.js",
+      "raw_bytes": 210,
+      "analyzer_deflate_bytes": 81,
+      "parts": 1,
+      "gzip_equivalent_bytes": 99
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/floating-ui-react/utils/createAttribute.mjs",
+      "raw_bytes": 75,
+      "analyzer_deflate_bytes": 80,
+      "parts": 1,
+      "gzip_equivalent_bytes": 98
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/shared/src/utils/mergeClasses.mjs",
+      "raw_bytes": 87,
+      "analyzer_deflate_bytes": 78,
+      "parts": 1,
+      "gzip_equivalent_bytes": 96
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/internals/TransitionStatusDataAttributes.mjs",
+      "raw_bytes": 86,
+      "analyzer_deflate_bytes": 78,
+      "parts": 1,
+      "gzip_equivalent_bytes": 96
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/internals/useBaseUiId.mjs",
+      "raw_bytes": 73,
+      "analyzer_deflate_bytes": 78,
+      "parts": 1,
+      "gzip_equivalent_bytes": 96
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/resolveRef.mjs",
+      "raw_bytes": 82,
+      "analyzer_deflate_bytes": 78,
+      "parts": 1,
+      "gzip_equivalent_bytes": 96
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/shared/src/utils/hasA11yProp.mjs",
+      "raw_bytes": 89,
+      "analyzer_deflate_bytes": 77,
+      "parts": 1,
+      "gzip_equivalent_bytes": 95
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/use-render/useRender.mjs",
+      "raw_bytes": 78,
+      "analyzer_deflate_bytes": 76,
+      "parts": 1,
+      "gzip_equivalent_bytes": 94
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/CommonPositionerCssVars.mjs",
+      "raw_bytes": 109,
+      "analyzer_deflate_bytes": 74,
+      "parts": 1,
+      "gzip_equivalent_bytes": 92
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/safeReact.mjs",
+      "raw_bytes": 69,
+      "analyzer_deflate_bytes": 74,
+      "parts": 1,
+      "gzip_equivalent_bytes": 92
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/CommonTriggerDataAttributes.mjs",
+      "raw_bytes": 84,
+      "analyzer_deflate_bytes": 73,
+      "parts": 1,
+      "gzip_equivalent_bytes": 91
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/submenu-root/MenuSubmenuRootContext.mjs",
+      "raw_bytes": 69,
+      "analyzer_deflate_bytes": 68,
+      "parts": 1,
+      "gzip_equivalent_bytes": 86
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/navigation.js",
+      "raw_bytes": 62,
+      "analyzer_deflate_bytes": 67,
+      "parts": 1,
+      "gzip_equivalent_bytes": 85
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/dialog/popup/DialogPopupDataAttributes.mjs",
+      "raw_bytes": 72,
+      "analyzer_deflate_bytes": 67,
+      "parts": 1,
+      "gzip_equivalent_bytes": 85
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/versions.js",
+      "raw_bytes": 59,
+      "analyzer_deflate_bytes": 64,
+      "parts": 1,
+      "gzip_equivalent_bytes": 82
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/compiled/scheduler/index.js",
+      "raw_bytes": 56,
+      "analyzer_deflate_bytes": 61,
+      "parts": 1,
+      "gzip_equivalent_bytes": 79
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/owner.mjs",
+      "raw_bytes": 55,
+      "analyzer_deflate_bytes": 60,
+      "parts": 1,
+      "gzip_equivalent_bytes": 78
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/reactVersion.mjs",
+      "raw_bytes": 55,
+      "analyzer_deflate_bytes": 60,
+      "parts": 1,
+      "gzip_equivalent_bytes": 78
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/compiled/react/jsx-runtime.js",
+      "raw_bytes": 52,
+      "analyzer_deflate_bytes": 57,
+      "parts": 1,
+      "gzip_equivalent_bytes": 75
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/shared/src/utils/toKebabCase.mjs",
+      "raw_bytes": 52,
+      "analyzer_deflate_bytes": 57,
+      "parts": 1,
+      "gzip_equivalent_bytes": 75
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/use-sync-external-store@1.7.0_react@19.2.8/node_modules/use-sync-external-store/shim/index.js",
+      "raw_bytes": 52,
+      "analyzer_deflate_bytes": 57,
+      "parts": 1,
+      "gzip_equivalent_bytes": 75
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/compiled/react/index.js",
+      "raw_bytes": 51,
+      "analyzer_deflate_bytes": 56,
+      "parts": 1,
+      "gzip_equivalent_bytes": 74
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/compiled/react-server-dom-turbopack/client.browser.js",
+      "raw_bytes": 51,
+      "analyzer_deflate_bytes": 56,
+      "parts": 1,
+      "gzip_equivalent_bytes": 74
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/compiled/react-server-dom-turbopack/client.js",
+      "raw_bytes": 51,
+      "analyzer_deflate_bytes": 56,
+      "parts": 1,
+      "gzip_equivalent_bytes": 74
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/next@16.3.6_@babel+core@7.2_ca238b86ea289addff90a6f982bce3be/node_modules/next/dist/lib/require-instrumentation-client.js",
+      "raw_bytes": 91,
+      "analyzer_deflate_bytes": 53,
+      "parts": 1,
+      "gzip_equivalent_bytes": 71
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@tanstack+react-query@5.103.2_react@19.2.8/node_modules/@tanstack/react-query/build/modern/queryOptions.js",
+      "raw_bytes": 48,
+      "analyzer_deflate_bytes": 53,
+      "parts": 1,
+      "gzip_equivalent_bytes": 71
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/adaptiveOriginConstants.mjs",
+      "raw_bytes": 46,
+      "analyzer_deflate_bytes": 51,
+      "parts": 1,
+      "gzip_equivalent_bytes": 69
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/tooltip/trigger/TooltipTriggerDataAttributes.mjs",
+      "raw_bytes": 43,
+      "analyzer_deflate_bytes": 48,
+      "parts": 1,
+      "gzip_equivalent_bytes": 66
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/shared/src/utils/toPascalCase.mjs",
+      "raw_bytes": 41,
+      "analyzer_deflate_bytes": 46,
+      "parts": 1,
+      "gzip_equivalent_bytes": 64
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/lucide-react@1.48.0_react@19.2.8/node_modules/lucide-react/dist/esm/context.mjs",
+      "raw_bytes": 46,
+      "analyzer_deflate_bytes": 37,
+      "parts": 1,
+      "gzip_equivalent_bytes": 55
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/CommonPopupCssVars.mjs",
+      "raw_bytes": 43,
+      "analyzer_deflate_bytes": 37,
+      "parts": 1,
+      "gzip_equivalent_bytes": 55
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/CommonViewportDataAttributes.mjs",
+      "raw_bytes": 28,
+      "analyzer_deflate_bytes": 27,
+      "parts": 1,
+      "gzip_equivalent_bytes": 45
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/use-sync-external-store@1.7.0_react@19.2.8/node_modules/use-sync-external-store/shim/with-selector.js",
+      "raw_bytes": 67,
+      "analyzer_deflate_bytes": 26,
+      "parts": 1,
+      "gzip_equivalent_bytes": 44
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+utils@0.4.0_@types_a7ee40379dbf5a371d82bc798dfd454d/node_modules/@base-ui/utils/platform/screen-reader.mjs",
+      "raw_bytes": 27,
+      "analyzer_deflate_bytes": 24,
+      "parts": 1,
+      "gzip_equivalent_bytes": 42
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/resolveClassName.mjs",
+      "raw_bytes": 26,
+      "analyzer_deflate_bytes": 23,
+      "parts": 1,
+      "gzip_equivalent_bytes": 41
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/menu/checkbox-item/MenuCheckboxItemDataAttributes.mjs",
+      "raw_bytes": 21,
+      "analyzer_deflate_bytes": 21,
+      "parts": 1,
+      "gzip_equivalent_bytes": 39
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/dialog/popup/DialogPopupCssVars.mjs",
+      "raw_bytes": 19,
+      "analyzer_deflate_bytes": 21,
+      "parts": 1,
+      "gzip_equivalent_bytes": 39
+    },
+    {
+      "source": "[project]/node_modules/.pnpm/@base-ui+react@1.8.0_@types_3b35f2919ea0021f0448fda311d9b8de/node_modules/@base-ui/react/utils/resolveStyle.mjs",
+      "raw_bytes": 17,
+      "analyzer_deflate_bytes": 19,
+      "parts": 1,
+      "gzip_equivalent_bytes": 37
+    }
+  ],
+  "module_attribution_total_gzip_equivalent_bytes": 339827,
+  "remaining_after_top_15_gzip_equivalent_bytes": 210253,
+  "package_allocation_method": "All shared modules classified by their innermost node_modules package; application/generated and bundler modules have explicit groups. Package gzip-equivalent sums are independent module compression, not measured package download sizes. estimated_shared_transfer_bytes proportionally allocates actual shared gzip-9 transfer using those weights, with rounding reconciled to the measured total; this is an estimate, not exact per-package compression.",
+  "packages": [
+    {
+      "package": "next",
+      "modules": 157,
+      "raw_bytes": 449910,
+      "gzip_equivalent_bytes": 171540,
+      "estimated_shared_transfer_bytes": 130905
+    },
+    {
+      "package": "@base-ui/react",
+      "modules": 142,
+      "raw_bytes": 139002,
+      "gzip_equivalent_bytes": 68456,
+      "estimated_shared_transfer_bytes": 52240
+    },
+    {
+      "package": "zod",
+      "modules": 12,
+      "raw_bytes": 93959,
+      "gzip_equivalent_bytes": 27212,
+      "estimated_shared_transfer_bytes": 20766
+    },
+    {
+      "package": "@tanstack/query-core",
+      "modules": 16,
+      "raw_bytes": 34184,
+      "gzip_equivalent_bytes": 13494,
+      "estimated_shared_transfer_bytes": 10298
+    },
+    {
+      "package": "(application / generated)",
+      "modules": 23,
+      "raw_bytes": 27752,
+      "gzip_equivalent_bytes": 12742,
+      "estimated_shared_transfer_bytes": 9723
+    },
+    {
+      "package": "cn",
+      "modules": 3,
+      "raw_bytes": 25634,
+      "gzip_equivalent_bytes": 10749,
+      "estimated_shared_transfer_bytes": 8203
+    },
+    {
+      "package": "@base-ui/utils",
+      "modules": 35,
+      "raw_bytes": 15270,
+      "gzip_equivalent_bytes": 8845,
+      "estimated_shared_transfer_bytes": 6750
+    },
+    {
+      "package": "lucide-react",
+      "modules": 29,
+      "raw_bytes": 7942,
+      "gzip_equivalent_bytes": 5579,
+      "estimated_shared_transfer_bytes": 4257
+    },
+    {
+      "package": "(bundler runtime)",
+      "modules": 4,
+      "raw_bytes": 9764,
+      "gzip_equivalent_bytes": 4390,
+      "estimated_shared_transfer_bytes": 3350
+    },
+    {
+      "package": "@floating-ui/dom",
+      "modules": 1,
+      "raw_bytes": 8207,
+      "gzip_equivalent_bytes": 3061,
+      "estimated_shared_transfer_bytes": 2336
+    },
+    {
+      "package": "@floating-ui/core",
+      "modules": 1,
+      "raw_bytes": 6306,
+      "gzip_equivalent_bytes": 2673,
+      "estimated_shared_transfer_bytes": 2040
+    },
+    {
+      "package": "openapi-fetch",
+      "modules": 1,
+      "raw_bytes": 6404,
+      "gzip_equivalent_bytes": 2523,
+      "estimated_shared_transfer_bytes": 1925
+    },
+    {
+      "package": "@tanstack/react-query",
+      "modules": 8,
+      "raw_bytes": 2807,
+      "gzip_equivalent_bytes": 1926,
+      "estimated_shared_transfer_bytes": 1470
+    },
+    {
+      "package": "@floating-ui/utils",
+      "modules": 2,
+      "raw_bytes": 4025,
+      "gzip_equivalent_bytes": 1868,
+      "estimated_shared_transfer_bytes": 1426
+    },
+    {
+      "package": "next-themes",
+      "modules": 1,
+      "raw_bytes": 3292,
+      "gzip_equivalent_bytes": 1476,
+      "estimated_shared_transfer_bytes": 1126
+    },
+    {
+      "package": "@floating-ui/react-dom",
+      "modules": 1,
+      "raw_bytes": 2676,
+      "gzip_equivalent_bytes": 1228,
+      "estimated_shared_transfer_bytes": 937
+    },
+    {
+      "package": "use-sync-external-store",
+      "modules": 4,
+      "raw_bytes": 1646,
+      "gzip_equivalent_bytes": 966,
+      "estimated_shared_transfer_bytes": 737
+    },
+    {
+      "package": "@swc/helpers",
+      "modules": 2,
+      "raw_bytes": 985,
+      "gzip_equivalent_bytes": 447,
+      "estimated_shared_transfer_bytes": 341
+    },
+    {
+      "package": "class-variance-authority",
+      "modules": 1,
+      "raw_bytes": 764,
+      "gzip_equivalent_bytes": 414,
+      "estimated_shared_transfer_bytes": 316
+    },
+    {
+      "package": "clsx",
+      "modules": 1,
+      "raw_bytes": 363,
+      "gzip_equivalent_bytes": 238,
+      "estimated_shared_transfer_bytes": 182
+    }
+  ],
+  "groups": {
+    "zod": {
+      "modules": 12,
+      "gzip_equivalent_bytes": 27212
+    },
+    "@base-ui/react": {
+      "modules": 142,
+      "gzip_equivalent_bytes": 68456
+    },
+    "@floating-ui": {
+      "modules": 5,
+      "gzip_equivalent_bytes": 8830
+    },
+    "sonner": {
+      "modules": 0,
+      "gzip_equivalent_bytes": 0
+    },
+    "cn": {
+      "modules": 3,
+      "gzip_equivalent_bytes": 10749
+    }
+  }
+}

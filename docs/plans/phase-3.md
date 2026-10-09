@@ -1,6 +1,6 @@
 # Phase 3 — Quizzes and full assignments
 
-**Status: approved (2026-10-04); steps 1-7 complete; step 8 in progress.** Decisions D1–D7 and
+**Status: approved (2026-10-04); steps 1-8 complete; step 9 in progress.** Decisions D1–D7 and
 the security repair below include the user's approved revisions.
 
 **Baseline:** `4f7d00826e368b9dbd7ce1635332a8b1d93dedb7`, the peeled
@@ -754,7 +754,13 @@ only after the user's "continue". Tests and documentation ship with each step.
    transaction, versioning and E2E case, including another batch and 360px; run
    the full Playwright suite with **0 failures**. Final endpoint/table inventory,
    completed-step commit/CI table, full deviation list and carried follow-ups;
-   mark complete with date only after all gates have passed. Report and stop.
+   Apply the user's approved cheapest safe student bundle reductions: named
+   Zod imports or Zod Mini, and toast loading on first use with durable queued
+   messages. Measure every student route before/after, tighten fixed CI budgets,
+   account for every shared module grouped by package and carry the remaining
+   reduction plan/estimates toward 200 KiB as a follow-up. Mark complete with
+   date only after all gates have passed. Push/check green CI, tag v0.3.0 on
+   the final close-out commit, push/verify the remote tag, report and stop.
 
 **Every step, including UI and close-out, ends with all of these:**
 
@@ -797,7 +803,7 @@ in section 9 were approved on 2026-10-06 before coding; steps 6 and 7 use its gu
 
 ## 14. Implementation record
 
-Steps 1-7 completed with green pushed CI. After each green pushed step, report its full SHA and
+Steps 1-8 completed with green pushed CI. After each green pushed step, report its full SHA and
 CI URL in the step summary; carry known commit/run records into this table in
 the next plan update. Do not invent a self-referential commit SHA or a CI URL
 before the commit/run exists. The close-out summary records its own final run.
@@ -811,8 +817,8 @@ before the commit/run exists. The close-out summary records its own final run.
 | 5    | Complete    | `c17c0f02ef413ca6979ab92395b58897f552f3a8` | [37517763653](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37517763653) |
 | 6    | Complete    | c23fd8e71dd0300c6eb2133b0b7e30a1a2d761fe   | [37787315118](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37787315118) |
 | 7    | Complete    | `a79fc494469e0e58f4c44fc38229f6a578f98f28` | [37811946835](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37811946835) |
-| 8    | In progress | —                                          | —                                                                                        |
-| 9    | Not started | —                                          | —                                                                                        |
+| 8    | Complete    | `4da76dfa07e3d4bbca8791a9621ca0b9b11ab223` | [37963596236](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37963596236) |
+| 9    | In progress | —                                          | —                                                                                        |
 
 ### Deviations
 
@@ -919,6 +925,19 @@ no assessment authoring/attempt UI from steps 6/7 starts here. System-default
 manual themes and a semantic-token-only guard replace the original hex-only
 guard. The beat-schedule registration regression is explicitly approved.
 
+Step 6: no product or architecture deviation. Additive author-only manual-question
+summaries avoid per-question hydration requests. Repairs keep toast contrast AA
+through transitions, derive rapid selections from current field-array values,
+and refresh the visible enrollment list every ten seconds after asynchronous
+fan-out. New test setup fixes lesson-ID navigation timing and taxonomy slugs;
+the existing route inventory adds the bank detail route. The planned single
+`phase-3.spec.ts` is realized as `assessment-authoring.spec.ts` and
+`assessment-learning.spec.ts`, retaining the authoring and full learning journey
+with desktop/360px coverage. Every original assertion
+and timeout remains unchanged. The implementation record below gives the exact
+failures, repairs and verification results; shipped in
+`c23fd8e71dd0300c6eb2133b0b7e30a1a2d761fe`.
+
 Step 7: no product or architecture deviation. The user additionally requested
 before/after student bundle measurements and proof that authoring dependencies
 are absent; the production audit also runs in CI. Verification findings and
@@ -944,6 +963,28 @@ Redis dirty marker and an extra batch in the canonical demo organization.
 The new test now tears down only its own markers even on failure and uses
 the existing canonical ECE batch. Existing video and identity seed assertions
 and all timeouts remain unchanged; the full suite is rerun after these repairs.
+
+Step 9: no product or architecture deviation. The user approved named/Mini Zod
+imports and first-use toast loading, exact post-reduction CI ceilings and full
+shared package attribution. Shared error-envelope validation uses Mini; deferred
+quiz schemas retain their classic named imports and all existing rules. The toast
+adapter covers all role callers because the host is global. New tests preserve
+first-use delivery and accessible import-failure recovery. An existing test mock
+now targets that adapter; its notification assertion and timeout are unchanged.
+Verification repaired a missed `.ts` toast caller and import formatting. The
+initial full `make test` passed all 1,723 API cases but the new real-render toast
+test's wait included dynamic-import setup under the full web runner. The test now
+explicitly settles its first-use import inside React `act` before the unchanged
+visibility assertion; no prefetch, assertion or timeout change. All 244 web tests
+then passed. The complete lint/test aggregate passed after that setup repair.
+
+Bundle-analysis repair: an async chunk common to every route is still deferred;
+shared attribution follows synchronous module edges and reconciles shared file
+counts with actual production output. Repeated library source paths cannot promote
+an unreachable async entry's chunk. Player-only SSR preload files are excluded
+from shared membership. All modules and package groups are retained in the
+attribution, with estimates explicitly separated from measured transfer. No
+existing application/test assertion or timeout was weakened.
 
 ### Security repairs
 
@@ -1426,6 +1467,153 @@ and all timeouts remain unchanged; the full suite is rerun after these repairs.
   its own full SHA, pushed green CI and URL go in the summary and are carried
   into the table at the next authorized plan update.
 
+### Step 9 acceptance (2026-10-09 to 2026-10-10; in progress)
+
+- Approved bundle reduction implemented without dependency upgrades or backend
+  changes. Exact production Windows/Linux figures and complete package/module
+  attribution are in [the Step 9 report](../design/student-bundles-step9.md).
+  Shared Windows transfer falls from 326.6 to 253.25 KiB. Student first-load totals fall
+  from 333.7/337.3/337.3/326.6 to 260.4/264.0/264.0/253.25 KiB on Windows
+  (Linux video: 253.3 KiB). The fixed CI
+  ceilings use the exact larger measured platform bytes, not rounded budgets.
+- The production audit passed the tightened limits and rejects an exceeded
+  ceiling. Sonner is absent from initial student chunks; all emitted student
+  graphs, including deferred feature chunks, remain free of Tiptap/dnd-kit/
+  ProseMirror. The 200 KiB target remains an explicit measured follow-up.
+- Shared component added: lazy notification host/adapter, using the existing
+  Button for accessible failure recovery. Applied UI guidelines sections 1
+  (tokens), 5 (states/notifications), 6 (forms/actions), 7 (accessibility) and
+  8 (extending the shared set). Updated section 5 with first-use/queue/retry conventions.
+- Integrated evidence checked in the full-suite inventory: raw app-role SQL
+  secrecy/joins/outbox tests and historical v1 upgrade in assessments
+  `test_rls.py`/`test_security_upgrade.py`; independently privileged response
+  secrecy/reveal tests in `test_schemas.py`; publish/structural rule tests;
+  runtime quota, partial scoring, timer boundary, no-browser sweep/restart/replay
+  and concurrent progress tests; populated assignment-history upgrade, rubric/
+  late math and own-org active-attempt grading tests. `test_beat_configuration.py`
+  checks the registered interval. Every write contract is enumerated by
+  assessments `test_write_visibility.py`/`test_runtime_transactions.py` and
+  assignments `test_transactions.py`, asserting separate-connection visibility
+  before success headers and rollback/error envelopes on failed commits.
+  The two assessment Playwright specs provide the authored three-type quiz,
+  rubric/image assignment, fail/pass, late grade/penalty/100%, other-batch 404,
+  durable resume/expiry and desktop/360px flows. `ui-foundation.spec.ts` checks
+  route axe coverage and role/theme shell screenshots; `demo-smoke.spec.ts`
+  remains read-only. Those cases passed in the full-suite gate below.
+- Nineteen focused tests passed, including new independent error-envelope,
+  queue and real lazy-render tests plus the existing quiz/rollback checks.
+  Production Windows build/analyzer and Linux Docker builder passed. Required
+  `make gen-api` and final full `make lint` passed (Ruff/format/mypy,
+  ESLint/Prettier/strict TypeScript). Final aggregate **`make test` passed**:
+  **1,723 API**, **244 Vitest**, **61 Playwright**, **7 unchanged deliberate
+  skips**, **0 failures**, against real Compose services and the final host
+  production web fallback. Desktop and 360px assessment authoring/learning,
+  no-late-edits expiry, all four read-only demo roles, 16 shell screenshots
+  and every renderable route's zero serious/critical axe check passed.
+  No new endpoint, response schema, event or migration in this step;
+  existing MATRIX/access-control coverage passed. No production application
+  code changed after its measured builds. Commit hooks passed; whitespace,
+  JSON, size and secret exclusions were checked. Local gates alone do not
+  complete Step 9: pushed CI is pending. Its known acceptance SHA/run will
+  enter the nine-step table in the final documentation close-out, whose own
+  exact SHA/green run must then pass before the annotated release tag.
+
+### Final endpoint and table inventory
+
+Verified against the shipped routers, generated OpenAPI and migrations. Routes
+below have the `/api/v1` prefix. Phase 3 adds **34 method/path contracts**:
+21 assessments, 6 assignment definition/history reads, 7 landing/grading reads.
+All eight existing assignment contracts remain available with additive fields;
+submission-upload and publishing use the approved If-Match tightening. All lists
+are cursor endpoints. MATRIX and access-control remain the role references.
+
+Assessments (21 contracts):
+
+| Method | Path                                                                  |
+| ------ | --------------------------------------------------------------------- |
+| GET    | `/question-banks`                                                     |
+| POST   | `/question-banks`                                                     |
+| GET    | `/question-banks/{bank_id}`                                           |
+| PATCH  | `/question-banks/{bank_id}`                                           |
+| DELETE | `/question-banks/{bank_id}`                                           |
+| GET    | `/question-banks/{bank_id}/questions`                                 |
+| POST   | `/question-banks/{bank_id}/questions`                                 |
+| GET    | `/questions/{question_id}`                                            |
+| PATCH  | `/questions/{question_id}`                                            |
+| DELETE | `/questions/{question_id}`                                            |
+| PUT    | `/questions/{question_id}/skills`                                     |
+| GET    | `/courses/{course_id}/lessons/{lesson_id}/quiz`                       |
+| PUT    | `/courses/{course_id}/lessons/{lesson_id}/quiz`                       |
+| GET    | `/courses/{course_id}/versions/{version_id}/lessons/{lesson_id}/quiz` |
+| GET    | `/enrollments/{enrollment_id}/lessons/{lesson_id}/quiz`               |
+| GET    | `/enrollments/{enrollment_id}/lessons/{lesson_id}/quiz-attempts`      |
+| POST   | `/enrollments/{enrollment_id}/lessons/{lesson_id}/quiz-attempts`      |
+| GET    | `/quiz-attempts/{attempt_id}`                                         |
+| PUT    | `/quiz-attempts/{attempt_id}/answers`                                 |
+| POST   | `/quiz-attempts/{attempt_id}/submit`                                  |
+| GET    | `/quiz-attempts/{attempt_id}/results`                                 |
+
+Assignments (14 contracts, extending the Phase 2.5 module):
+
+| Method | Path                                                                                       | Phase 3 status      |
+| ------ | ------------------------------------------------------------------------------------------ | ------------------- |
+| GET    | `/courses/{course_id}/lessons/{lesson_id}/assignment`                                      | Retained / extended |
+| PUT    | `/courses/{course_id}/lessons/{lesson_id}/assignment`                                      | Retained / extended |
+| GET    | `/courses/{course_id}/lessons/{lesson_id}/assignment/preview`                              | New                 |
+| GET    | `/enrollments/{enrollment_id}/lessons/{lesson_id}/assignment`                              | Retained / extended |
+| POST   | `/enrollments/{enrollment_id}/lessons/{lesson_id}/submission-upload`                       | Retained / extended |
+| GET    | `/enrollments/{enrollment_id}/lessons/{lesson_id}/submission-attempts`                     | New                 |
+| GET    | `/enrollments/{enrollment_id}/lessons/{lesson_id}/submission-attempts/{attempt_id}/grades` | New                 |
+| PUT    | `/enrollments/{enrollment_id}/lessons/{lesson_id}/submission`                              | Retained / extended |
+| GET    | `/courses/{course_id}/lessons/{lesson_id}/submissions`                                     | Retained / extended |
+| GET    | `/assignment-submissions/{submission_id}`                                                  | Retained / extended |
+| PUT    | `/assignment-submissions/{submission_id}/grade`                                            | Retained / extended |
+| GET    | `/assignment-submissions/{submission_id}/attempts`                                         | New                 |
+| GET    | `/assignment-submissions/{submission_id}/attempts/{attempt_id}`                            | New                 |
+| GET    | `/assignment-submissions/{submission_id}/attempts/{attempt_id}/grades`                     | New                 |
+
+Tableless reports service (7 new contracts; 3 existing report routes retained):
+
+| Method | Path                                   | Phase 3 status      |
+| ------ | -------------------------------------- | ------------------- |
+| GET    | `/dashboards/admin`                    | New                 |
+| GET    | `/dashboards/admin/batches`            | New                 |
+| GET    | `/dashboards/admin/unassigned-courses` | New                 |
+| GET    | `/dashboards/teach`                    | New                 |
+| GET    | `/assignment-submissions`              | New                 |
+| GET    | `/dashboards/learn/due`                | New                 |
+| GET    | `/dashboards/learn/results`            | New                 |
+| GET    | `/courses/{course_id}/progress`        | Retained / extended |
+| GET    | `/courses/{course_id}/progress.csv`    | Retained / extended |
+| GET    | `/batches/{batch_id}/courses`          | Retained / extended |
+
+The existing course publish/preview/minor-major paths freeze assessment and
+assignment snapshots and expose their structural changes in the diff. Existing
+skills services link question skills; notes-image flows reuse media upload,
+confirmation and scoped references. These reuse existing contracts and tables.
+No Phase 3 endpoint is introduced during Step 9.
+
+| Module      | Tables                                                                    | Final responsibility                                                                                   |
+| ----------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| assessments | `question_banks`, `questions`, `question_skills`, `question_keys`         | Draft banks/prompts/skill links; separate private answer keys.                                         |
+| assessments | `quizzes`, `quiz_versions`, `quiz_version_questions`, `quiz_version_keys` | Draft rules, immutable published rules/pools/keys; structural publish diff and gated SQL reveal.       |
+| assessments | `quiz_attempts`, `quiz_answers`                                           | Frozen student selection/rules, Postgres autosave/resume, authoritative expiry/scoring/attempt limits. |
+| assignments | `assignments` (extended)                                                  | Rubric, instruction images and late-policy definitions, frozen in course snapshots.                    |
+| assignments | `assignment_submissions` (extended)                                       | Stable current-submission aggregate/revision and active attempt reference.                             |
+| assignments | `submission_attempts` (new)                                               | Immutable accepted text/file/rules/late evidence; every submission retained.                           |
+| assignments | `assignment_grades` (extended)                                            | Grade history per attempt, criterion scores, raw/penalty/final marks; one-grade constraint removed.    |
+| reports     | No tables                                                                 | Batched role landing/grading reads through module services and documented SQL interfaces.              |
+
+Migrations **0012-0016** implement the new ten assessments tables, one assignment
+history table, RLS/column grants/private SQL interfaces, runtime guards,
+immutable-history backfill, authoring indexes and scoped dashboard helpers.
+Courses, enrollments, skills, media, audits and the outbox reuse existing tables;
+modules query only their own tables, with documented SQL/service boundaries.
+Progress recomputation calls assessments/assignments services. The outbox SELECT
+repair covers historical grade v1 payloads. Published events/topics and versioned
+JSON Schemas are in `docs/events.md`: `quiz_attempt_submitted` v1 and
+`assignment_graded` v2, with retained v1 schema validation.
+
 ### Open follow-ups / carried forward
 
 - Plagiarism detection, AI feedback and coding labs remain outside this brief;
@@ -1440,17 +1628,18 @@ and all timeouts remain unchanged; the full suite is rerun after these repairs.
   after assignment grading and individual deadline accommodations need separate
   product decisions; this phase preserves the established completion rules.
 - Student first-load performance: **under 200 KiB gzip on every `/learn` route**
-  is the target. Step 8 makes no application bundle reductions. See the
-  [shared top-15 analysis and estimated reduction sequence](../design/student-bundles-step8.md)
-  and its machine-readable production analyzer evidence. The largest player is
-  337.3 KiB; more than 137.3 KiB must be removed to meet the target. Try mechanical
-  named Zod imports in Step 9 only if safe, with before/after measurements and
-  all gates; larger Zod/mini, overlay, class-merging and toast changes remain a
-  Phase 3 follow-up. Estimated combined savings of 123–167 KiB are hypotheses,
-  not achieved results or a guarantee. The mandatory CI audit enforces fixed
-  current-baseline whole-KiB ceilings (334/338/338/327 KiB), never automatically
-  raises them, and must tighten after verified improvements. Preserve runtime
-  validation, shared component accessibility and the authoring-dependency ban.
+  remains the target. Step 9 removes 73.4 KiB per route through narrow Zod
+  imports/Mini and first-use toast loading. The largest measured Linux player
+  is 264.01 KiB; more than 64.01 KiB is still needed. See the
+  [full package attribution, before/after evidence and remaining reduction plan](../design/student-bundles-step9.md).
+  Follow-ups: defer noninitial Base UI shell overlays (25-40 KiB), investigate
+  class-conflict equivalence (6-8 KiB), narrow remaining Mini/core validation
+  (5-10 KiB), and server-render static shell/read-only summaries (10-20 KiB).
+  The combined additional 46-78 KiB is a hypothesis with overlap/compression
+  uncertainty, not a guarantee of the target. Preserve validation, accessibility,
+  learning cache/timer behavior and the authoring-dependency ban. CI now fails
+  above the exact larger Windows/Linux measured byte figures: `/learn` 266,673,
+  both players 270,349, video 259,366. Never raise budgets automatically.
 
 ### Planning verification
 

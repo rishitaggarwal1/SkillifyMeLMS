@@ -98,6 +98,12 @@ error includes recovery guidance, and critical errors also remain inline.
 LiveAnnouncement provides polite save/timer status or an urgent alert. Do not
 announce a countdown every second; announce meaningful timer thresholds.
 
+Step 9: all notifications use `@/lib/toast`. The global LazyToaster loads
+Sonner on first use, queues messages until its themed host mounts and delivers
+each once. Failed chunk loads keep the messages in an accessible fallback
+with shared Retry/Dismiss buttons; retry or the next notification reloads the
+host. Never import Sonner directly from feature code or eager layouts.
+
 ConfirmButton uses a focus-trapped dialog for destructive actions. Name the
 resource and consequence, offer Cancel, disable the confirm while saving and
 keep a failed operation's error visible. Never use window.confirm.

@@ -1,7 +1,9 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { Toaster as Sonner, type ToasterProps } from "sonner";
+import { useEffect } from "react";
+import { toast, Toaster as Sonner, type ToasterProps } from "sonner";
+import type { ToastKind } from "@/lib/toast-queue";
 import {
   CircleCheckIcon,
   InfoIcon,
@@ -10,8 +12,9 @@ import {
   Loader2Icon,
 } from "lucide-react";
 
-const Toaster = ({ ...props }: ToasterProps) => {
+const Toaster = ({ onReady, ...props }: ToasterProps & { onReady: () => () => void }) => {
   const { theme = "system" } = useTheme();
+  useEffect(onReady, [onReady]);
 
   return (
     <Sonner
@@ -43,3 +46,4 @@ const Toaster = ({ ...props }: ToasterProps) => {
 };
 
 export { Toaster };
+export const showToast = (kind: ToastKind, message: string) => toast[kind](message);

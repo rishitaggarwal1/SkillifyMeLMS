@@ -1,11 +1,11 @@
-import { z } from "zod";
+import { object, optional, string, unknown } from "zod/mini";
 
 /** The API's single error envelope: {"error": {"code", "message", "details"}}. */
-export const errorEnvelopeSchema = z.object({
-  error: z.object({
-    code: z.string(),
-    message: z.string(),
-    details: z.unknown().optional(),
+export const errorEnvelopeSchema = object({
+  error: object({
+    code: string(),
+    message: string(),
+    details: optional(unknown()),
   }),
 });
 

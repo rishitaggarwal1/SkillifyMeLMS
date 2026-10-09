@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/lazy-toaster";
 import { SiteHeader } from "@/features/auth/site-header";
 
 import { Providers } from "./providers";
@@ -47,7 +47,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <main id="main-content" tabIndex={-1} className="app-content">
             {children}
           </main>
-          <Toaster position="top-center" />
+          <Toaster />
         </Providers>
       </body>
     </html>

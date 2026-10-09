@@ -2,7 +2,7 @@
 
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { GradeBreakdown, LateStatus } from "@/components/patterns/assessment";
 import { ErrorAlert, errorMessage } from "@/components/patterns/page";

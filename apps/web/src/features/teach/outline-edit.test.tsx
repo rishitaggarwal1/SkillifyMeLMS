@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/api/errors";
@@ -9,7 +9,7 @@ import type { Draft } from "@/lib/api/types";
 
 import { keys, useOutlineEdit, type IfMatch } from "./api";
 
-vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
+vi.mock("@/lib/toast", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
 const COURSE = "c1";
 

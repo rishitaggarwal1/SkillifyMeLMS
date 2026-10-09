@@ -1,5 +1,5 @@
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
-import { z } from "zod";
+import { array, object, string, uuid } from "zod";
 
 import { api } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
@@ -17,18 +17,16 @@ export type QuizResult =
   | components["schemas"]["AnswersResult"]
   | components["schemas"]["ExplanationsResult"];
 
-const answerBatch = z.object({
-  answers: z
-    .array(
-      z.object({
-        question_id: z.uuid(),
-        answer: z.object({
-          option_ids: z.array(z.string().min(1).max(100)).max(100).optional(),
-          text: z.string().max(20_000).nullable().optional(),
-        }),
+const answerBatch = object({
+  answers: array(
+    object({
+      question_id: uuid(),
+      answer: object({
+        option_ids: array(string().min(1).max(100)).max(100).optional(),
+        text: string().max(20_000).nullable().optional(),
       }),
-    )
-    .max(100),
+    }),
+  ).max(100),
 });
 
 const lessonPath = (enrollmentId: string, lessonId: string) => ({

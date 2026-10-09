@@ -1,0 +1,63 @@
+{
+  "git_head": "4da76dfa07e3d4bbca8791a9621ca0b9b11ab223",
+  "application_worktree_modified": true,
+  "next_version": "16.3.6",
+  "build_id": "yRQp-xTUgYieyrSMA_ZOI",
+  "measurement": "Production first-load JS including shared/runtime chunks; sum of per-file gzip level 9. Redirects have no separate first-load bundle. Dependency audit covers all emitted browser chunks in each route graph, including deferred chunks.",
+  "routes": [
+    {
+      "route": "/learn",
+      "first_load_raw_bytes": 865941,
+      "first_load_gzip_bytes": 266637,
+      "budget_gzip_bytes": 266673,
+      "first_load_chunks": 13,
+      "audited_client_sources": 479,
+      "authoring_dependencies": []
+    },
+    {
+      "route": "/learn/courses/[courseId]",
+      "first_load_raw_bytes": null,
+      "first_load_gzip_bytes": null,
+      "budget_gzip_bytes": null,
+      "first_load_chunks": 0,
+      "audited_client_sources": 0,
+      "authoring_dependencies": []
+    },
+    {
+      "route": "/learn/courses/[courseId]/lessons/[lessonId]",
+      "first_load_raw_bytes": null,
+      "first_load_gzip_bytes": null,
+      "budget_gzip_bytes": null,
+      "first_load_chunks": 0,
+      "audited_client_sources": 0,
+      "authoring_dependencies": []
+    },
+    {
+      "route": "/learn/enrollments/[enrollmentId]",
+      "first_load_raw_bytes": 875684,
+      "first_load_gzip_bytes": 270318,
+      "budget_gzip_bytes": 270349,
+      "first_load_chunks": 14,
+      "audited_client_sources": 530,
+      "authoring_dependencies": []
+    },
+    {
+      "route": "/learn/enrollments/[enrollmentId]/lessons/[lessonId]",
+      "first_load_raw_bytes": 875684,
+      "first_load_gzip_bytes": 270318,
+      "budget_gzip_bytes": 270349,
+      "first_load_chunks": 14,
+      "audited_client_sources": 530,
+      "authoring_dependencies": []
+    },
+    {
+      "route": "/learn/enrollments/[enrollmentId]/video/[lessonId]",
+      "first_load_raw_bytes": 842976,
+      "first_load_gzip_bytes": 259328,
+      "budget_gzip_bytes": 259366,
+      "first_load_chunks": 12,
+      "audited_client_sources": 451,
+      "authoring_dependencies": []
+    }
+  ]
+}

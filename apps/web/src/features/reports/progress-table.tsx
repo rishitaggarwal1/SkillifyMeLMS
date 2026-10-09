@@ -3,7 +3,7 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { DataTable } from "@/components/patterns/data-table";
 import { Button } from "@/components/ui/button";
