@@ -4,6 +4,14 @@ Measured production builds with the Step 8 release as baseline. **KiB = 1,024
 bytes**. JavaScript totals include shared framework/runtime first-load scripts.
 Deferred downloads are excluded from first load but remain in the dependency audit.
 
+Source baseline: Step 8 `4da76dfa07e3d4bbca8791a9621ca0b9b11ab223`.
+Reduction commit: `7ac8fd49c42468a4a355edb5953ca22d747685f5`, [green acceptance CI](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37977673085). After artifacts
+were captured from the changed worktree before that commit, so their recorded
+HEAD is the baseline with `application_worktree_modified: true`. Production
+application code did not change after the measured builds. The new renderer
+test's import-settlement setup was repaired before the final passing local gates.
+The release close-out changes documentation only.
+
 ## Safe reductions delivered
 
 - Shared error-envelope validation uses named `object`, `optional`, `string`

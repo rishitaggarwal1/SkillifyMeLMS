@@ -1,7 +1,10 @@
 # Phase 3 — Quizzes and full assignments
 
-**Status: approved (2026-10-04); steps 1-8 complete; step 9 in progress.** Decisions D1–D7 and
-the security repair below include the user's approved revisions.
+**Status: complete (2026-10-10).** All nine implementation steps passed their
+local lint/type/test gates and green pushed CI. Decisions D1-D7 and the security
+repair below include the user's approved revisions. The final documentation
+close-out must also have green exact-commit CI before `v0.3.0` is tagged;
+its run URL is recorded in the annotated tag and release summary.
 
 **Baseline:** `4f7d00826e368b9dbd7ce1635332a8b1d93dedb7`, the peeled
 `v0.2.5` release commit. The working tree was clean before this plan was written.
@@ -803,22 +806,22 @@ in section 9 were approved on 2026-10-06 before coding; steps 6 and 7 use its gu
 
 ## 14. Implementation record
 
-Steps 1-8 completed with green pushed CI. After each green pushed step, report its full SHA and
+All nine implementation steps completed with green pushed CI. After each green pushed step, report its full SHA and
 CI URL in the step summary; carry known commit/run records into this table in
 the next plan update. Do not invent a self-referential commit SHA or a CI URL
 before the commit/run exists. The close-out summary records its own final run.
 
-| Step | Status      | Commit                                     | CI run                                                                                   |
-| ---- | ----------- | ------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| 1    | Complete    | `99b59e7b3e8d284fafce9fb40ef9533d20b503a9` | [37220970826](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37220970826) |
-| 2    | Complete    | `d660c7330e2f520a043cd58745aac4452576816e` | [37231238285](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37231238285) |
-| 3    | Complete    | `c9aac0b02a9964ddee43c5ba5304d027fa7c7a0e` | [37355212064](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37355212064) |
-| 4    | Complete    | `c34ddc9b265b2865e5ade2a8eb1c89b8f7eb5cf0` | [37494612624](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37494612624) |
-| 5    | Complete    | `c17c0f02ef413ca6979ab92395b58897f552f3a8` | [37517763653](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37517763653) |
-| 6    | Complete    | c23fd8e71dd0300c6eb2133b0b7e30a1a2d761fe   | [37787315118](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37787315118) |
-| 7    | Complete    | `a79fc494469e0e58f4c44fc38229f6a578f98f28` | [37811946835](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37811946835) |
-| 8    | Complete    | `4da76dfa07e3d4bbca8791a9621ca0b9b11ab223` | [37963596236](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37963596236) |
-| 9    | In progress | —                                          | —                                                                                        |
+| Step | Status   | Commit                                     | CI run                                                                                   |
+| ---- | -------- | ------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| 1    | Complete | `99b59e7b3e8d284fafce9fb40ef9533d20b503a9` | [37220970826](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37220970826) |
+| 2    | Complete | `d660c7330e2f520a043cd58745aac4452576816e` | [37231238285](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37231238285) |
+| 3    | Complete | `c9aac0b02a9964ddee43c5ba5304d027fa7c7a0e` | [37355212064](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37355212064) |
+| 4    | Complete | `c34ddc9b265b2865e5ade2a8eb1c89b8f7eb5cf0` | [37494612624](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37494612624) |
+| 5    | Complete | `c17c0f02ef413ca6979ab92395b58897f552f3a8` | [37517763653](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37517763653) |
+| 6    | Complete | c23fd8e71dd0300c6eb2133b0b7e30a1a2d761fe   | [37787315118](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37787315118) |
+| 7    | Complete | `a79fc494469e0e58f4c44fc38229f6a578f98f28` | [37811946835](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37811946835) |
+| 8    | Complete | `4da76dfa07e3d4bbca8791a9621ca0b9b11ab223` | [37963596236](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37963596236) |
+| 9    | Complete | `7ac8fd49c42468a4a355edb5953ca22d747685f5` | [37977673085](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37977673085) |
 
 ### Deviations
 
@@ -985,6 +988,8 @@ an unreachable async entry's chunk. Player-only SSR preload files are excluded
 from shared membership. All modules and package groups are retained in the
 attribution, with estimates explicitly separated from measured transfer. No
 existing application/test assertion or timeout was weakened.
+Step 9's application, test and analyzer repairs ship in
+`7ac8fd49c42468a4a355edb5953ca22d747685f5`; its green CI is recorded in the table.
 
 ### Security repairs
 
@@ -1467,7 +1472,7 @@ existing application/test assertion or timeout was weakened.
   its own full SHA, pushed green CI and URL go in the summary and are carried
   into the table at the next authorized plan update.
 
-### Step 9 acceptance (2026-10-09 to 2026-10-10; in progress)
+### Step 9 acceptance and close-out (2026-10-09 to 2026-10-10)
 
 - Approved bundle reduction implemented without dependency upgrades or backend
   changes. Exact production Windows/Linux figures and complete package/module
@@ -1514,9 +1519,23 @@ existing application/test assertion or timeout was weakened.
   existing MATRIX/access-control coverage passed. No production application
   code changed after its measured builds. Commit hooks passed; whitespace,
   JSON, size and secret exclusions were checked. Local gates alone do not
-  complete Step 9: pushed CI is pending. Its known acceptance SHA/run will
-  enter the nine-step table in the final documentation close-out, whose own
-  exact SHA/green run must then pass before the annotated release tag.
+  complete a step. Acceptance commit `7ac8fd49c42468a4a355edb5953ca22d747685f5` was pushed;
+  `python scripts/ci_status.py 7ac8fd49c42468a4a355edb5953ca22d747685f5` exited **0** for
+  [run 37977673085](https://github.com/rishitaggarwal1/SkillifyMeLMS/actions/runs/37977673085), with all six jobs successful.
+  Step 9 is complete in the nine-step implementation table. The subsequent
+  documentation-only release commit must also pass its exact-SHA checker before
+  the tag is created. Its own SHA/URL belong in the annotated `v0.3.0` tag and
+  final release summary rather than an invented self-reference in this file.
+
+- Close-out (2026-10-10): dated complete status, all nine known implementation
+  commits/green runs, final endpoint/table inventory, approved deviations and
+  repairs, and carried follow-ups are recorded here. README Demo includes the
+  quiz/reveal tour, cross-course rubric grading, penalty/100% example, role
+  landings, credential location and unchanged risky-flag guards. The bundle
+  report maps its precommit build evidence to the accepted source SHA and
+  accounts for all shared modules/packages. The under-200-KiB work remains an
+  explicitly estimated follow-up with tightened CI regression ceilings.
+  No Phase 4 or other feature work starts during close-out.
 
 ### Final endpoint and table inventory
 
@@ -1654,4 +1673,6 @@ At the initial planning gate only this plan was added; implementation checks,
 commit, push and CI had not run. Step 1 subsequently passed its local and pushed-CI gates (recorded above).
 Steps 2-5 passed their local and pushed-CI gates (recorded above). The user
 explicitly skipped the unspecified Step 5 follow-up and authorized Step 6;
-later steps remain gated on the user's "continue".
+the user subsequently authorized steps 7-9. All nine steps now have local
+passing gates and green pushed implementation CI recorded above. Release tagging
+still waits for green CI on the final documentation close-out commit.

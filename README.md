@@ -31,15 +31,15 @@ make install   # host toolchains: API venv, web deps, Playwright chromium, pre-c
 make dev       # builds and starts the whole stack; returns once everything is healthy
 ```
 
-| Service           | URL                                   |
-| ----------------- | ------------------------------------- |
-| Web               | http://localhost:3000                 |
-| API docs          | http://localhost:8000/docs            |
-| API readiness     | http://localhost:8000/health/ready    |
-| Keycloak          | `KEYCLOAK_PUBLIC_URL` (http://localhost:8080, realm `skillifyme`) |
-| MinIO console     | http://localhost:9001                 |
-| Redpanda console  | http://localhost:8082                 |
-| Mailpit           | http://localhost:8025                 |
+| Service          | URL                                                               |
+| ---------------- | ----------------------------------------------------------------- |
+| Web              | http://localhost:3000                                             |
+| API docs         | http://localhost:8000/docs                                        |
+| API readiness    | http://localhost:8000/health/ready                                |
+| Keycloak         | `KEYCLOAK_PUBLIC_URL` (http://localhost:8080, realm `skillifyme`) |
+| MinIO console    | http://localhost:9001                                             |
+| Redpanda console | http://localhost:8082                                             |
+| Mailpit          | http://localhost:8025                                             |
 
 Credentials for all of these are in your local `.env`, which is created from `.env.example`.
 
@@ -58,20 +58,20 @@ API and in the database. All of them use `DEV_USER_PASSWORD` from `.env` (`Local
 `.env.example`). A server never sets `SEED_DEV_USERS`, so these accounts exist only locally and in
 CI; the realm template itself contains no users.
 
-| User                              | Organization and role                        |
-| --------------------------------- | -------------------------------------------- |
-| platform.admin@skillifyme.local   | platform admin (Keycloak realm role)         |
-| content.admin@skillifyme.local    | SkillifyMe (content publisher): org_admin    |
-| author@skillifyme.local           | SkillifyMe: instructor                       |
-| lab.author@skillifyme.local       | SkillifyMe: lab_author                       |
-| multi@skillifyme.local            | SkillifyMe and Demo College: instructor      |
-| admin@demo-college.local          | Demo College: org_admin                      |
-| instructor@demo-college.local     | Demo College: instructor                     |
-| cse.student@demo-college.local    | Demo College: student, batch CSE 2026        |
-| ece.student@demo-college.local    | Demo College: student, batch ECE 2026        |
-| admin@other-college.local         | Other College: org_admin                     |
-| instructor@other-college.local    | Other College: instructor                    |
-| student@other-college.local       | Other College: student, batch MECH 2026      |
+| User                            | Organization and role                     |
+| ------------------------------- | ----------------------------------------- |
+| platform.admin@skillifyme.local | platform admin (Keycloak realm role)      |
+| content.admin@skillifyme.local  | SkillifyMe (content publisher): org_admin |
+| author@skillifyme.local         | SkillifyMe: instructor                    |
+| lab.author@skillifyme.local     | SkillifyMe: lab_author                    |
+| multi@skillifyme.local          | SkillifyMe and Demo College: instructor   |
+| admin@demo-college.local        | Demo College: org_admin                   |
+| instructor@demo-college.local   | Demo College: instructor                  |
+| cse.student@demo-college.local  | Demo College: student, batch CSE 2026     |
+| ece.student@demo-college.local  | Demo College: student, batch ECE 2026     |
+| admin@other-college.local       | Other College: org_admin                  |
+| instructor@other-college.local  | Other College: instructor                 |
+| student@other-college.local     | Other College: student, batch MECH 2026   |
 
 ## Everyday commands
 
@@ -100,12 +100,12 @@ make seed-demo
 Open the web app and sign in with one of the four roles below. The home page sends each
 single-role user to their area.
 
-| Role | Login | Landing and demo |
-|---|---|---|
-| Platform admin | `demo.platform-admin@skillifyme.co.in` | `/platform`: platform counts, organizations and users |
-| College admin | `demo.admin@skillifyme.co.in` | `/admin`: batches; `/admin/courses` shows granted courses and distribution |
-| Instructor | `demo.instructor@skillifyme.co.in` | `/teach`: assigned courses, submissions to grade and batch progress |
-| Student | `demo.student@skillifyme.co.in` | `/learn`: Python Foundations, 85% complete; quiz failed then passed |
+| Role           | Login                                  | Landing and demo                                                                                                          |
+| -------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Platform admin | `demo.platform-admin@skillifyme.co.in` | `/platform`: platform counts, organizations and users                                                                     |
+| College admin  | `demo.admin@skillifyme.co.in`          | `/admin`: batch completion/activity, unassigned grants, invitations and imports; distribute courses from `/admin/courses` |
+| Instructor     | `demo.instructor@skillifyme.co.in`     | `/teach`: Needs attention and courses; `/teach/grading` opens the cross-course grading queue                              |
+| Student        | `demo.student@skillifyme.co.in`        | `/learn`: Python Foundations, 85% complete; quiz failed then passed                                                       |
 
 `demo.author@skillifyme.co.in` is the instructor in the SkillifyMe publisher org who owns and
 edits the course. The other students are `demo.student2@skillifyme.co.in` through
@@ -121,6 +121,28 @@ one grade. Fresh assignments have a correctness/readability rubric (6 + 4 marks)
 frozen when authored, and a 10% penalty per started late day. Aarav's initial raw grade is
 9/10, reduced to 8.10/10 for one late day. Reruns do not move the due date, alter accepted
 penalties, replace existing attempts/grades or rotate passwords.
+
+To tour the Phase 3 examples in a fresh demo:
+
+1. Sign in as `demo.author@skillifyme.co.in`. Open **Question banks** to inspect
+   the Python questions, then the quiz lesson in Python Foundations to inspect
+   its selection, marks, timer, attempts and reveal settings. The FizzBuzz
+   assignment editor shows the instruction document, rubric and late policy.
+2. Sign in as Priya (`demo.student@skillifyme.co.in`). Continue Python Foundations,
+   open the quiz and view the failed then passed attempt history. Her second
+   result reveals the explanations after both attempts are used. Open FizzBuzz
+   to see the active submission and its accepted late status.
+3. As the college instructor, use **Grading → submission → Save grade**. Score
+   Priya's active FizzBuzz attempt by rubric criterion. Its frozen penalty is
+   shown before saving; grading completes the assignment and Priya reaches 100%.
+   As Priya, inspect the final score, rubric breakdown, penalty and history in
+   the player or Recent results. Aarav (`demo.student2@skillifyme.co.in`) already
+   demonstrates a fresh 9.00 raw grade reduced to 8.10 by one late day.
+
+The authoring and learning acceptance specs exercise a newly built quiz and
+image/rubric assignment, fail/pass, late grading, 100% progress and another
+batch's isolation at desktop and 360px. The [Phase 3 close-out](docs/plans/phase-3.md)
+records the endpoint/table inventory, nine build commits, CI runs and follow-ups.
 
 An existing Phase 2.5 six-lesson demo is left intact by a normal run, which reports the
 required upgrade. To add the assessments, run:
@@ -171,7 +193,7 @@ When that happens the web app keeps serving old code until you restart it.
 2. Clone the repository **inside the WSL2 filesystem**, e.g. `~/src/LMS`, not under `/mnt/c/...`.
    Files there are native Linux files, so file events and I/O are fast.
 3. Install the prerequisites inside WSL (make, uv, Node 22 + pnpm) and run every `make` command
-   from the WSL shell. VS Code's *WSL* extension opens the folder directly.
+   from the WSL shell. VS Code's _WSL_ extension opens the folder directly.
 
 **Fallback, without moving the checkout:** `make dev-web-host`.
 
@@ -218,7 +240,7 @@ one test video (deleted at the end), and exits non-zero on failure. The webhook 
   - the token issuer, `<KEYCLOAK_PUBLIC_URL>/realms/skillifyme`, pinned via `KC_HOSTNAME` so it's
     the same whichever host fetched the token
   - the API's JWKS URL, the realm's redirect URIs and web origins, and MinIO's CORS origin
-  `apps/api/tests/test_config_hosts.py` fails if a host or port gets hardcoded.
+    `apps/api/tests/test_config_hosts.py` fails if a host or port gets hardcoded.
 - **Keycloak realm.** `infra/keycloak/realm.template.json` is rendered from `.env` at startup by
   the `keycloak-realm` job and imported on Keycloak's first start. Keycloak never re-imports an
   existing realm, so `keycloak-sync` then re-applies the settings (redirect URIs, SMTP,
